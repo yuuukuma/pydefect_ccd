@@ -8,7 +8,7 @@ from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from pymatgen.core import Lattice, Structure, Element
 from vise.tests.helpers.assertion import assert_json_roundtrip
 
-from dephon.dephon_init import get_dR, MinimumPointInfo, BandEdgeState
+from dephon.dephon_init import get_dR, RelaxedPointInfo, BandEdgeState
 
 
 def test_get_dR():
@@ -44,7 +44,7 @@ def minimum_point_info(ground_structure):
                               occupation=0.0)
     cb_nes_down = copy(cb_nes_up)
     cb_nes_down.band_index = 3
-    return MinimumPointInfo(name="test",
+    return RelaxedPointInfo(name="test",
                             charge=-1,
                             structure=ground_structure,
                             energy=-90.0,
@@ -59,7 +59,7 @@ def minimum_point_info(ground_structure):
 
 
 def test_relevant_band_indices(minimum_point_info):
-    assert minimum_point_info.relevant_band_indices == {(): [1, 2, 3]}
+    assert minimum_point_info.relevant_band_indices == {1, 2, 3}
 
 
 def test_str(minimum_point_info):
@@ -80,8 +80,8 @@ def test_dephon_init_dQ(dephon_init):
 
 
 def test_dephon_init_min_point_info_from_charge(dephon_init):
-    actual = dephon_init.min_info_from_charge(charge=1)
-    assert actual == dephon_init.min_points[1]
+    actual = dephon_init.relaxed_point_info_from_charge(charge=1)
+    assert actual == dephon_init.relaxed_points[1]
 
 
 def test_dephon_init_volume(dephon_init):
