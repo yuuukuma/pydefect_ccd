@@ -4,8 +4,8 @@ from copy import deepcopy
 
 from vise.util.logger import get_logger
 
-from dephon.config_coord import SingleCcd, Ccd, SingleCcdId
-from dephon.dephon_init import DephonInit
+from dephon.config_coord import PotentialCurve, ConfigCoordDiagram, CcdId
+from dephon.dephon_init import ConfigCoordDiagInit
 from dephon.enum import Carrier, BandEdge
 
 logger = get_logger(__name__)
@@ -25,9 +25,9 @@ class MakeCcd:
       - minority carrier is h and majority carrier is e
     """
     def __init__(self,
-                 ground_ccd: SingleCcd,
-                 excited_ccd: SingleCcd,
-                 dephon_init: DephonInit):
+                 ground_ccd: PotentialCurve,
+                 excited_ccd: PotentialCurve,
+                 dephon_init: ConfigCoordDiagInit):
         if abs(ground_ccd.charge - excited_ccd.charge) != 1:
             raise AssertionError(
                 f"The charge difference needs to be 1. Now, ground state "
@@ -41,7 +41,7 @@ class MakeCcd:
         self.orig_excited_ccd.shift_energy(
             excited_ccd.charge * self.band_edge_level)
 
-        self.ref_energy = ground_ccd.disp_point_info(0.0).corrected_energy
+        self.ref_energy = ground_ccd.get_single_point_by_disp_ratio(0.0).corrected_energy
 
     @property
     def charge_diff(self) -> int:
@@ -73,29 +73,29 @@ class MakeCcd:
         return - carrier.charge * band_edge
 
     @property
-    def _ground_ccd(self) -> SingleCcd:
+    def _ground_ccd(self) -> PotentialCurve:
         """
         Returns: Ground state ccd with the lowest energy to be zero
         """
         result = deepcopy(self.orig_ground_ccd)
         result.set_base_energy(self.ref_energy)
-        result.id_ = SingleCcdId("ground")
+        result.id_ = CcdId("ground")
         return result
 
     @property
-    def _ground_pn_ccd(self) -> SingleCcd:
+    def _ground_pn_ccd(self) -> PotentialCurve:
         """
         Returns: Ground state ccd with an excited electron at CBM from VBM
         """
         result = deepcopy(self.orig_ground_ccd)
         result.set_base_energy(self.ref_energy)
-        result.id_ = SingleCcdId("ground",
-                                 carriers=[Carrier.h, Carrier.e])
+        result.id_ = CcdId("ground",
+                           carriers=[Carrier.h, Carrier.e])
         result.shift_energy(self.dephon_init.cbm - self.dephon_init.vbm)
         return result
 
     @property
-    def _excited_ccd(self) -> SingleCcd:
+    def _excited_ccd(self) -> PotentialCurve:
         """
         Returns: Excited state ccd capturing _default_single_ccd_for_e_p_coupling minority carrier with _default_single_ccd_for_e_p_coupling majority
                  carrier. The Q values are reverted and zero is set to that of
@@ -109,14 +109,14 @@ class MakeCcd:
             raise
 
         result.set_base_energy(self.ref_energy)
-        result.id_ = SingleCcdId(
+        result.id_ = CcdId(
             "excited", carriers=[self.carrier_coexisting_with_excited])
         return result
 
     @property
-    def ccd(self) -> Ccd:
+    def ccd(self) -> ConfigCoordDiagram:
         ccds = [self._ground_ccd, self._excited_ccd, self._ground_pn_ccd]
         for ccd in ccds:
             ccd.set_quadratic_fitting_range()
 
-        return Ccd(name=self.dephon_init.name, ccds=ccds)
+        return ConfigCoordDiagram(name=self.dephon_init.name, potential_curves=ccds)

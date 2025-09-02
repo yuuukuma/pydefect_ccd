@@ -8,10 +8,11 @@ from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from pymatgen.core import Structure, Lattice
 from pymatgen.electronic_structure.core import Spin
 
-from dephon.config_coord import SinglePointInfo, Ccd, SingleCcd, SingleCcdId
-from dephon.dephon_init import MinimumPointInfo, DephonInit, BandEdgeState
+from dephon.config_coord import SinglePoint, ConfigCoordDiagram, PotentialCurve
+from dephon.dephon_init import ConfigCoordDiagInit
 from dephon.ele_phon_coupling import InnerProduct, EPMatrixElement
 from dephon.enum import Carrier
+from dephon.relaxed_point import BandEdgeState, RelaxedPoint
 
 
 @pytest.fixture(scope="session")
@@ -96,50 +97,50 @@ def dephon_init(ground_structure, excited_structure):
     cb_w_lo = copy(cb)
     cb_w_lo.band_index = 3
 
-    va_o1_0 = MinimumPointInfo(name="Va_O1",
-                               charge=0,
-                               structure=ground_structure,
-                               energy=11.0,
-                               correction_energy=-1.0,
-                               magnetization=0.0,
-                               localized_orbitals=[[], []],
-                               initial_site_symmetry="2mm",
-                               final_site_symmetry="2",
-                               parsed_dir="/path/to/Va_O1_0",
-                               valence_bands=[[vb], [vb]],
-                               conduction_bands=[[cb], [cb]])
-    va_o1_1 = MinimumPointInfo(name="Va_O1",
-                               charge=1,
-                               structure=excited_structure,
-                               energy=12.0,
-                               correction_energy=-1.0,
-                               magnetization=1.0,
-                               localized_orbitals=[[], [orb_info]],
-                               initial_site_symmetry="2mm",
-                               final_site_symmetry="2",
-                               parsed_dir="/path/to/Va_O1_1",
-                               valence_bands=[[vb], [vb]],
-                               conduction_bands=[[cb], [cb_w_lo]])
+    va_o1_0 = RelaxedPoint(name="Va_O1",
+                           charge=0,
+                           structure=ground_structure,
+                           energy=11.0,
+                           correction_energy=-1.0,
+                           magnetization=0.0,
+                           localized_orbitals=[[], []],
+                           initial_site_symmetry="2mm",
+                           final_site_symmetry="2",
+                           parsed_dir="/path/to/Va_O1_0",
+                           valence_bands=[[vb], [vb]],
+                           conduction_bands=[[cb], [cb]])
+    va_o1_1 = RelaxedPoint(name="Va_O1",
+                           charge=1,
+                           structure=excited_structure,
+                           energy=12.0,
+                           correction_energy=-1.0,
+                           magnetization=1.0,
+                           localized_orbitals=[[], [orb_info]],
+                           initial_site_symmetry="2mm",
+                           final_site_symmetry="2",
+                           parsed_dir="/path/to/Va_O1_1",
+                           valence_bands=[[vb], [vb]],
+                           conduction_bands=[[cb], [cb_w_lo]])
     # transition level = -1.0 from CBM
-    return DephonInit(min_points=[va_o1_0, va_o1_1],
-                      vbm=1.0, cbm=3.0, supercell_volume=100.0,
-                      supercell_vbm=1.1, supercell_cbm=2.9,
-                      ave_electron_mass=11.0, ave_hole_mass=12.0,
-                      ave_static_diele_const=13.0)
+    return ConfigCoordDiagInit(relaxed_points=[va_o1_0, va_o1_1],
+                               vbm=1.0, cbm=3.0, supercell_volume=100.0,
+                               supercell_vbm=1.1, supercell_cbm=2.9,
+                               ave_electron_mass=11.0, ave_hole_mass=12.0,
+                               ave_static_diele_const=13.0)
 
 
 @pytest.fixture
 def ccd(excited_structure, ground_structure, intermediate_structure):
-    return Ccd(name="test",
-               ccds=[
-                   SingleCcd(SingleCcdId(name="excited"), charge=0,
-                             point_infos=[SinglePointInfo(-1.0, -0.1, 2.1, False, used_for_fitting=True),
-                                          SinglePointInfo(0.0, 0.0, 1.1, False, used_for_fitting=True, conduction_bands=[[cb]], valence_bands=[[vb]]),
-                                          SinglePointInfo(1.0, 0.1, 2.2, False, used_for_fitting=True)]),
-                   SingleCcd(SingleCcdId(name="ground"), charge=1,
-                             point_infos=[SinglePointInfo(-1.0, -0.1, 1.1, False, used_for_fitting=False),
-                                          SinglePointInfo(0.0, 0.0, 0.1, False, used_for_fitting=True, conduction_bands=[[cb]], valence_bands=[[vb]]),
-                                          SinglePointInfo(1.0, 0.1, 1.2, False, used_for_fitting=True)])])
+    return ConfigCoordDiagram(name="test",
+                              potential_curves=[
+                   PotentialCurve(name="excited", charge=0,
+                                  points=[SinglePoint(-1.0, -0.1, 2.1, False, used_for_fitting=True),
+                                          SinglePoint(0.0, 0.0, 1.1, False, used_for_fitting=True, conduction_bands=[[cb]], valence_bands=[[vb]]),
+                                          SinglePoint(1.0, 0.1, 2.2, False, used_for_fitting=True)]),
+                   PotentialCurve(name="ground", charge=1,
+                                  points=[SinglePoint(-1.0, -0.1, 1.1, False, used_for_fitting=False),
+                                          SinglePoint(0.0, 0.0, 0.1, False, used_for_fitting=True, conduction_bands=[[cb]], valence_bands=[[vb]]),
+                                          SinglePoint(1.0, 0.1, 1.2, False, used_for_fitting=True)])])
 
 
 @pytest.fixture(scope="session")

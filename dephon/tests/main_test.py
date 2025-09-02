@@ -9,8 +9,8 @@ from vise.analyzer.effective_mass import EffectiveMass
 from dephon.cli.main import parse_args_main
 from dephon.cli.main_function import update_single_point_infos, make_ccd, \
     plot_eigenvalues, add_point_infos_to_single_ccd
-from dephon.config_coord import Ccd, SingleCcd
-from dephon.dephon_init import DephonInit
+from dephon.config_coord import ConfigCoordDiagram, PotentialCurve
+from dephon.dephon_init import ConfigCoordDiagInit
 
 
 def loadfn_effect(d: dict):
@@ -51,7 +51,7 @@ def test_main_make_dephon_init(mocker):
 
 
 def test_main_make_dirs(mocker):
-    mock_dephon_init = mocker.Mock(spec=DephonInit, autospec=True)
+    mock_dephon_init = mocker.Mock(spec=ConfigCoordDiagInit, autospec=True)
     side_effect = loadfn_effect({"dephon_init.json": mock_dephon_init})
     mocker.patch("dephon.cli.main.loadfn", side_effect=side_effect)
 
@@ -88,9 +88,9 @@ def test_main_add_point_infos_to_single_ccd():
 
 
 def test_main_make_ccd_wo_args(mocker):
-    mock_dephon_init = mocker.Mock(spec=DephonInit, autospec=True)
-    mock_ground_single_ccd = mocker.Mock(spec=SingleCcd, autospec=True)
-    mock_excited_single_ccd = mocker.Mock(spec=SingleCcd, autospec=True)
+    mock_dephon_init = mocker.Mock(spec=ConfigCoordDiagInit, autospec=True)
+    mock_ground_single_ccd = mocker.Mock(spec=PotentialCurve, autospec=True)
+    mock_excited_single_ccd = mocker.Mock(spec=PotentialCurve, autospec=True)
     side_effect = loadfn_effect(
         {"dephon_init.json": mock_dephon_init,
          "ground_single_ccd.json": mock_ground_single_ccd,
@@ -110,7 +110,7 @@ def test_main_make_ccd_wo_args(mocker):
 
 
 def test_main_set_quadratic_fitting_q_range(mocker):
-    mock_ccd = mocker.Mock(spec=Ccd, autospec=True)
+    mock_ccd = mocker.Mock(spec=ConfigCoordDiagram, autospec=True)
     side_effect = loadfn_effect({"ccd.json": mock_ccd})
     mocker.patch("dephon.cli.main.loadfn", side_effect=side_effect)
 
@@ -125,7 +125,7 @@ def test_main_set_quadratic_fitting_q_range(mocker):
 
 
 def test_main_plot_ccd_wo_args(mocker):
-    mock_ccd = mocker.Mock(spec=Ccd, autospec=True)
+    mock_ccd = mocker.Mock(spec=ConfigCoordDiagram, autospec=True)
     side_effect = loadfn_effect({"ccd.json": mock_ccd})
     mocker.patch("dephon.cli.main.loadfn", side_effect=side_effect)
 
@@ -141,7 +141,7 @@ def test_main_plot_ccd_wo_args(mocker):
 
 
 def test_main_plot_eigenvalues(mocker):
-    mock_dephon_init = mocker.Mock(spec=DephonInit, autospec=True)
+    mock_dephon_init = mocker.Mock(spec=ConfigCoordDiagInit, autospec=True)
     side_effect = loadfn_effect({"dephon_init.json": mock_dephon_init})
     mocker.patch("dephon.cli.main.loadfn", side_effect=side_effect)
 

@@ -38,7 +38,8 @@ def test_eigenvalue_plotter(mocker):
                                       supercell_vbm=-1.0,
                                       supercell_cbm=1.0)
     plotter.construct_plot()
-    plotter.plt.show()
+    plotter.plt.savefig("test.png")
+    # plotter.plt.show()
 
 
 """

@@ -42,8 +42,8 @@ def parse_args_main(args):
         aliases=['rwa'])
 
     parser_reduce_wswq_auto.add_argument(
-        "-s", "--single_ccd", type=loadfn, required=True,
-        help="single_ccd.json file.")
+        "-s", "--potential_curve", type=loadfn, required=True,
+        help="potential_curve.json file.")
     parser_reduce_wswq_auto.add_argument(
         "-w", "--wswq", type=Path, required=True,
         help="")

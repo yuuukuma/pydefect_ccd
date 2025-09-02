@@ -17,7 +17,6 @@ from pydefect.analyzer.band_edge_states import BandEdgeStates, \
 from pydefect.analyzer.calc_results import CalcResults
 from pydefect.analyzer.defect_energy import DefectEnergyInfo
 from pydefect.analyzer.defect_structure_info import DefectStructureInfo
-from pydefect.analyzer.unitcell import Unitcell
 from pydefect.cli.main_functions import get_calc_results
 from pydefect.cli.main_tools import parse_dirs
 from pydefect.cli.vasp.make_efnv_correction import make_efnv_correction
@@ -29,24 +28,25 @@ from vise.util.file_transfer import FileLink
 from vise.util.logger import get_logger
 
 from dephon.capture_rate import calc_phonon_overlaps, CaptureRate
-from dephon.config_coord import SinglePointInfo, CcdPlotter, \
-    SingleCcd, SingleCcdId
+from dephon.config_coord import SinglePoint, CcdPlotter, \
+    PotentialCurve, CcdId
 from dephon.corrections import DephonCorrection
-from dephon.dephon_init import DephonInit, MinimumPointInfo, BandEdgeState
+from dephon.dephon_init import ConfigCoordDiagInit
 from dephon.ele_phon_coupling import EPMatrixElement
 from dephon.enum import CorrectionType
 from dephon.make_config_coord import MakeCcd
 from dephon.make_e_p_matrix_element import MakeEPMatrixElement
 from dephon.plot_eigenvalues import DephonEigenvaluePlotter
+from dephon.relaxed_point import BandEdgeState, RelaxedPoint
 from dephon.util import spin_to_idx
 
 logger = get_logger(__name__)
 
 
-def make_near_edge_states(band_edge_orbital_infos: BandEdgeOrbitalInfos,
-                          spin: Spin,
-                          edge_energy: float,
-                          threshold: float = 0.1):
+def _make_near_edge_states(band_edge_orbital_infos: BandEdgeOrbitalInfos,
+                           spin: Spin,
+                           edge_energy: float,
+                           threshold: float = 0.1):
     result = []
     info_by_spin = band_edge_orbital_infos.orbital_infos[spin_to_idx(spin)]
     for k_idx, (orb_info_by_kpt, k_coords, k_weight) in \
@@ -68,7 +68,7 @@ def make_near_edge_states(band_edge_orbital_infos: BandEdgeOrbitalInfos,
     return result
 
 
-def make_min_point_info_from_dir(_dir: Path):
+def _make_relaxed_point_from_dir(_dir: Path):
     energy_info = DefectEnergyInfo.from_yaml(_dir / "defect_energy_info.yaml")
     calc_results: CalcResults = loadfn(_dir / "calc_results.json")
     defect_structure_info: DefectStructureInfo \
@@ -77,9 +77,9 @@ def make_min_point_info_from_dir(_dir: Path):
 
     band_edge_orbital_infos: BandEdgeOrbitalInfos = \
         loadfn(_dir / "band_edge_orbital_infos.json")
-    localized_orbitals, valence_bands, conduction_bands = get_orbs(
+    localized_orbitals, valence_bands, conduction_bands = _get_band_edge_info(
         band_edge_orbital_infos, band_edge_states)
-    min_point_info = MinimumPointInfo(
+    relaxed_point = RelaxedPoint(
         name=energy_info.name,
         charge=energy_info.charge,
         structure=calc_results.structure,
@@ -93,53 +93,59 @@ def make_min_point_info_from_dir(_dir: Path):
         valence_bands=valence_bands,
         conduction_bands=conduction_bands)
 
-    volume = defect_structure_info.shifted_final_structure.volume
-
-    return min_point_info, volume
+    return relaxed_point
 
 
-def get_orbs(band_edge_orbital_infos: BandEdgeOrbitalInfos,
-             band_edge_states: BandEdgeStates
-             ) -> Tuple[List, List, List]:
+def _get_band_edge_info(band_edge_orbital_infos: BandEdgeOrbitalInfos,
+                        band_edge_states: BandEdgeStates
+                        ) -> Tuple[List, List, List]:
     localized_orbitals, valence_bands, conduction_bands = [], [], []
     for state, spin in zip(band_edge_states.states, [Spin.up, Spin.down]):
         los = state.localized_orbitals
         for lo in los:
             lo.band_idx += 1
         localized_orbitals.append(los)
-        valence_bands.append(make_near_edge_states(band_edge_orbital_infos,
-                                                   spin,
-                                                   state.vbm_info.energy))
-        conduction_bands.append(make_near_edge_states(band_edge_orbital_infos,
-                                                      spin,
-                                                      state.cbm_info.energy))
+        valence_bands.append(_make_near_edge_states(band_edge_orbital_infos,
+                                                    spin,
+                                                    state.vbm_info.energy))
+        conduction_bands.append(_make_near_edge_states(band_edge_orbital_infos,
+                                                       spin,
+                                                       state.cbm_info.energy))
     return localized_orbitals, valence_bands, conduction_bands
 
 
 def make_dephon_init(args: Namespace):
-    min_point_1, volume = make_min_point_info_from_dir(args.first_dir)
-    min_point_2, _ = make_min_point_info_from_dir(args.second_dir)
+    min_point_1 = _make_relaxed_point_from_dir(args.first_dir)
+    min_point_2 = _make_relaxed_point_from_dir(args.second_dir)
+
+    path = Path(f"cc/{min_point_1.full_name}⇆{min_point_2.full_name}")
+    json_file = path / "dephon_init.json"
+
+    if json_file.exists():
+        logger.info(f"{json_file} exists. Remove it first to recreate it.")
+        return
 
     if abs(min_point_1.charge - min_point_2.charge) != 1:
-        logger.warning("The charge difference is not 1. User needs to know"
-                       "what one is doing.")
+        logger.warning("The charge difference is not 1. "
+                       "Please ensure you understand the implications.")
 
-    concentration = args.effective_mass.concentrations[0]
-    ave_hole_mass = args.effective_mass.average_mass("p", concentration)
-    ave_electron_mass = args.effective_mass.average_mass("n", concentration)
-    unitcell: Unitcell = args.unitcell
-    dephon_init = DephonInit(min_points=[min_point_1, min_point_2],
-                             vbm=unitcell.vbm,
-                             cbm=unitcell.cbm,
-                             supercell_volume=volume,
-                             supercell_vbm=args.p_state.vbm_info.energy,
-                             supercell_cbm=args.p_state.cbm_info.energy,
-                             ave_hole_mass=ave_hole_mass,
-                             ave_electron_mass=ave_electron_mass,
-                             ave_static_diele_const=unitcell.ave_ele_diele,
-                             )
+    volume = min_point_1.structure.volume
+    if args.effective_mass:
+        concentration = args.effective_mass.concentrations[0]
+        ave_hole_mass = args.effective_mass.average_mass("p", concentration)
+        ave_electron_mass = args.effective_mass.average_mass("n", concentration)
+    else:
+        ave_hole_mass, ave_electron_mass = None, None
 
-    path = Path(f"cc/{min_point_1.full_name}__{min_point_2.full_name}")
+    dephon_init = ConfigCoordDiagInit(relaxed_points=[min_point_1, min_point_2],
+                                      vbm=args.unitcell.vbm,
+                                      cbm=args.unitcell.cbm,
+                                      supercell_volume=volume,
+                                      supercell_vbm=args.p_state.vbm_info.energy,
+                                      supercell_cbm=args.p_state.cbm_info.energy,
+                                      ave_hole_mass=ave_hole_mass,
+                                      ave_electron_mass=ave_electron_mass,
+                                      ave_static_diele_const=args.unitcell.ave_ele_diele)
 
     if path.exists() is False:
         path.mkdir(parents=True)
@@ -150,27 +156,23 @@ def make_dephon_init(args: Namespace):
 user_incar_settings:
   NSW: 1""")
 
-
-    json_file = path / "dephon_init.json"
-    if json_file.exists():
-        logger.info(f"{json_file} exists. Remove it first to recreate it.")
-        return
-
     dephon_init.to_json_file(json_file)
-    print(dephon_init)
+    logger.info(dephon_init)
 
 
 def make_ccd_dirs(args: Namespace):
     os.chdir(args.calc_dir)
     d_init = args.dephon_init
-    s1 = d_init.min_points[0].structure
-    s2 = d_init.min_points[1].structure
+    s1 = d_init.relaxed_points[0].structure
+    s2 = d_init.relaxed_points[1].structure
     s1_to_s2 = s1.interpolate(s2, nimages=args.first_to_second_div_ratios)
     s2_to_s1 = s2.interpolate(s1, nimages=args.second_to_first_div_ratios)
-    initial_charges = [d_init.min_points[0].charge, d_init.min_points[1].charge]
-    final_charges = [d_init.min_points[1].charge, d_init.min_points[0].charge]
-    correction_energies = [d_init.min_points[0].correction_energy,
-                           d_init.min_points[1].correction_energy]
+    initial_charges = [d_init.relaxed_points[0].charge,
+                       d_init.relaxed_points[1].charge]
+    final_charges = [d_init.relaxed_points[1].charge,
+                     d_init.relaxed_points[0].charge]
+    correction_energies = [d_init.relaxed_points[0].correction_energy,
+                           d_init.relaxed_points[1].correction_energy]
 
     for ratios, structures, initial_charge, final_charge, corr in \
             zip([args.first_to_second_div_ratios,
@@ -183,10 +185,10 @@ def make_ccd_dirs(args: Namespace):
         for ratio, structure, dQ in zip(ratios, structures, dQs):
             _make_ccd_dir(initial_charge, name, ratio, structure, dQ, corr)
 
-        single_ccd = Path(name) / "single_ccd.json"
+        single_ccd = Path(name) / "potential_curve.json"
         if single_ccd.exists() is False:
-            id_ = SingleCcdId(name)
-            SingleCcd(id_, charge=initial_charge).to_json_file(single_ccd)
+            id_ = CcdId(name)
+            PotentialCurve(id_, charge=initial_charge).to_json_file(single_ccd)
 
 
 def _make_ccd_dir(charge, dirname, ratio, structure, dQ, correction):
@@ -198,7 +200,7 @@ def _make_ccd_dir(charge, dirname, ratio, structure, dQ, correction):
         structure.to(filename=str(dir_ / "POSCAR"))
         (dir_ / "prior_info.yaml").write_text(
             yaml.dump({"charge": charge}), None)
-        single_point_info = SinglePointInfo(dQ=dQ, disp_ratio=ratio)
+        single_point_info = SinglePoint(dQ=dQ, disp_ratio=ratio)
         single_point_info.to_json_file(dir_ / "single_point_info.json")
 
         correction = DephonCorrection({CorrectionType.extended_FNV: correction})
@@ -212,35 +214,38 @@ def make_ccd_correction(args):
     file_name = "ccd_correction.json"
 
     def _inner(dir_: Path):
-        single_point_info: SinglePointInfo \
+        single_point_info: SinglePoint \
             = loadfn(dir_ / "single_point_info.json")
 
         if single_point_info.disp_ratio == 0.0:
             return
 
         calc_results = get_calc_results(dir_, False)
-        minus_charge_diff = args.single_ccd.charge - args.to_charge
+        minus_charge_diff = args.potential_curve.charge - args.to_charge
         effective_charge = single_point_info.disp_ratio * minus_charge_diff
 
-        efnv = make_efnv_correction(effective_charge,
-                                    calc_results,
-                                    args.no_disp_calc_results,
-                                    args.unitcell.effective_ionic_diele_const,
-                                    args.no_disp_defect_entry.defect_center)
-        efnv.to_json_file(dir_ / file_name)
+        kumagai2023 = make_efnv_correction(effective_charge,
+                                           calc_results,
+                                           args.no_disp_calc_results,
+                                           args.unitcell.effective_ionic_diele_const,
+                                           args.no_disp_defect_entry.defect_center)
+        kumagai2023.to_json_file(dir_ / file_name)
 
-        title = args.single_ccd.name
+        title = args.potential_curve.name
         plotter = SitePotentialMplPlotter.from_efnv_corr(
-            title=title, efnv_correction=efnv)
+            title=title, efnv_correction=kumagai2023)
         plotter.construct_plot()
         plotter.plt.savefig(fname=dir_ / "ccd_correction.pdf")
         plotter.plt.clf()
 
+        kumagai2023 = loadfn(dir_ / file_name)
+
         correction = DephonCorrection.from_yaml(dir_ / "dephon_correction.yaml")
         correction.corrections[
-            str(CorrectionType.kumagai2023)] = efnv.correction_energy
+            str(CorrectionType.kumagai2023)] = float(kumagai2023.correction_energy)
+        correction.to_yaml_file(dir_ / "dephon_correction.yaml")
 
-    parse_dirs(args.dirs, _inner, output_filename=file_name)
+    parse_dirs(args.dirs, _inner, output_filename=file_name, verbose=True)
 
 
 def update_single_point_infos(args: Namespace):
@@ -251,10 +256,10 @@ def update_single_point_infos(args: Namespace):
 
         correction = DephonCorrection.from_yaml(dir_ / "dephon_correction.yaml")
 
-        localized_orbitals, valence_bands, conduction_bands = get_orbs(
+        localized_orbitals, valence_bands, conduction_bands = _get_band_edge_info(
             band_edge_orbital_infos, band_edge_states)
 
-        sp_info: SinglePointInfo = loadfn(dir_ / "single_point_info.json")
+        sp_info: SinglePoint = loadfn(dir_ / "single_point_info.json")
         sp_info.corrected_energy = calc_results.energy + correction.total_correction_energy
         sp_info.magnetization = calc_results.magnetization
         sp_info.localized_orbitals = localized_orbitals
@@ -270,9 +275,9 @@ def add_point_infos_to_single_ccd(args: Namespace):
     def _inner(dir_: Path):
         return loadfn(dir_ / "single_point_info.json")
 
-    single_ccd: SingleCcd = loadfn("single_ccd.json")
-    single_ccd.point_infos = parse_dirs(args.dirs, _inner, verbose=True)
-    single_ccd.to_json_file("single_ccd.json")
+    single_ccd: PotentialCurve = loadfn("potential_curve.json")
+    single_ccd.points = parse_dirs(args.dirs, _inner, verbose=True)
+    single_ccd.to_json_file("potential_curve.json")
 
 
 def make_ccd(args: Namespace):
@@ -282,7 +287,7 @@ def make_ccd(args: Namespace):
 
 
 def set_quadratic_fitting_q_range(args: Namespace):
-    single_ccd: SingleCcd = args.ccd.single_ccd(args.single_ccd_name)
+    single_ccd: PotentialCurve = args.ccd.potential_curve(args.single_ccd_name)
     single_ccd.set_quadratic_fitting_range(args.q_range)
     print(args.ccd)
     args.ccd.to_json_file()
@@ -327,14 +332,14 @@ def make_wswq_dirs(args: Namespace):
         _make_wswq_dir(dir_, args.dephon_init)
 
 
-def _make_wswq_dir(dir_, dephon_init: DephonInit):
+def _make_wswq_dir(dir_, dephon_init: ConfigCoordDiagInit):
     wswq_dir = (dir_ / "wswq")
     if wswq_dir.exists():
         logger.info(f"Directory {wswq_dir} exists, so skip creating it.")
         return
 
     charge = PriorInfo.load_yaml(dir_ / "prior_info.yaml").charge
-    original_dir = Path(dephon_init.min_info_from_charge(charge).parsed_dir)
+    original_dir = Path(dephon_init.relaxed_point_info_from_charge(charge).parsed_dir)
 
     wswq_dir.mkdir()
     logger.info(f"Directory {wswq_dir} was created.")
@@ -382,7 +387,7 @@ def make_e_p_matrix_element(args: Namespace):
 
 
 def make_capture_rate(args: Namespace):
-    dephon_init: DephonInit = args.dephon_init
+    dephon_init: ConfigCoordDiagInit = args.dephon_init
     e_p_matrix_elem: EPMatrixElement = args.e_p_matrix_elem
     if e_p_matrix_elem.e_p_matrix_element is None:
         raise ValueError
@@ -391,8 +396,8 @@ def make_capture_rate(args: Namespace):
     print(i_ccd)
     print(f_ccd)
 
-    i_min_info = dephon_init.min_info_from_charge(i_ccd.charge)
-    f_min_info = dephon_init.min_info_from_charge(f_ccd.charge)
+    i_min_info = dephon_init.relaxed_point_info_from_charge(i_ccd.charge)
+    f_min_info = dephon_init.relaxed_point_info_from_charge(f_ccd.charge)
     i_deg = i_min_info.degeneracy_by_symmetry_reduction
     f_deg = f_min_info.degeneracy_by_symmetry_reduction
 

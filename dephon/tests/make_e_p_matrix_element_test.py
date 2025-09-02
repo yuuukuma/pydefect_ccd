@@ -5,11 +5,11 @@ import pytest
 from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from pymatgen.electronic_structure.core import Spin
 
-from dephon.config_coord import SingleCcd, SinglePointInfo, SingleCcdId
-from dephon.dephon_init import BandEdgeState
+from dephon.config_coord import PotentialCurve, SinglePoint, CcdId
 from dephon.ele_phon_coupling import InnerProduct, EPMatrixElement
 from dephon.enum import Carrier
 from dephon.make_e_p_matrix_element import MakeEPMatrixElement
+from dephon.relaxed_point import BandEdgeState
 
 
 # @pytest.fixture
@@ -60,22 +60,21 @@ def single_ccd():
                         occupation=1.0)
 
     single_point_info = \
-        SinglePointInfo(dQ=1.0,
-                        disp_ratio=0.0,
-                        magnetization=-1.0,
-                        localized_orbitals=[[l_orb_lower, l_orb_upper], []],
-                        valence_bands=[[vbm], []],
-                        conduction_bands=[[cbm], []])
-    return SingleCcd(SingleCcdId("excited", carriers=[Carrier.e]),
-                     charge=0,
-                     point_infos=[single_point_info])
+        SinglePoint(dQ=1.0,
+                    disp_ratio=0.0,
+                    magnetization=-1.0,
+                    localized_orbitals=[[l_orb_lower, l_orb_upper], []],
+                    valence_bands=[[vbm], []],
+                    conduction_bands=[[cbm], []])
+    return PotentialCurve(CcdId("excited", carriers=[Carrier.e]),
+                          charge=0,
+                          points=[single_point_info])
 
 
 @pytest.fixture
 def make_e_p_coupling_h_capture(single_ccd):
     return MakeEPMatrixElement(base_disp_ratio=0.0,
                                single_ccd=single_ccd,
-                               captured_carrier=Carrier.h,
                                band_edge_index=101,
                                defect_band_index=102,
                                kpoint_index=1,
@@ -88,13 +87,12 @@ def test_make_e_p_matrix_element(make_e_p_coupling_h_capture):
     actual = make_e_p_coupling_h_capture.make()
     expected = EPMatrixElement(charge=0,
                                base_disp_ratio=0.0,
-                               captured_carrier=Carrier.h,
                                band_edge_index=101,
                                defect_band_index=102,
                                spin=Spin.up,
                                eigenvalue_diff=1.0,
                                kpt_idx=1,
-                               inner_products={0.0: InnerProduct(5.0),
+                               inner_products={0.0: InnerProduct(0.0),
                                                0.1: InnerProduct(50.0)})
     assert actual == expected
 

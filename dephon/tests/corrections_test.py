@@ -22,8 +22,9 @@ def test_correction_msonable(dephon_correction):
 
 
 def test_correction_yaml_round_trip(dephon_correction, tmpdir):
-    expected_str = f"""extended FNV: 1.0
+    expected_str = f"""extended_FNV: 1.0
 kumagai2023: 2.0
 """
+    print(dephon_correction.to_yaml())
     assert_yaml_roundtrip(dephon_correction, tmpdir, expected_str)
 

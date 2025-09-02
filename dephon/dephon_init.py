@@ -1,165 +1,45 @@
 # -*- coding: utf-8 -*-
 #  Copyright (c) 2022 Kumagai group.
 from dataclasses import dataclass
-from pathlib import Path
 from typing import List
 
 from monty.json import MSONable
-from numpy import sqrt, sum
-from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from pymatgen.analysis.defects.ccd import get_dQ
-from pymatgen.core import Structure
 from tabulate import tabulate
 from vise.util.logger import get_logger
 from vise.util.mix_in import ToJsonFileMixIn
-from vise.util.structure_symmetrizer import num_sym_op
 
 from dephon.enum import Carrier
+from dephon.relaxed_point import _joined_local_orbitals, RelaxedPoint
+from dephon.util import get_dR
 
 logger = get_logger(__name__)
 
 
-def get_dR(ground: Structure, excited: Structure) -> float:
-    """Summation of atomic displacement distance
-
-    Args:
-        ground (Structure): Reference structure
-        excited (Structure): Target structure
-
-    A constant offset should be removed, for example, by aligning the farthest
-    atom.
-
-    Returns:
-        The Summed atomic displacement distance in float
-    """
-    return sqrt(sum([x.distance(y) ** 2 for x, y in zip(ground, excited)]))
-
-
 @dataclass
-class BandEdgeState(MSONable):
-    band_index: int  # begin from 1.
-    kpt_coord: List[float]
-    kpt_weight: float
-    kpt_index: int  # begin from 1.
-    eigenvalue: float
-    occupation: float
-
-    def __str__(self):
-        k_coord = " ".join([f"{x:.2f}" for x in self.kpt_coord])
-        k = [f"index : {self.kpt_index}",
-             f"coord: {k_coord}",
-             f"weight: {self.kpt_weight}"]
-        x = [f"band index: {self.band_index}",
-             f"kpt info: ({', '.join(k)})",
-             f"eigenvalue: {self.eigenvalue:.2f}",
-             f"occupation: {self.occupation:.2f}"]
-        return ", ".join(x)
-
-
-def _joined_local_orbitals(localized_orbitals) -> str:
-    lo_str = []
-    for lo_by_spin, spin in zip(localized_orbitals, ["up", "down"]):
-        for lo_by_band in lo_by_spin:
-            occupation = f"{lo_by_band.occupation:.1f}"
-            lo_str.append(f"{spin}-{lo_by_band.band_idx}({occupation})")
-    return ", ".join(lo_str)
-
-
-@dataclass
-class RelaxedPointInfo(MSONable):
-    """Information at the relaxed structure for a given charge state
+class ConfigCoordDiagInit(MSONable, ToJsonFileMixIn):
+    """ Initial information related to the configuration coordination diagram.
 
     Attributes:
-        charge: The charge state.
-        structure: The atomic configuration.
-        energy: Formation energy at Ef=VBM and chemical potentials
-            being standard states.
-        correction_energy: Correction energy estimated e.g. by eFNV method.
-        magnetization: Magnetization
-        localized_orbitals: List of localized orbitals at each spin channel.
-            [Spin up orbitals, Spin down orbitals]
-        initial_site_symmetry (str): Site symmetry before relaxing the defect
-        final_site_symmetry (str): Site symmetry after relaxing the defect
-        vbm: valence band maximum in the unitcell calculation
-        cbm: conduction band minimum in the unitcell calculation
-        parse_dir (str): Directory where the calculation results of this
-            minimum point are stored. This should be an absolute path.
-    """
-    name: str
-    charge: int
-    structure: Structure
-    energy: float
-    correction_energy: float
-    magnetization: float
-    localized_orbitals: List[List[LocalizedOrbital]]
-    initial_site_symmetry: str
-    final_site_symmetry: str
-    valence_bands: List[List[BandEdgeState]]  # by spin
-    conduction_bands: List[List[BandEdgeState]]  # by spin
-    parsed_dir: str # absolute dir
-
-    @property
-    def full_name(self) -> str:
-        return f"{self.name}_{self.charge}"
-
-    @property
-    def corrected_energy(self) -> float:
-        return self.energy + self.correction_energy
-
-    @property
-    def degeneracy_by_symmetry_reduction(self) -> float:
-        initial_num_sym_op = num_sym_op[self.initial_site_symmetry]
-        final_num_sym_op = num_sym_op[self.final_site_symmetry]
-        return initial_num_sym_op / final_num_sym_op
-
-    @property
-    def dir_path(self) -> Path:
-        return Path(self.parsed_dir)
-
-    @property
-    def is_spin_polarized(self):
-        return abs(self.magnetization) > 0.95
-
-    @property
-    def relevant_band_indices(self) -> set:
-        result = set()
-
-        def add(bands):
-            for i in bands:
-                for j in i:
-                    try:
-                        result.add(j.band_index)
-                    except AttributeError:
-                        result.add(j.band_idx)
-
-        add(self.valence_bands)
-        add(self.localized_orbitals)
-        add(self.conduction_bands)
-        return result
-
-
-@dataclass
-class DephonInit(MSONable, ToJsonFileMixIn):
-    """ Information related to configuration coordination diagram.
-
-    Attributes:
-        relaxed_points (List[RelaxedPointInfo]): List of two relaxed defects.
-            the charge state difference should be 1.
+        relaxed_points (List[dephon.relaxed_point.RelaxedPoint]): List of two relaxed defects.
+            The charge state difference must be 1.
         vbm (float): valence band maximum in the unitcell calculation.
         cbm (float): conduction band minimum in the unitcell calculation.
         supercell_vbm (float): vbm in the perfect supercell calculation.
         supercell_cbm (float): cbm in the perfect supercell calculation.
-
+        ave_static_diele_const (float): Average of the static dielectric
+        ave_electron_mass (float): Average of the electron effective mass
+        ave_hole_mass (float): Average of the hole effective mass
     """
-    relaxed_points: List[RelaxedPointInfo]
+    relaxed_points: List[RelaxedPoint]
     vbm: float
     cbm: float
     supercell_vbm: float
     supercell_cbm: float
     supercell_volume: float
-    ave_electron_mass: float
-    ave_hole_mass: float
     ave_static_diele_const: float
+    ave_electron_mass: float = None
+    ave_hole_mass: float = None
 
     def __post_init__(self):
         assert len(self.relaxed_points) == 2

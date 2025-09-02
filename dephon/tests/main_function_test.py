@@ -16,11 +16,12 @@ from dephon.cli.main_function import make_dephon_init, make_ccd, plot_ccd, \
     make_ccd_dirs, make_wswq_dirs, update_single_point_infos, \
     add_point_infos_to_single_ccd, plot_eigenvalues, \
     set_quadratic_fitting_q_range, make_e_p_matrix_element
-from dephon.config_coord import SinglePointInfo, Ccd
+from dephon.config_coord import SinglePoint, ConfigCoordDiagram
 from dephon.corrections import DephonCorrection
-from dephon.dephon_init import DephonInit, MinimumPointInfo, BandEdgeState
+from dephon.dephon_init import ConfigCoordDiagInit
 from dephon.ele_phon_coupling import EPMatrixElement
 from dephon.enum import CorrectionType, Carrier
+from dephon.relaxed_point import BandEdgeState, RelaxedPoint
 
 
 def test_make_dephon_init(test_files, tmpdir):
@@ -33,15 +34,15 @@ def test_make_dephon_init(test_files, tmpdir):
                      p_state=loadfn(dir_ / "perfect_band_edge_state.json"),
                      effective_mass=loadfn(dir_ / "effective_mass.json"))
     make_dephon_init(args)
-    print(loadfn("cc/Va_O1_1__Va_O1_0/dephon_init.json"))
+    print(loadfn("cc/Va_O1_1⇆Va_O1_0/dephon_init.json"))
 
 
 def test_make_ccd_dirs(tmpdir, ground_structure, excited_structure,
                        intermediate_structure):
     print(tmpdir)
     tmpdir.chdir()
-    dephon_init = DephonInit(
-        min_points=[MinimumPointInfo(name="test",
+    dephon_init = ConfigCoordDiagInit(
+        relaxed_points=[RelaxedPoint(name="test",
                                      charge=1,
                                      structure=ground_structure,
                                      energy=10.0,
@@ -65,7 +66,7 @@ def test_make_ccd_dirs(tmpdir, ground_structure, excited_structure,
                                                         kpt_index=1,
                                                         eigenvalue=2.0,
                                                         occupation=0.0)]]),
-                    MinimumPointInfo(name="test",
+                        RelaxedPoint(name="test",
                                      charge=0,
                                      structure=excited_structure,
                                      energy=10.0,
@@ -76,21 +77,21 @@ def test_make_ccd_dirs(tmpdir, ground_structure, excited_structure,
                                      final_site_symmetry="",
                                      parsed_dir="",
                                      valence_bands=[
-                                         [BandEdgeState(band_index=10,
-                                                        kpt_coord=[0.0] * 3,
-                                                        kpt_weight=1.0,
-                                                        kpt_index=1,
-                                                        eigenvalue=1.0,
-                                                        occupation=1.0)]],
+                                             [BandEdgeState(band_index=10,
+                                                            kpt_coord=[0.0] * 3,
+                                                            kpt_weight=1.0,
+                                                            kpt_index=1,
+                                                            eigenvalue=1.0,
+                                                            occupation=1.0)]],
                                      conduction_bands=[
-                                         [BandEdgeState(band_index=11,
-                                                        kpt_coord=[0.0] * 3,
-                                                        kpt_weight=1.0,
-                                                        kpt_index=1,
-                                                        eigenvalue=2.0,
-                                                        occupation=0.0)]],
+                                             [BandEdgeState(band_index=11,
+                                                            kpt_coord=[0.0] * 3,
+                                                            kpt_weight=1.0,
+                                                            kpt_index=1,
+                                                            eigenvalue=2.0,
+                                                            occupation=0.0)]],
                                      ),
-                    ],
+                        ],
         vbm=-100.0, cbm=100.0, supercell_volume=10.0,
         supercell_vbm=-100.0, supercell_cbm=100.0,
         ave_electron_mass=1.0, ave_hole_mass=1.0, ave_static_diele_const=1.0)
@@ -112,11 +113,11 @@ def test_make_ccd_dirs(tmpdir, ground_structure, excited_structure,
     # dQ = sqrt((0.1*10)**2*6 * Element.H.atomic_mass)
     # dQ / 2 =1.2295974951178128
     actual = loadfn("from_1_to_0/disp_0.5/single_point_info.json")
-    expected = SinglePointInfo(dQ=1.2295974951178128, disp_ratio=0.5)
+    expected = SinglePoint(dQ=1.2295974951178128, disp_ratio=0.5)
     assert actual == expected
 
     actual = loadfn("from_0_to_1/disp_0.0/single_point_info.json")
-    expected = SinglePointInfo(dQ=0.0, disp_ratio=0.0)
+    expected = SinglePoint(dQ=0.0, disp_ratio=0.0)
     assert actual == expected
 
     actual = Structure.from_file("from_1_to_0/disp_1.0/POSCAR")
@@ -161,15 +162,15 @@ def test_add_point_infos_to_single_ccd(test_files, tmpdir):
     args = Namespace(dirs=[Path("disp_0.2")])
     add_point_infos_to_single_ccd(args)
 
-    actual = loadfn("single_ccd.json")
+    actual = loadfn("potential_curve.json")
     print(actual)
 
 
 def test_make_ccd(test_files, tmpdir):
     tmpdir.chdir()
     va_p1 = Path(test_files) / "NaP/Va_P1_-1__Va_P1_0"
-    ground_ccd = loadfn(va_p1 / "from_-1_to_0_after_make_single_point_infos/single_ccd.json")
-    excited_ccd = loadfn(va_p1 / "from_0_to_-1_after_make_single_point_infos/single_ccd.json")
+    ground_ccd = loadfn(va_p1 / "from_-1_to_0_after_make_single_point_infos/potential_curve.json")
+    excited_ccd = loadfn(va_p1 / "from_0_to_-1_after_make_single_point_infos/potential_curve.json")
     dephon_init = loadfn(va_p1 / "dephon_init.json")
     args = Namespace(ground_ccd=ground_ccd, excited_ccd=excited_ccd,
                      dephon_init=dephon_init)
@@ -180,8 +181,8 @@ def test_set_quadratic_fitting_q_range(ccd, tmpdir):
     tmpdir.chdir()
     args = Namespace(ccd=ccd, single_ccd_name="ground", q_range=[-1.0, 1.0])
     set_quadratic_fitting_q_range(args)
-    ccd: Ccd = loadfn("ccd.json")
-    assert ccd.ccds[1].point_infos[1].used_for_fitting is True
+    ccd: ConfigCoordDiagram = loadfn("ccd.json")
+    assert ccd.potential_curves[1].points[1].used_for_fitting is True
 
 
 def test_plot_ccd(ccd, tmpdir):
@@ -233,12 +234,12 @@ def test_make_wswq_dirs(tmpdir, mocker):
     min_point_info2.parsed_dir = str(tmpdir / "excited_original")
     min_point_info2.charge = 1
 
-    dephon_init = DephonInit(min_points=[min_point_info1, min_point_info2],
-                             vbm=1.0, cbm=2.0,
-                             supercell_volume=10.0,
-                             supercell_vbm=1.0, supercell_cbm=2.0,
-                             ave_electron_mass=1.0, ave_hole_mass=1.0,
-                             ave_static_diele_const=1.0)
+    dephon_init = ConfigCoordDiagInit(relaxed_points=[min_point_info1, min_point_info2],
+                                      vbm=1.0, cbm=2.0,
+                                      supercell_volume=10.0,
+                                      supercell_vbm=1.0, supercell_cbm=2.0,
+                                      ave_electron_mass=1.0, ave_hole_mass=1.0,
+                                      ave_static_diele_const=1.0)
 
     args = Namespace(dirs=[Path(f"ground/disp_-0.2"), Path(f"excited/disp_-0.2")],
                      dephon_init=dephon_init)
@@ -274,7 +275,7 @@ def test_make_e_p_matrix_element(tmpdir, test_files):
     tmpdir.chdir()
     dir_ = test_files / "NaP/Va_P1_-1__Va_P1_0/from_0_to_-1_after_make_single_point_infos"
     args = Namespace(base_disp=0.0,
-                     single_ccd=loadfn(dir_/"single_ccd.json"),
+                     single_ccd=loadfn(dir_/"potential_curve.json"),
                      captured_carrier=Carrier.e,
                      band_edge_index=767,
                      defect_band_index=766,
@@ -294,7 +295,7 @@ def test_make_e_p_matrix_element(tmpdir, test_files):
 #     tmpdir.chdir()
 #     dir_ = test_files / "NaP/Va_P1_-1__Va_P1_0/from_0_to_-1_after_make_single_point_infos"
 #     args = Namespace(base_disp=0.0,
-#                      single_ccd=loadfn(dir_/"single_ccd.json"),
+#                      potential_curve=loadfn(dir_/"potential_curve.json"),
 #                      captured_carrier=Carrier.e,
 #                      band_edge_index=767,
 #                      defect_band_index=766,

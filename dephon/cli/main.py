@@ -46,9 +46,8 @@ def parse_args_main(args):
     # -- make_dephon_init -----------------------------------
     parser_make_dephon_init = subparsers.add_parser(
         name="make_dephon_init",
-        description="Make dephon_init.json file from two directories with "
-                    "pydefect files. When the excited state has one more "
-                    "(less) charge state, n(p)-type is assumed.",
+        description="""Create a `dephon_init.json` file from two directories containing pydefect files.
+ If the excited state has one more (less) charge state, n-type (p-type) is assumed.""",
         parents=[unitcell_parser, pbes_parser],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=['mdi'])
@@ -67,8 +66,8 @@ def parse_args_main(args):
     # -- make_ccd_dirs -----------------------------------
     parser_add_ccd_dirs = subparsers.add_parser(
         name="make_ccd_dirs",
-        description="Make directories to calculate configuration coordination "
-                    "diagrams for ground and excited states.",
+        description=""" Make directories to calculate configuration coordinate 
+        diagrams for ground and excited states.""",
         parents=[dephon_init],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=['mcd'])
@@ -105,10 +104,7 @@ def parse_args_main(args):
     # -- add_point_infos_to_single_ccd -----------------------------------
     parser_add_point_infos_to_single_ccd = subparsers.add_parser(
         name="add_point_infos_to_single_ccd",
-        description="Make single_point_info.json at each directory. "
-                    "Before running this command, calc_results.json and "
-                    "band_edge_states.json files need to be created using "
-                    "pydefect.",
+        description="""""",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         parents=[dirs],
         aliases=['apsc'])
@@ -126,10 +122,10 @@ def parse_args_main(args):
 
     parser_make_ccd.add_argument(
         "-g", "--ground_ccd", type=loadfn,
-        help="single_ccd.json file corresponding to _default_single_ccd_for_e_p_coupling ground state.")
+        help="potential_curve.json file corresponding to _default_single_ccd_for_e_p_coupling ground state.")
     parser_make_ccd.add_argument(
         "-e", "--excited_ccd", type=loadfn,
-        help="single_ccd.json file corresponding to an excited state.")
+        help="potential_curve.json file corresponding to an excited state.")
     parser_make_ccd.set_defaults(func=make_ccd)
 
     # -- make_ccd_correction -----------------------------------
@@ -142,8 +138,8 @@ def parse_args_main(args):
         aliases=['mcc'])
 
     parser_make_ccd_correction.add_argument(
-        "-s", "--single_ccd", type=loadfn,
-        help="single_ccd.json file.")
+        "-s", "--potential_curve", type=loadfn,
+        help="potential_curve.json file.")
     parser_make_ccd_correction.add_argument(
         "--to_charge", type=int)
     parser_make_ccd_correction.add_argument(
@@ -245,10 +241,10 @@ def parse_args_main(args):
 
     parser_make_e_p_matrix_element.add_argument(
         "--base_disp", type=float, required=True,
-        help="Base displacement that must exist in single_ccd.json file.")
+        help="Base displacement that must exist in potential_curve.json file.")
     parser_make_e_p_matrix_element.add_argument(
-        "--single_ccd", type=loadfn, required=True,
-        help="single_ccd.json filename.")
+        "--potential_curve", type=loadfn, required=True,
+        help="potential_curve.json filename.")
     parser_make_e_p_matrix_element.add_argument(
         "--band_edge_index", type=int)
     parser_make_e_p_matrix_element.add_argument(

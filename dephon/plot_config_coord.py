@@ -5,13 +5,13 @@ from matplotlib import pyplot as plt
 from vise.util.logger import get_logger
 from vise.util.matplotlib import float_to_int_formatter
 
-from dephon.config_coord import Ccd
+from dephon.config_coord import ConfigCoordDiagram
 
 logger = get_logger(__name__)
 
 
 class CcdPlotter:
-    def __init__(self, ccd: Ccd,
+    def __init__(self, ccd: ConfigCoordDiagram,
                  title: str = None,
                  set_energy_zero: bool = True):
         self._title = title or ""
@@ -28,7 +28,7 @@ class CcdPlotter:
 
     def _add_ccd(self):
         ax = self.plt.gca()
-        for imag_infos in self._ccd.ccds:
+        for imag_infos in self._ccd.potential_curves:
             imag_infos.add_plot(ax, "black")
 
     def _set_labels(self):

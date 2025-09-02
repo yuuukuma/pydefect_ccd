@@ -6,7 +6,7 @@ import numpy as np
 from pymatgen.electronic_structure.core import Spin
 from vise.util.logger import get_logger
 
-from dephon.config_coord import SingleCcd
+from dephon.config_coord import PotentialCurve
 from dephon.ele_phon_coupling import EPMatrixElement, InnerProduct
 from dephon.util import spin_to_idx
 
@@ -19,7 +19,7 @@ wswq_type = Dict[Optional[Tuple[int, int]], Dict[Tuple[int, int], complex]]
 class MakeEPMatrixElement:
     def __init__(self,
                  base_disp_ratio: float,
-                 single_ccd: SingleCcd,
+                 single_ccd: PotentialCurve,
                  band_edge_index: int,
                  defect_band_index: int,
                  kpoint_index: int,
@@ -32,7 +32,7 @@ class MakeEPMatrixElement:
         self.band_edge_index = band_edge_index
         self.defect_band_index = defect_band_index
 
-        single_point_info = single_ccd.disp_point_info(base_disp_ratio)
+        single_point_info = single_ccd.get_single_point_by_disp_ratio(base_disp_ratio)
         if energy_diff:
             self.energy_diff = energy_diff
         else:

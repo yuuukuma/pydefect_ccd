@@ -4,6 +4,8 @@ import re
 from pathlib import Path
 from typing import List
 
+from numpy import sqrt, sum
+from pymatgen.core import Structure
 from pymatgen.electronic_structure.core import Spin
 
 
@@ -47,3 +49,19 @@ def _append_ij(line, orbitals, out):
     i, j = int(data.group(1)), int(data.group(2))
     if i in orbitals and j in orbitals:
         out.append(line)
+
+
+def get_dR(ground: Structure, excited: Structure) -> float:
+    """Summation of atomic displacement distances
+
+    Args:
+        ground (Structure): Reference structure
+        excited (Structure): Target structure
+
+    A constant offset should be removed, for example, by aligning the farthest
+    atom.
+
+    Returns:
+        The Summed atomic displacement distance in float
+    """
+    return sqrt(sum([x.distance(y) ** 2 for x, y in zip(ground, excited)]))
