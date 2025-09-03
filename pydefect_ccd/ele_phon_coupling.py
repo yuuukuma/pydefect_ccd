@@ -4,11 +4,12 @@ from dataclasses import dataclass, field
 from typing import Union, Dict
 
 import numpy as np
-from dephon.util import spin_to_idx
 from monty.json import MSONable
 from pymatgen.electronic_structure.core import Spin
 from tabulate import tabulate
 from vise.util.mix_in import ToJsonFileMixIn
+
+from pydefect_ccd.util import spin_to_idx
 
 
 @dataclass

@@ -3,9 +3,10 @@
 from math import sqrt
 from pathlib import Path
 
-from dephon.util import spin_to_idx, idx_to_spin, reduce_wswq, get_dR
 from pymatgen.core import Lattice, Structure
 from pymatgen.electronic_structure.core import Spin
+
+from pydefect_ccd.util import spin_to_idx, idx_to_spin, reduce_wswq, get_dR
 
 
 def test_spin_to_idx():

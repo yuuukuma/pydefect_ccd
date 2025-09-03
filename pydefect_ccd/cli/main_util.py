@@ -5,10 +5,11 @@ import sys
 import warnings
 from pathlib import Path
 
-from dephon.cli.main_util_function import reduce_wswq_auto
-from dephon.version import __version__
 from monty.serialization import loadfn
 from pymatgen.io.vasp.inputs import UnknownPotcarWarning
+
+from pydefect_ccd.cli.main_util_function import reduce_wswq_auto
+from pydefect_ccd.version import __version__
 
 warnings.simplefilter('ignore', UnknownPotcarWarning)
 
@@ -24,9 +25,8 @@ def parse_args_main(args):
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
     subparsers = parser.add_subparsers()
 
-    dephon_init = argparse.ArgumentParser(description="", add_help=False)
-    dephon_init.add_argument(
-            "--dephon_init", type=loadfn, default="dephon_init.json")
+    ccd_init = argparse.ArgumentParser(description="", add_help=False)
+    ccd_init.add_argument("--ccd_init", type=loadfn, default="ccd_init.json")
 
     ccd = argparse.ArgumentParser(description="", add_help=False)
     ccd.add_argument(
@@ -36,7 +36,7 @@ def parse_args_main(args):
     parser_reduce_wswq_auto = subparsers.add_parser(
         name="reduce_wswq_auto",
         description="",
-        parents=[dephon_init],
+        parents=[ccd_init],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=['rwa'])
 

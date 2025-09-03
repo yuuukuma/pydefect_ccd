@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 #  Copyright (c) 2022 Kumagai group.
 import pytest
-from dephon.ccd_init import CcdInit
-from dephon.config_coord import SinglePointResult, PotentialCurve, Ccd, \
-    CcdId
-from dephon.enum import Carrier
-from dephon.make_config_coord import MakeCcd
-from dephon.relaxed_point import RelaxedPoint
+
+from pydefect_ccd.ccd_init import CcdInit
+from pydefect_ccd.config_coord import SinglePointResult, PotentialCurve, Ccd
+from pydefect_ccd.enum import Carrier
+from pydefect_ccd.make_config_coord import MakeCcd
+from pydefect_ccd.relaxed_point import RelaxedPoint
 
 band_edges = dict(vbm=1.0, cbm=3.0, supercell_vbm=1.1, supercell_cbm=2.9)
 

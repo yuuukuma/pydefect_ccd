@@ -6,9 +6,6 @@ from math import isclose
 from typing import List, Optional, Dict, Tuple
 
 import numpy as np
-from dephon.enum import Carrier
-from dephon.relaxed_point import NearEdgeState, _joined_local_orbitals
-from dephon.util import spin_to_idx
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from monty.json import MSONable
@@ -20,6 +17,10 @@ from tabulate import tabulate
 from vise.util.logger import get_logger
 from vise.util.matplotlib import float_to_int_formatter
 from vise.util.mix_in import ToJsonFileMixIn
+
+from pydefect_ccd.enum import Carrier
+from pydefect_ccd.relaxed_point import NearEdgeState, _joined_local_orbitals
+from pydefect_ccd.util import spin_to_idx
 
 logger = get_logger(__name__)
 

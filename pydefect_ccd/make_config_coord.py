@@ -2,10 +2,11 @@
 #  Copyright (c) 2022 Kumagai group.
 from copy import deepcopy
 
-from dephon.ccd_init import CcdInit
-from dephon.config_coord import PotentialCurve, Ccd, CcdId
-from dephon.enum import Carrier, BandEdge
 from vise.util.logger import get_logger
+
+from pydefect_ccd.ccd_init import CcdInit
+from pydefect_ccd.config_coord import PotentialCurve, Ccd
+from pydefect_ccd.enum import Carrier, BandEdge
 
 logger = get_logger(__name__)
 

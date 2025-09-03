@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 #  Copyright (c) 2022 Kumagai group.
 
-from dephon.config_coord import Ccd
 from matplotlib import pyplot as plt
 from vise.util.logger import get_logger
 from vise.util.matplotlib import float_to_int_formatter
+
+from pydefect_ccd.config_coord import Ccd
 
 logger = get_logger(__name__)
 

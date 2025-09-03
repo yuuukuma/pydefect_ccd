@@ -5,17 +5,18 @@ import sys
 import warnings
 from pathlib import Path
 
-from dephon.cli.main_function import make_ccd_init, make_ccd, \
-    make_ccd_dirs, plot_ccd, plot_eigenvalues, set_quadratic_fitting_q_range, \
-    make_wswq_dirs, update_single_point_infos, add_point_infos_to_single_ccd, \
-    make_e_p_matrix_element, make_capture_rate, plot_capture_rate, \
-    make_ccd_correction
-from dephon.enum import Carrier
-from dephon.version import __version__
 from monty.serialization import loadfn
 from pydefect.cli.main import add_sub_parser
 from pymatgen.electronic_structure.core import Spin
 from pymatgen.io.vasp.inputs import UnknownPotcarWarning
+
+from pydefect_ccd.cli.main_function import make_ccd_init, make_ccd, \
+    make_ccd_dirs, plot_ccd, plot_eigenvalues, set_quadratic_fitting_q_range, \
+    make_wswq_dirs, update_single_point_infos, add_point_infos_to_single_ccd, \
+    make_e_p_matrix_element, make_capture_rate, plot_capture_rate, \
+    make_ccd_correction
+from pydefect_ccd.enum import Carrier
+from pydefect_ccd.version import __version__
 
 warnings.simplefilter('ignore', UnknownPotcarWarning)
 
@@ -34,40 +35,39 @@ def parse_args_main(args):
     pbes_parser = add_sub_parser(argparse, name="perfect_band_edge_state")
     dirs = add_sub_parser(argparse, name="dirs")
 
-    dephon_init = argparse.ArgumentParser(description="", add_help=False)
-    dephon_init.add_argument(
-            "--dephon_init", type=loadfn, default="dephon_init.json")
+    ccd_init = argparse.ArgumentParser(description="", add_help=False)
+    ccd_init.add_argument("--ccd_init", type=loadfn, default="ccd_init.json")
 
     ccd = argparse.ArgumentParser(description="", add_help=False)
     ccd.add_argument(
         "--ccd", type=loadfn, default="ccd.json")
 
     # -- make_ccd_init -----------------------------------
-    parser_make_dephon_init = subparsers.add_parser(
+    parser_make_ccd_init = subparsers.add_parser(
         name="make_ccd_init",
-        description="""Create a `dephon_init.json` file from two directories containing pydefect files.
+        description="""Create a `ccd_init.json` file from two directories containing pydefect files.
  If the excited state has one more (less) charge state, n-type (p-type) is assumed.""",
         parents=[unitcell_parser, pbes_parser],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=['mdi'])
 
-    parser_make_dephon_init.add_argument(
+    parser_make_ccd_init.add_argument(
         "-fd", "--first_dir", type=Path, required=True,
         help="First directory considered for ccd, e.g., Va_O1_0.")
-    parser_make_dephon_init.add_argument(
+    parser_make_ccd_init.add_argument(
         "-sd", "--second_dir", type=Path, required=True,
         help="Second directory considered for ccd, e.g., Va_O1_1.")
-    parser_make_dephon_init.add_argument(
+    parser_make_ccd_init.add_argument(
         "-em", "--effective_mass", type=loadfn, required=True,
         help="effective_mass.json file.")
-    parser_make_dephon_init.set_defaults(func=make_ccd_init)
+    parser_make_ccd_init.set_defaults(func=make_ccd_init)
 
     # -- make_ccd_dirs -----------------------------------
     parser_add_ccd_dirs = subparsers.add_parser(
         name="make_ccd_dirs",
         description=""" Make directories to calculate configuration coordinate 
         diagrams for ground and excited states.""",
-        parents=[dephon_init],
+        parents=[ccd_init],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=['mcd'])
 
@@ -115,7 +115,7 @@ def parse_args_main(args):
     parser_make_ccd = subparsers.add_parser(
         name="make_ccd",
         description="Make ccd.json file",
-        parents=[dephon_init],
+        parents=[ccd_init],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=['mc'])
 
@@ -187,7 +187,7 @@ def parse_args_main(args):
     # -- plot_eigenvalues -----------------------------------
     parser_plot_eigenvalues = subparsers.add_parser(
         name="plot_eigenvalues",
-        parents=[dephon_init, dirs],
+        parents=[ccd_init, dirs],
         description="Plot eigenvalues as function of displacement ratio. "
                     "band_edge_orbital_infos.json is needed at each directory.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -201,7 +201,7 @@ def parse_args_main(args):
     # # -- make_initial_e_p_coupling -----------------------------------
     # parser_make_initial_e_p_coupling = subparsers.add_parser(
     #     name="make_initial_e_p_coupling",
-    #     parents=[dephon_init, ccd],
+    #     parents=[ccd_init, ccd],
     #     description="Make initial e_p_coupling.json file.",
     #     formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     #     aliases=['miepc'])
@@ -225,7 +225,7 @@ def parse_args_main(args):
         aliases=['mwd'])
 
     parser_make_wswq_dirs.add_argument(
-        "--dephon_init", type=loadfn, default="dephon_init.json")
+        "--ccd_init", type=loadfn, default="ccd_init.json")
     parser_make_wswq_dirs.add_argument(
         "--dirs", type=Path, nargs="+", default=[])
 
@@ -263,7 +263,7 @@ def parse_args_main(args):
     parser_make_capture_rate = subparsers.add_parser(
         name="make_capture_rate",
         description="Make directories for calculating WSWQ files.",
-        parents=[dephon_init, ccd],
+        parents=[ccd_init, ccd],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=['mcr'])
 

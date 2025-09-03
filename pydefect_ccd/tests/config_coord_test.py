@@ -4,11 +4,12 @@ from copy import deepcopy
 
 import numpy as np
 import pytest
-from dephon.config_coord import Ccd, SinglePointResult, CcdPlotter, \
-    PotentialCurve, spline3, captured_carrier, CarrierDiffError
-from dephon.enum import CorrectionType, Carrier
 from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from vise.tests.helpers.assertion import assert_dataclass_almost_equal
+
+from pydefect_ccd.config_coord import Ccd, SinglePointResult, CcdPlotter, \
+    PotentialCurve, spline3, captured_carrier, CarrierDiffError
+from pydefect_ccd.enum import CorrectionType, Carrier
 
 
 @pytest.fixture

@@ -3,11 +3,12 @@
 from typing import Dict, Tuple, Optional, List
 
 import numpy as np
-from dephon.config_coord import PotentialCurve
-from dephon.ele_phon_coupling import EPMatrixElement, InnerProduct
-from dephon.util import spin_to_idx
 from pymatgen.electronic_structure.core import Spin
 from vise.util.logger import get_logger
+
+from pydefect_ccd.config_coord import PotentialCurve
+from pydefect_ccd.ele_phon_coupling import EPMatrixElement, InnerProduct
+from pydefect_ccd.util import spin_to_idx
 
 logger = get_logger(__name__)
 

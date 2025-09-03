@@ -1,4 +1,4 @@
-dephon
+pydefect_ccd
 ===========
 
 Requirements
@@ -16,7 +16,7 @@ Workflow
 -----------------------------------------
 The workflow is depicted above.
 
-1. Create a `dephon_init.json` file from two directories containing pydefect files. 
+1. Create a `ccd_init.json` file from two directories containing pydefect files. 
 If the excited state has one more (less) charge state, n-type (p-type) is assumed.
 
 2. Make directories to calculate configuration coordinate diagrams for ground and excited states.

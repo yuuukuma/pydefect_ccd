@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 #  Copyright (c) 2022 Kumagai group.
-from dephon.ele_phon_coupling import InnerProduct
 from matplotlib import pyplot as plt
 from numpy.testing import assert_almost_equal
 from vise.tests.helpers.assertion import assert_json_roundtrip
+
+from pydefect_ccd.ele_phon_coupling import InnerProduct
 
 
 def test_e_p_coupling_to_json_file(e_p_coupling, tmpdir):

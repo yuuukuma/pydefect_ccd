@@ -2,7 +2,7 @@
 #  Copyright (c) 2022 Kumagai group.
 import pytest
 
-from dephon.capture_rate import CaptureRate
+from pydefect_ccd.capture_rate import CaptureRate
 
 
 @pytest.fixture

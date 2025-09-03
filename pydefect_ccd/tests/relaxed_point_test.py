@@ -3,8 +3,9 @@
 from copy import copy
 
 import pytest
-from dephon.relaxed_point import NearEdgeState, RelaxedPoint
 from pydefect.analyzer.band_edge_states import LocalizedOrbital
+
+from pydefect_ccd.relaxed_point import NearEdgeState, RelaxedPoint
 
 vb_nes = NearEdgeState(band_index=1,
                        kpt_coord=[0.0]*3,

@@ -4,11 +4,12 @@ from dataclasses import dataclass
 from typing import List
 
 import numpy as np
-from dephon.config_coord import PotentialCurve
 from monty.json import MSONable
 from nonrad import get_C
 from tabulate import tabulate
 from vise.util.mix_in import ToJsonFileMixIn
+
+from pydefect_ccd.config_coord import PotentialCurve
 
 
 @dataclass

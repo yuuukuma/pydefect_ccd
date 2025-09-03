@@ -2,17 +2,18 @@
 #  Copyright (c) 2022 Kumagai group.
 
 import pytest
-from dephon.config_coord import PotentialCurve, SinglePointResult, CcdId
-from dephon.ele_phon_coupling import InnerProduct, EPMatrixElement
-from dephon.enum import Carrier
-from dephon.make_e_p_matrix_element import MakeEPMatrixElement
-from dephon.relaxed_point import NearEdgeState
 from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from pymatgen.electronic_structure.core import Spin
 
+from pydefect_ccd.config_coord import PotentialCurve, SinglePointResult, CcdId
+from pydefect_ccd.ele_phon_coupling import InnerProduct, EPMatrixElement
+from pydefect_ccd.enum import Carrier
+from pydefect_ccd.make_e_p_matrix_element import MakeEPMatrixElement
+from pydefect_ccd.relaxed_point import NearEdgeState
+
 
 # @pytest.fixture
-# def dephon_init():
+# def ccd_init():
 #     lattice = Lattice.cubic(2.0)
 #     coords = [[0.0, 0.0, 0.0]]
 #     vbm = BandEdgeState(band_index=101, kpt_coord=[0.0] * 3, kpt_weight=1.0, kpt_index=1, eigenvalue=1000.0, occupation=0.0)

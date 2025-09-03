@@ -4,14 +4,15 @@ from copy import copy
 from pathlib import Path
 
 import pytest
-from dephon.ccd_init import CcdInit
-from dephon.config_coord import SinglePointResult, Ccd, PotentialCurve
-from dephon.ele_phon_coupling import InnerProduct, EPMatrixElement
-from dephon.enum import Carrier
-from dephon.relaxed_point import NearEdgeState, RelaxedPoint
 from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from pymatgen.core import Structure, Lattice
 from pymatgen.electronic_structure.core import Spin
+
+from pydefect_ccd.ccd_init import CcdInit
+from pydefect_ccd.config_coord import SinglePointResult, Ccd, PotentialCurve
+from pydefect_ccd.ele_phon_coupling import InnerProduct, EPMatrixElement
+from pydefect_ccd.enum import Carrier
+from pydefect_ccd.relaxed_point import NearEdgeState, RelaxedPoint
 
 
 @pytest.fixture(scope="session")
@@ -88,7 +89,7 @@ cb = NearEdgeState(band_index=2,
 
 
 @pytest.fixture
-def dephon_init(ground_structure, excited_structure):
+def ccd_init(ground_structure, excited_structure):
     orb_info = LocalizedOrbital(band_idx=2,
                                 ave_energy=2.0,
                                 occupation=1.0,

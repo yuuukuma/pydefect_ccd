@@ -2,8 +2,9 @@
 #  Copyright (c) 2022 Kumagai group.
 from copy import deepcopy
 
-from dephon.plot_eigenvalues import DephonEigenvaluePlotter
 from pydefect.analyzer.band_edge_states import BandEdgeOrbitalInfos, OrbitalInfo
+
+from pydefect_ccd.plot_eigenvalues import CcdEigenvaluePlotter
 
 
 def test_eigenvalue_plotter(mocker):
@@ -32,7 +33,7 @@ def test_eigenvalue_plotter(mocker):
     i4 = deepcopy(i1)
     i4.orbital_infos[0][0][2].energy = 0.3
 
-    plotter = DephonEigenvaluePlotter(orb_infos=[i1, i2, i3, i4],
+    plotter = CcdEigenvaluePlotter(orb_infos=[i1, i2, i3, i4],
                                       disp_ratios=[-0.1, 0.0, 0.4, 0.8],
                                       supercell_vbm=-1.0,
                                       supercell_cbm=1.0)

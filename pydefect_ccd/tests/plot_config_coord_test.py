@@ -3,9 +3,9 @@
 
 import pytest
 
-from dephon.config_coord import Ccd, SinglePointResult, CcdPlotter, \
-    PotentialCurve, CcdId
-from dephon.enum import Carrier
+from pydefect_ccd.config_coord import (Ccd, SinglePointResult, CcdPlotter,
+                                       PotentialCurve)
+from pydefect_ccd.enum import Carrier
 
 
 @pytest.fixture

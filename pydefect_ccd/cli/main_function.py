@@ -7,18 +7,6 @@ from typing import List, Tuple
 
 import numpy as np
 import yaml
-from dephon.capture_rate import calc_phonon_overlaps, CaptureRate
-from dephon.ccd_init import CcdInit
-from dephon.config_coord import SinglePointResult, CcdPlotter, \
-    PotentialCurve, CcdId
-from dephon.corrections import DephonCorrection
-from dephon.ele_phon_coupling import EPMatrixElement
-from dephon.enum import CorrectionType
-from dephon.make_config_coord import MakeCcd
-from dephon.make_e_p_matrix_element import MakeEPMatrixElement
-from dephon.plot_eigenvalues import DephonEigenvaluePlotter
-from dephon.relaxed_point import NearEdgeState, RelaxedPoint
-from dephon.util import spin_to_idx
 from matplotlib import pyplot as plt
 from monty.serialization import loadfn
 from nonrad.elphon import _read_WSWQ
@@ -38,6 +26,18 @@ from vise.input_set.incar import ViseIncar
 from vise.input_set.prior_info import PriorInfo
 from vise.util.file_transfer import FileLink
 from vise.util.logger import get_logger
+
+from pydefect_ccd.capture_rate import calc_phonon_overlaps, CaptureRate
+from pydefect_ccd.ccd_init import CcdInit
+from pydefect_ccd.config_coord import SinglePointResult, CcdPlotter, \
+    PotentialCurve
+from pydefect_ccd.ele_phon_coupling import EPMatrixElement
+from pydefect_ccd.enum import CorrectionType
+from pydefect_ccd.make_config_coord import MakeCcd
+from pydefect_ccd.make_e_p_matrix_element import MakeEPMatrixElement
+from pydefect_ccd.plot_eigenvalues import CcdEigenvaluePlotter
+from pydefect_ccd.relaxed_point import NearEdgeState, RelaxedPoint
+from pydefect_ccd.util import spin_to_idx
 
 logger = get_logger(__name__)
 
@@ -118,7 +118,7 @@ def make_ccd_init(args: Namespace):
     min_point_2 = _make_relaxed_point_from_dir(args.second_dir)
 
     path = Path(f"cc/{min_point_1.full_name}⇆{min_point_2.full_name}")
-    json_file = path / "dephon_init.json"
+    json_file = path / "ccd_init.json"
 
     if json_file.exists():
         logger.info(f"{json_file} exists. Remove it first to recreate it.")
@@ -136,7 +136,7 @@ def make_ccd_init(args: Namespace):
     else:
         ave_hole_mass, ave_electron_mass = None, None
 
-    dephon_init = CcdInit(relaxed_points=[min_point_1, min_point_2],
+    ccd_init = CcdInit(relaxed_points=[min_point_1, min_point_2],
                           vbm=args.unitcell.vbm,
                           cbm=args.unitcell.cbm,
                           supercell_volume=volume,
@@ -155,13 +155,13 @@ def make_ccd_init(args: Namespace):
 user_incar_settings:
   NSW: 1""")
 
-    dephon_init.to_json_file(json_file)
-    logger.info(dephon_init)
+    ccd_init.to_json_file(json_file)
+    logger.info(ccd_init)
 
 
 def make_ccd_dirs(args: Namespace):
     os.chdir(args.calc_dir)
-    d_init = args.dephon_init
+    d_init = args.ccd_init
     s1 = d_init.relaxed_points[0].structure
     s2 = d_init.relaxed_points[1].structure
     s1_to_s2 = s1.interpolate(s2, nimages=args.first_to_second_div_ratios)
@@ -178,7 +178,7 @@ def make_ccd_dirs(args: Namespace):
                  args.second_to_first_div_ratios],
                 [s1_to_s2, s2_to_s1],
                 initial_charges, final_charges, correction_energies):
-        dQs = [args.dephon_init.dQ * r for r in ratios]
+        dQs = [args.ccd_init.dQ * r for r in ratios]
         name = f"from_{initial_charge}_to_{final_charge}"
 
         for ratio, structure, dQ in zip(ratios, structures, dQs):
@@ -203,7 +203,7 @@ def _make_ccd_dir(charge, dirname, ratio, structure, dQ, correction):
         single_point_info.to_json_file(dir_ / "single_point_info.json")
 
         correction = DephonCorrection({CorrectionType.extended_FNV: correction})
-        correction.to_yaml_file(dir_ / "dephon_correction.yaml")
+        correction.to_yaml_file(dir_ / "ccd_correction.yaml")
 
     except FileExistsError:
         logger.info(f"Directory {dir_} exists, so skip it.")
@@ -319,8 +319,8 @@ def plot_eigenvalues(args: Namespace):
         disp_ratios.append(single_point_info.disp_ratio)
 
     vbm, cbm = args.dephon_init.supercell_vbm, args.dephon_init.supercell_cbm
-    eigval_plotter = DephonEigenvaluePlotter(orb_infos, disp_ratios, vbm, cbm,
-                                             y_range=args.y_range)
+    eigval_plotter = CcdEigenvaluePlotter(orb_infos, disp_ratios, vbm, cbm,
+                                          y_range=args.y_range)
     eigval_plotter.construct_plot()
     eigval_plotter.plt.savefig("dephon_eigenvalues.pdf")
     eigval_plotter.plt.show()

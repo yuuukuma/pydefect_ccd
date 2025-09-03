@@ -3,13 +3,14 @@
 from argparse import Namespace
 from pathlib import Path
 
-from dephon.ccd_init import CcdInit
-from dephon.cli.main import parse_args_main
-from dephon.cli.main_function import update_single_point_infos, make_ccd, \
-    plot_eigenvalues, add_point_infos_to_single_ccd
-from dephon.config_coord import Ccd, PotentialCurve
 from pydefect.analyzer.band_edge_states import PerfectBandEdgeState
 from vise.analyzer.effective_mass import EffectiveMass
+
+from pydefect_ccd.ccd_init import CcdInit
+from pydefect_ccd.cli.main import parse_args_main
+from pydefect_ccd.cli.main_function import update_single_point_infos, make_ccd, \
+    plot_eigenvalues, add_point_infos_to_single_ccd
+from pydefect_ccd.config_coord import Ccd, PotentialCurve
 
 
 def loadfn_effect(d: dict):
@@ -21,7 +22,7 @@ def loadfn_effect(d: dict):
     return side_effect
 
 
-def test_main_make_dephon_init(mocker):
+def test_main_make_ccd_init(mocker):
     mock_unitcell = mocker.patch("pydefect.cli.main.Unitcell")
     mock_p_band_edge_state = mocker.Mock(spec=PerfectBandEdgeState, autospec=True)
     mock_effective_mass = mocker.Mock(spec=EffectiveMass, autospec=True)
@@ -30,7 +31,7 @@ def test_main_make_dephon_init(mocker):
         {"perfect_band_edge_state.json": mock_p_band_edge_state,
          "effective_mass.json": mock_effective_mass})
     mocker.patch("pydefect.cli.main.loadfn", side_effect=side_effect)
-    mocker.patch("dephon.cli.main.loadfn", side_effect=side_effect)
+    mocker.patch("pydefect_ccd.cli.main.loadfn", side_effect=side_effect)
     parsed_args = parse_args_main(["mdi",
                                    "-fd", "Va_O1_0",
                                    "-sd", "Va_O1_1",
@@ -50,13 +51,13 @@ def test_main_make_dephon_init(mocker):
 
 
 def test_main_make_dirs(mocker):
-    mock_dephon_init = mocker.Mock(spec=CcdInit, autospec=True)
-    side_effect = loadfn_effect({"dephon_init.json": mock_dephon_init})
-    mocker.patch("dephon.cli.main.loadfn", side_effect=side_effect)
+    mock_ccd_init = mocker.Mock(spec=CcdInit, autospec=True)
+    side_effect = loadfn_effect({"ccd_init.json": mock_ccd_init})
+    mocker.patch("pydefect_ccd.cli.main.loadfn", side_effect=side_effect)
 
     parsed_args = parse_args_main(["mcd"])
     expected = Namespace(
-        dephon_init=mock_dephon_init,
+        ccd_init=mock_ccd_init,
         first_to_second_div_ratios=[-0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
         second_to_first_div_ratios=[-0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
         calc_dir=Path.cwd(),
@@ -66,7 +67,7 @@ def test_main_make_dirs(mocker):
     parsed_args = parse_args_main(["mcd", "-fsr", "0.0", "-sfr", "0.1",
                                    "-d", "dirname"])
     expected = Namespace(
-        dephon_init=mock_dephon_init,
+        ccd_init=mock_ccd_init,
         first_to_second_div_ratios=[0.0],
         second_to_first_div_ratios=[0.1],
         calc_dir=Path("dirname"),
@@ -87,21 +88,21 @@ def test_main_add_point_infos_to_single_ccd():
 
 
 def test_main_make_ccd_wo_args(mocker):
-    mock_dephon_init = mocker.Mock(spec=CcdInit, autospec=True)
+    mock_ccd_init = mocker.Mock(spec=CcdInit, autospec=True)
     mock_ground_single_ccd = mocker.Mock(spec=PotentialCurve, autospec=True)
     mock_excited_single_ccd = mocker.Mock(spec=PotentialCurve, autospec=True)
     side_effect = loadfn_effect(
-        {"dephon_init.json": mock_dephon_init,
+        {"ccd_init.json": mock_ccd_init,
          "ground_single_ccd.json": mock_ground_single_ccd,
          "excited_single_ccd.json": mock_excited_single_ccd})
 
-    mocker.patch("dephon.cli.main.loadfn", side_effect=side_effect)
+    mocker.patch("pydefect_ccd.cli.main.loadfn", side_effect=side_effect)
 
     parsed_args = parse_args_main(["mc",
                                    "-g", "ground_single_ccd.json",
                                    "-e", "excited_single_ccd.json"])
     expected = Namespace(
-        dephon_init=mock_dephon_init,
+        ccd_init=mock_ccd_init,
         ground_ccd=mock_ground_single_ccd,
         excited_ccd=mock_excited_single_ccd,
         func=make_ccd)
@@ -111,7 +112,7 @@ def test_main_make_ccd_wo_args(mocker):
 def test_main_set_quadratic_fitting_q_range(mocker):
     mock_ccd = mocker.Mock(spec=Ccd, autospec=True)
     side_effect = loadfn_effect({"ccd.json": mock_ccd})
-    mocker.patch("dephon.cli.main.loadfn", side_effect=side_effect)
+    mocker.patch("pydefect_ccd.cli.main.loadfn", side_effect=side_effect)
 
     parsed_args = parse_args_main(
         ["sfr", "--single_ccd_name", "ground", "--q_range", "-1.0", "1.0"])
@@ -126,7 +127,7 @@ def test_main_set_quadratic_fitting_q_range(mocker):
 def test_main_plot_ccd_wo_args(mocker):
     mock_ccd = mocker.Mock(spec=Ccd, autospec=True)
     side_effect = loadfn_effect({"ccd.json": mock_ccd})
-    mocker.patch("dephon.cli.main.loadfn", side_effect=side_effect)
+    mocker.patch("pydefect_ccd.cli.main.loadfn", side_effect=side_effect)
 
     parsed_args = parse_args_main(["pc"])
     expected = Namespace(
@@ -140,14 +141,14 @@ def test_main_plot_ccd_wo_args(mocker):
 
 
 def test_main_plot_eigenvalues(mocker):
-    mock_dephon_init = mocker.Mock(spec=CcdInit, autospec=True)
-    side_effect = loadfn_effect({"dephon_init.json": mock_dephon_init})
-    mocker.patch("dephon.cli.main.loadfn", side_effect=side_effect)
+    mock_ccd_init = mocker.Mock(spec=CcdInit, autospec=True)
+    side_effect = loadfn_effect({"ccd_init.json": mock_ccd_init})
+    mocker.patch("pydefect_ccd.cli.main.loadfn", side_effect=side_effect)
 
     parsed_args = parse_args_main(["pe", "-d", "disp_0.0"])
     expected = Namespace(
         dirs=[Path("disp_0.0")],
-        dephon_init=mock_dephon_init,
+        ccd_init=mock_ccd_init,
         y_range=None,
         func=plot_eigenvalues)
     assert parsed_args == expected
@@ -158,14 +159,14 @@ def test_main_plot_eigenvalues(mocker):
 #     mock_ccd = mocker.Mock(spec=Ccd, autospec=True)
 #     mocker.patch(
 #         "dephon.cli.main.loadfn",
-#         side_effect=loadfn_effect({"dephon_init.json": mock_dephon_init,
+#         side_effect=loadfn_effect({"ccd_init.json": mock_dephon_init,
 #                                    "ccd.json": mock_ccd}))
 #
 #     parsed_args = parse_args_main(["miepc",
 #                                    "-cc", "h",
 #                                    "--charge_for_e_p_coupling", "1"])
 #     expected = Namespace(
-#         dephon_init=mock_dephon_init,
+#         ccd_init=mock_dephon_init,
 #         ccd=mock_ccd,
 #         captured_carrier=Carrier.h,
 #         charge_for_e_p_coupling=1,

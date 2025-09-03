@@ -5,16 +5,6 @@ import shutil
 from argparse import Namespace
 from pathlib import Path
 
-from dephon.ccd_init import CcdInit
-from dephon.cli.main_function import make_ccd_init, make_ccd, plot_ccd, \
-    make_ccd_dirs, make_wswq_dirs, update_single_point_infos, \
-    add_point_infos_to_single_ccd, plot_eigenvalues, \
-    set_quadratic_fitting_q_range, make_e_p_matrix_element
-from dephon.config_coord import SinglePointResult, Ccd
-from dephon.corrections import DephonCorrection
-from dephon.ele_phon_coupling import EPMatrixElement
-from dephon.enum import CorrectionType, Carrier
-from dephon.relaxed_point import NearEdgeState, RelaxedPoint
 from monty.serialization import loadfn
 from pydefect.analyzer.unitcell import Unitcell
 from pymatgen.core import Structure
@@ -22,8 +12,18 @@ from pymatgen.electronic_structure.core import Spin
 from vise.input_set.incar import ViseIncar
 from vise.input_set.prior_info import PriorInfo
 
+from pydefect_ccd.ccd_init import CcdInit
+from pydefect_ccd.cli.main_function import make_ccd_init, make_ccd, plot_ccd, \
+    make_ccd_dirs, make_wswq_dirs, update_single_point_infos, \
+    add_point_infos_to_single_ccd, plot_eigenvalues, \
+    set_quadratic_fitting_q_range, make_e_p_matrix_element
+from pydefect_ccd.config_coord import SinglePointResult, Ccd
+from pydefect_ccd.ele_phon_coupling import EPMatrixElement
+from pydefect_ccd.enum import CorrectionType, Carrier
+from pydefect_ccd.relaxed_point import NearEdgeState, RelaxedPoint
 
-def test_make_dephon_init(test_files, tmpdir):
+
+def test_make_ccd_init(test_files, tmpdir):
     tmpdir.chdir()
     dir_ = test_files / "Na3AgO2"
 
@@ -33,14 +33,14 @@ def test_make_dephon_init(test_files, tmpdir):
                      p_state=loadfn(dir_ / "perfect_band_edge_state.json"),
                      effective_mass=loadfn(dir_ / "effective_mass.json"))
     make_ccd_init(args)
-    print(loadfn("cc/Va_O1_1⇆Va_O1_0/dephon_init.json"))
+    print(loadfn("cc/Va_O1_1⇆Va_O1_0/ccd_init.json"))
 
 
 def test_make_ccd_dirs(tmpdir, ground_structure, excited_structure,
                        intermediate_structure):
     print(tmpdir)
     tmpdir.chdir()
-    dephon_init = CcdInit(
+    ccd_init = CcdInit(
         relaxed_points=[RelaxedPoint(name="test",
                                      charge=1,
                                      structure=ground_structure,
@@ -96,7 +96,7 @@ def test_make_ccd_dirs(tmpdir, ground_structure, excited_structure,
         ave_electron_mass=1.0, ave_hole_mass=1.0, ave_static_diele_const=1.0)
 
     Path("test").mkdir()
-    args = Namespace(dephon_init=dephon_init,
+    args = Namespace(dephon_init=ccd_init,
                      first_to_second_div_ratios=[0.5, 1.0],
                      second_to_first_div_ratios=[0.0, 1.0],
                      calc_dir=Path("test"))
@@ -170,7 +170,7 @@ def test_make_ccd(test_files, tmpdir):
     va_p1 = Path(test_files) / "NaP/Va_P1_-1__Va_P1_0"
     ground_ccd = loadfn(va_p1 / "from_-1_to_0_after_make_single_point_infos/potential_curve.json")
     excited_ccd = loadfn(va_p1 / "from_0_to_-1_after_make_single_point_infos/potential_curve.json")
-    dephon_init = loadfn(va_p1 / "dephon_init.json")
+    dephon_init = loadfn(va_p1 / "ccd_init.json")
     args = Namespace(ground_ccd=ground_ccd, excited_ccd=excited_ccd,
                      dephon_init=dephon_init)
     make_ccd(args)
@@ -195,7 +195,7 @@ def test_plot_ccd(ccd, tmpdir):
 def test_plot_eigenvalues(test_files, tmpdir):
     tmpdir.chdir()
     va_p1 = Path(test_files) / "NaP/Va_P1_-1__Va_P1_0"
-    dephon_init = loadfn(va_p1 / "dephon_init.json")
+    dephon_init = loadfn(va_p1 / "ccd_init.json")
     dir_ = va_p1 / "from_0_to_-1_before_make_single_point_infos"
     args = Namespace(dirs=[dir_ / "disp_0.0"],
                      dephon_init=dephon_init,
