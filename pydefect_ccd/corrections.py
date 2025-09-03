@@ -4,10 +4,9 @@ from dataclasses import dataclass
 from typing import Dict
 
 import yaml
+from dephon.enum import CorrectionType
 from monty.json import MSONable
 from vise.util.mix_in import ToYamlFileMixIn
-
-from dephon.enum import CorrectionType
 
 
 @dataclass

@@ -2,14 +2,13 @@
 #  Copyright (c) 2022 Kumagai group.
 
 import pytest
-from pydefect.analyzer.band_edge_states import LocalizedOrbital
-from pymatgen.electronic_structure.core import Spin
-
-from dephon.config_coord import PotentialCurve, SinglePoint, CcdId
+from dephon.config_coord import PotentialCurve, SinglePointResult, CcdId
 from dephon.ele_phon_coupling import InnerProduct, EPMatrixElement
 from dephon.enum import Carrier
 from dephon.make_e_p_matrix_element import MakeEPMatrixElement
-from dephon.relaxed_point import BandEdgeState
+from dephon.relaxed_point import NearEdgeState
+from pydefect.analyzer.band_edge_states import LocalizedOrbital
+from pymatgen.electronic_structure.core import Spin
 
 
 # @pytest.fixture
@@ -42,7 +41,7 @@ from dephon.relaxed_point import BandEdgeState
 
 @pytest.fixture
 def single_ccd():
-    cbm = BandEdgeState(band_index=104,
+    cbm = NearEdgeState(band_index=104,
                         kpt_coord=[0.0]*3,
                         kpt_weight=1.0,
                         kpt_index=1,
@@ -52,7 +51,7 @@ def single_ccd():
         band_idx=103, ave_energy=4.0, occupation=0.0, orbitals={})
     l_orb_lower = LocalizedOrbital(
         band_idx=102, ave_energy=2.0, occupation=1.0, orbitals={})
-    vbm = BandEdgeState(band_index=101,
+    vbm = NearEdgeState(band_index=101,
                         kpt_coord=[0.0]*3,
                         kpt_weight=1.0,
                         kpt_index=1,
@@ -60,15 +59,15 @@ def single_ccd():
                         occupation=1.0)
 
     single_point_info = \
-        SinglePoint(dQ=1.0,
-                    disp_ratio=0.0,
-                    magnetization=-1.0,
-                    localized_orbitals=[[l_orb_lower, l_orb_upper], []],
-                    valence_bands=[[vbm], []],
-                    conduction_bands=[[cbm], []])
+        SinglePointResult(dQ=1.0,
+                          disp_ratio=0.0,
+                          magnetization=-1.0,
+                          localized_orbitals=[[l_orb_lower, l_orb_upper], []],
+                          valence_bands=[[vbm], []],
+                          conduction_bands=[[cbm], []])
     return PotentialCurve(CcdId("excited", carriers=[Carrier.e]),
                           charge=0,
-                          points=[single_point_info])
+                          single_points=[single_point_info])
 
 
 @pytest.fixture

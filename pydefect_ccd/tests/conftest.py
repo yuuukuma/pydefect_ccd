@@ -4,15 +4,14 @@ from copy import copy
 from pathlib import Path
 
 import pytest
+from dephon.ccd_init import CcdInit
+from dephon.config_coord import SinglePointResult, Ccd, PotentialCurve
+from dephon.ele_phon_coupling import InnerProduct, EPMatrixElement
+from dephon.enum import Carrier
+from dephon.relaxed_point import NearEdgeState, RelaxedPoint
 from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from pymatgen.core import Structure, Lattice
 from pymatgen.electronic_structure.core import Spin
-
-from dephon.config_coord import SinglePoint, ConfigCoordDiagram, PotentialCurve
-from dephon.dephon_init import ConfigCoordDiagInit
-from dephon.ele_phon_coupling import InnerProduct, EPMatrixElement
-from dephon.enum import Carrier
-from dephon.relaxed_point import BandEdgeState, RelaxedPoint
 
 
 @pytest.fixture(scope="session")
@@ -74,13 +73,13 @@ direct
 0.0 0.0 0.85""", fmt="poscar")
 
 
-vb = BandEdgeState(band_index=1,
+vb = NearEdgeState(band_index=1,
                    kpt_coord=[0.0]*3,
                    kpt_index=1,
                    kpt_weight=1.0,
                    eigenvalue=1.0,
                    occupation=1.0)
-cb = BandEdgeState(band_index=2,
+cb = NearEdgeState(band_index=2,
                    kpt_coord=[0.0]*3,
                    kpt_index=1,
                    kpt_weight=1.0,
@@ -122,25 +121,25 @@ def dephon_init(ground_structure, excited_structure):
                            valence_bands=[[vb], [vb]],
                            conduction_bands=[[cb], [cb_w_lo]])
     # transition level = -1.0 from CBM
-    return ConfigCoordDiagInit(relaxed_points=[va_o1_0, va_o1_1],
-                               vbm=1.0, cbm=3.0, supercell_volume=100.0,
-                               supercell_vbm=1.1, supercell_cbm=2.9,
-                               ave_electron_mass=11.0, ave_hole_mass=12.0,
-                               ave_static_diele_const=13.0)
+    return CcdInit(relaxed_points=[va_o1_0, va_o1_1],
+                   vbm=1.0, cbm=3.0, supercell_volume=100.0,
+                   supercell_vbm=1.1, supercell_cbm=2.9,
+                   ave_electron_mass=11.0, ave_hole_mass=12.0,
+                   ave_static_diele_const=13.0)
 
 
 @pytest.fixture
 def ccd(excited_structure, ground_structure, intermediate_structure):
-    return ConfigCoordDiagram(name="test",
-                              potential_curves=[
+    return Ccd(name="test",
+               potential_curves=[
                    PotentialCurve(name="excited", charge=0,
-                                  points=[SinglePoint(-1.0, -0.1, 2.1, False, used_for_fitting=True),
-                                          SinglePoint(0.0, 0.0, 1.1, False, used_for_fitting=True, conduction_bands=[[cb]], valence_bands=[[vb]]),
-                                          SinglePoint(1.0, 0.1, 2.2, False, used_for_fitting=True)]),
+                                  single_points=[SinglePointResult(-1.0, -0.1, 2.1, False, used_for_fitting=True),
+                                                 SinglePointResult(0.0, 0.0, 1.1, False, used_for_fitting=True, conduction_bands=[[cb]], valence_bands=[[vb]]),
+                                                 SinglePointResult(1.0, 0.1, 2.2, False, used_for_fitting=True)]),
                    PotentialCurve(name="ground", charge=1,
-                                  points=[SinglePoint(-1.0, -0.1, 1.1, False, used_for_fitting=False),
-                                          SinglePoint(0.0, 0.0, 0.1, False, used_for_fitting=True, conduction_bands=[[cb]], valence_bands=[[vb]]),
-                                          SinglePoint(1.0, 0.1, 1.2, False, used_for_fitting=True)])])
+                                  single_points=[SinglePointResult(-1.0, -0.1, 1.1, False, used_for_fitting=False),
+                                                 SinglePointResult(0.0, 0.0, 0.1, False, used_for_fitting=True, conduction_bands=[[cb]], valence_bands=[[vb]]),
+                                                 SinglePointResult(1.0, 0.1, 1.2, False, used_for_fitting=True)])])
 
 
 @pytest.fixture(scope="session")

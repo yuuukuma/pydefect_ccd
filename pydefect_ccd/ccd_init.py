@@ -3,21 +3,20 @@
 from dataclasses import dataclass
 from typing import List
 
+from dephon.enum import Carrier
+from dephon.relaxed_point import _joined_local_orbitals, RelaxedPoint
+from dephon.util import get_dR
 from monty.json import MSONable
 from pymatgen.analysis.defects.ccd import get_dQ
 from tabulate import tabulate
 from vise.util.logger import get_logger
 from vise.util.mix_in import ToJsonFileMixIn
 
-from dephon.enum import Carrier
-from dephon.relaxed_point import _joined_local_orbitals, RelaxedPoint
-from dephon.util import get_dR
-
 logger = get_logger(__name__)
 
 
 @dataclass
-class ConfigCoordDiagInit(MSONable, ToJsonFileMixIn):
+class CcdInit(MSONable, ToJsonFileMixIn):
     """ Initial information related to the configuration coordination diagram.
 
     Attributes:

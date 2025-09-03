@@ -11,7 +11,7 @@ from vise.util.structure_symmetrizer import num_sym_op
 
 
 @dataclass
-class BandEdgeState(MSONable):
+class NearEdgeState(MSONable):
     band_index: int  # begin from 1.
     kpt_coord: List[float]
     kpt_weight: float
@@ -69,8 +69,8 @@ class RelaxedPoint(MSONable):
     localized_orbitals: List[List[LocalizedOrbital]]
     initial_site_symmetry: str
     final_site_symmetry: str
-    valence_bands: List[List[BandEdgeState]]  # by spin
-    conduction_bands: List[List[BandEdgeState]]  # by spin
+    valence_bands: List[List[NearEdgeState]]  # by spin
+    conduction_bands: List[List[NearEdgeState]]  # by spin
     parsed_dir: str
 
     @property

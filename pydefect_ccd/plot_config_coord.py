@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
 #  Copyright (c) 2022 Kumagai group.
 
+from dephon.config_coord import Ccd
 from matplotlib import pyplot as plt
 from vise.util.logger import get_logger
 from vise.util.matplotlib import float_to_int_formatter
-
-from dephon.config_coord import ConfigCoordDiagram
 
 logger = get_logger(__name__)
 
 
 class CcdPlotter:
-    def __init__(self, ccd: ConfigCoordDiagram,
+    def __init__(self, ccd: Ccd,
                  title: str = None,
                  set_energy_zero: bool = True):
         self._title = title or ""

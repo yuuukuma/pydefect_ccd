@@ -2,9 +2,8 @@
 #  Copyright (c) 2022 Kumagai group.
 from copy import deepcopy
 
-from pydefect.analyzer.band_edge_states import BandEdgeOrbitalInfos, OrbitalInfo
-
 from dephon.plot_eigenvalues import DephonEigenvaluePlotter
+from pydefect.analyzer.band_edge_states import BandEdgeOrbitalInfos, OrbitalInfo
 
 
 def test_eigenvalue_plotter(mocker):

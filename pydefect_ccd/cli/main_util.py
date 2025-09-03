@@ -5,11 +5,10 @@ import sys
 import warnings
 from pathlib import Path
 
-from monty.serialization import loadfn
-from pymatgen.io.vasp.inputs import UnknownPotcarWarning
-
 from dephon.cli.main_util_function import reduce_wswq_auto
 from dephon.version import __version__
+from monty.serialization import loadfn
+from pymatgen.io.vasp.inputs import UnknownPotcarWarning
 
 warnings.simplefilter('ignore', UnknownPotcarWarning)
 

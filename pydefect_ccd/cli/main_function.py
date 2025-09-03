@@ -7,6 +7,18 @@ from typing import List, Tuple
 
 import numpy as np
 import yaml
+from dephon.capture_rate import calc_phonon_overlaps, CaptureRate
+from dephon.ccd_init import CcdInit
+from dephon.config_coord import SinglePointResult, CcdPlotter, \
+    PotentialCurve, CcdId
+from dephon.corrections import DephonCorrection
+from dephon.ele_phon_coupling import EPMatrixElement
+from dephon.enum import CorrectionType
+from dephon.make_config_coord import MakeCcd
+from dephon.make_e_p_matrix_element import MakeEPMatrixElement
+from dephon.plot_eigenvalues import DephonEigenvaluePlotter
+from dephon.relaxed_point import NearEdgeState, RelaxedPoint
+from dephon.util import spin_to_idx
 from matplotlib import pyplot as plt
 from monty.serialization import loadfn
 from nonrad.elphon import _read_WSWQ
@@ -27,19 +39,6 @@ from vise.input_set.prior_info import PriorInfo
 from vise.util.file_transfer import FileLink
 from vise.util.logger import get_logger
 
-from dephon.capture_rate import calc_phonon_overlaps, CaptureRate
-from dephon.config_coord import SinglePoint, CcdPlotter, \
-    PotentialCurve, CcdId
-from dephon.corrections import DephonCorrection
-from dephon.dephon_init import ConfigCoordDiagInit
-from dephon.ele_phon_coupling import EPMatrixElement
-from dephon.enum import CorrectionType
-from dephon.make_config_coord import MakeCcd
-from dephon.make_e_p_matrix_element import MakeEPMatrixElement
-from dephon.plot_eigenvalues import DephonEigenvaluePlotter
-from dephon.relaxed_point import BandEdgeState, RelaxedPoint
-from dephon.util import spin_to_idx
-
 logger = get_logger(__name__)
 
 
@@ -59,7 +58,7 @@ def _make_near_edge_states(band_edge_orbital_infos: BandEdgeOrbitalInfos,
             if e_from_band_edge > threshold:
                 continue
             band_idx = rel_idx + band_edge_orbital_infos.lowest_band_index + 1
-            result.append(BandEdgeState(band_idx,
+            result.append(NearEdgeState(band_idx,
                                         k_coords,
                                         k_weight,
                                         k_idx_from_1,
@@ -114,7 +113,7 @@ def _get_band_edge_info(band_edge_orbital_infos: BandEdgeOrbitalInfos,
     return localized_orbitals, valence_bands, conduction_bands
 
 
-def make_dephon_init(args: Namespace):
+def make_ccd_init(args: Namespace):
     min_point_1 = _make_relaxed_point_from_dir(args.first_dir)
     min_point_2 = _make_relaxed_point_from_dir(args.second_dir)
 
@@ -137,15 +136,15 @@ def make_dephon_init(args: Namespace):
     else:
         ave_hole_mass, ave_electron_mass = None, None
 
-    dephon_init = ConfigCoordDiagInit(relaxed_points=[min_point_1, min_point_2],
-                                      vbm=args.unitcell.vbm,
-                                      cbm=args.unitcell.cbm,
-                                      supercell_volume=volume,
-                                      supercell_vbm=args.p_state.vbm_info.energy,
-                                      supercell_cbm=args.p_state.cbm_info.energy,
-                                      ave_hole_mass=ave_hole_mass,
-                                      ave_electron_mass=ave_electron_mass,
-                                      ave_static_diele_const=args.unitcell.ave_ele_diele)
+    dephon_init = CcdInit(relaxed_points=[min_point_1, min_point_2],
+                          vbm=args.unitcell.vbm,
+                          cbm=args.unitcell.cbm,
+                          supercell_volume=volume,
+                          supercell_vbm=args.p_state.vbm_info.energy,
+                          supercell_cbm=args.p_state.cbm_info.energy,
+                          ave_hole_mass=ave_hole_mass,
+                          ave_electron_mass=ave_electron_mass,
+                          ave_static_diele_const=args.unitcell.ave_ele_diele)
 
     if path.exists() is False:
         path.mkdir(parents=True)
@@ -200,7 +199,7 @@ def _make_ccd_dir(charge, dirname, ratio, structure, dQ, correction):
         structure.to(filename=str(dir_ / "POSCAR"))
         (dir_ / "prior_info.yaml").write_text(
             yaml.dump({"charge": charge}), None)
-        single_point_info = SinglePoint(dQ=dQ, disp_ratio=ratio)
+        single_point_info = SinglePointResult(dQ=dQ, disp_ratio=ratio)
         single_point_info.to_json_file(dir_ / "single_point_info.json")
 
         correction = DephonCorrection({CorrectionType.extended_FNV: correction})
@@ -214,7 +213,7 @@ def make_ccd_correction(args):
     file_name = "ccd_correction.json"
 
     def _inner(dir_: Path):
-        single_point_info: SinglePoint \
+        single_point_info: SinglePointResult \
             = loadfn(dir_ / "single_point_info.json")
 
         if single_point_info.disp_ratio == 0.0:
@@ -259,7 +258,7 @@ def update_single_point_infos(args: Namespace):
         localized_orbitals, valence_bands, conduction_bands = _get_band_edge_info(
             band_edge_orbital_infos, band_edge_states)
 
-        sp_info: SinglePoint = loadfn(dir_ / "single_point_info.json")
+        sp_info: SinglePointResult = loadfn(dir_ / "single_point_info.json")
         sp_info.corrected_energy = calc_results.energy + correction.total_correction_energy
         sp_info.magnetization = calc_results.magnetization
         sp_info.localized_orbitals = localized_orbitals
@@ -276,7 +275,7 @@ def add_point_infos_to_single_ccd(args: Namespace):
         return loadfn(dir_ / "single_point_info.json")
 
     single_ccd: PotentialCurve = loadfn("potential_curve.json")
-    single_ccd.points = parse_dirs(args.dirs, _inner, verbose=True)
+    single_ccd.single_points = parse_dirs(args.dirs, _inner, verbose=True)
     single_ccd.to_json_file("potential_curve.json")
 
 
@@ -332,7 +331,7 @@ def make_wswq_dirs(args: Namespace):
         _make_wswq_dir(dir_, args.dephon_init)
 
 
-def _make_wswq_dir(dir_, dephon_init: ConfigCoordDiagInit):
+def _make_wswq_dir(dir_, dephon_init: CcdInit):
     wswq_dir = (dir_ / "wswq")
     if wswq_dir.exists():
         logger.info(f"Directory {wswq_dir} exists, so skip creating it.")
@@ -387,7 +386,7 @@ def make_e_p_matrix_element(args: Namespace):
 
 
 def make_capture_rate(args: Namespace):
-    dephon_init: ConfigCoordDiagInit = args.dephon_init
+    dephon_init: CcdInit = args.dephon_init
     e_p_matrix_elem: EPMatrixElement = args.e_p_matrix_elem
     if e_p_matrix_elem.e_p_matrix_element is None:
         raise ValueError

@@ -3,12 +3,11 @@
 from typing import Dict, Tuple, Optional, List
 
 import numpy as np
-from pymatgen.electronic_structure.core import Spin
-from vise.util.logger import get_logger
-
 from dephon.config_coord import PotentialCurve
 from dephon.ele_phon_coupling import EPMatrixElement, InnerProduct
 from dephon.util import spin_to_idx
+from pymatgen.electronic_structure.core import Spin
+from vise.util.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -36,7 +35,7 @@ class MakeEPMatrixElement:
         if energy_diff:
             self.energy_diff = energy_diff
         else:
-            band_edge_state = single_point_info.band_edge_state(spin, band_edge_index)
+            band_edge_state = single_point_info.near_edge_state(spin, band_edge_index)
             defect_state = single_point_info.localized_orbital(spin, defect_band_index)
             self.energy_diff = abs(band_edge_state.eigenvalue - defect_state.ave_energy)
 

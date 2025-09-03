@@ -4,17 +4,16 @@ from copy import deepcopy
 
 import numpy as np
 import pytest
-from pydefect.analyzer.band_edge_states import LocalizedOrbital
-from vise.tests.helpers.assertion import assert_dataclass_almost_equal
-
-from dephon.config_coord import ConfigCoordDiagram, SinglePoint, CcdPlotter, \
+from dephon.config_coord import Ccd, SinglePointResult, CcdPlotter, \
     PotentialCurve, spline3, captured_carrier, CarrierDiffError
 from dephon.enum import CorrectionType, Carrier
+from pydefect.analyzer.band_edge_states import LocalizedOrbital
+from vise.tests.helpers.assertion import assert_dataclass_almost_equal
 
 
 @pytest.fixture
 def single_point_min_info():
-    return SinglePoint(dQ=1.0, disp_ratio=0.1)
+    return SinglePointResult(dQ=1.0, disp_ratio=0.1)
 
 
 @pytest.fixture
@@ -24,21 +23,21 @@ def single_point_max_info():
                                 occupation=1.0,
                                 orbitals={"O": [0.0, 1.0, 0.0]})
 
-    return SinglePoint(dQ=1.0,
-                       disp_ratio=0.1,
-                       corrected_energy=5.0,
-                       magnetization=1.0,
-                       localized_orbitals=[[], [orb_info]],
-                       is_shallow=True,
-                       correction_method=CorrectionType.extended_FNV,
-                       used_for_fitting=True,
-                       base_energy=1.0)
+    return SinglePointResult(dQ=1.0,
+                             disp_ratio=0.1,
+                             corrected_energy=5.0,
+                             magnetization=1.0,
+                             localized_orbitals=[[], [orb_info]],
+                             is_shallow=True,
+                             correction_method=CorrectionType.extended_FNV,
+                             used_for_fitting=True,
+                             base_energy=1.0)
 
 
 def test_single_point_info_corrected_energy(single_point_min_info,
                                             single_point_max_info):
-    assert single_point_min_info.relative_energy is None
-    assert single_point_max_info.relative_energy == 5.0 - 1.0
+    assert single_point_min_info.corrected_relative_energy is None
+    assert single_point_max_info.corrected_relative_energy == 5.0 - 1.0
 
 
 def test_image_structure_str(single_point_min_info,
@@ -57,31 +56,30 @@ def test_image_structure_str(single_point_min_info,
 @pytest.fixture
 def potential_curve():
     return PotentialCurve(
-        name="from_0_to_1",
         carriers=[Carrier.h, Carrier.e],
         charge=0,
-        points=[
-            SinglePoint(2., 1.0, 3.3, is_shallow=False, used_for_fitting=True),
-            SinglePoint(1., 0.5, 2.2, is_shallow=False, used_for_fitting=True),
-            SinglePoint(0., 0.0, 3.4, is_shallow=False, used_for_fitting=True),
-            SinglePoint(3., 1.5, 3.5, is_shallow=False, used_for_fitting=False)])
+        single_points=[
+            SinglePointResult(2., 1.0, 3.3, is_shallow=False),
+            SinglePointResult(1., 0.5, 2.2, is_shallow=False),
+            SinglePointResult(0., 0.0, 3.4, is_shallow=False),
+            SinglePointResult(3., 1.5, 3.5, is_shallow=False)])
 
 
 def test_single_ccd_sort_single_point_infos(potential_curve):
-    actual = potential_curve.points[0]
-    expected = SinglePoint(0., 0.0, 3.4, is_shallow=False,
-                           used_for_fitting=True, base_energy=2.2)
+    actual = potential_curve.single_points[0]
+    expected = SinglePointResult(0., 0.0, 3.4, is_shallow=False,
+                                 used_for_fitting=True, base_energy=2.2)
     assert actual == expected
 
 
 def test_single_ccd_set_quadratic_fitting_range(potential_curve):
     potential_curve.set_quadratic_fitting_range(q_range=[-0.1, 0.1])
-    actual = [p_info.used_for_fitting for p_info in potential_curve.points]
+    actual = [p_info.used_for_fitting for p_info in potential_curve.single_points]
     expected = [True, False, False, False]
     assert actual == expected
 
     potential_curve.set_quadratic_fitting_range()
-    actual = [p_info.used_for_fitting for p_info in potential_curve.points]
+    actual = [p_info.used_for_fitting for p_info in potential_curve.single_points]
     expected = [True, True, True, True]
     assert actual == expected
 
@@ -111,17 +109,17 @@ def test_single_ccd_omega(potential_curve):
 def test_energy_shifted_single_ccd(potential_curve):
     actual = deepcopy(potential_curve)
     actual.shift_energy(energy=1.0)
-    assert actual.points[0].corrected_energy == 4.4
+    assert actual.single_points[0].corrected_energy == 4.4
 
 
 def test_dQ_reverted_single_ccd(potential_curve):
     actual = potential_curve.dQ_reverted_single_ccd()
     expected = deepcopy(potential_curve)
-    expected.points = [
-        SinglePoint(-1.0, 1.5, 3.5, is_shallow=False, used_for_fitting=False),
-        SinglePoint(0.0, 1.0, 3.3, is_shallow=False, used_for_fitting=True),
-        SinglePoint(1.0, 0.5, 2.2, is_shallow=False, used_for_fitting=True),
-        SinglePoint(2.0, 0.0, 3.4, is_shallow=False, used_for_fitting=True)]
+    expected.single_points = [
+        SinglePointResult(-1.0, 1.5, 3.5, is_shallow=False, used_for_fitting=False),
+        SinglePointResult(0.0, 1.0, 3.3, is_shallow=False, used_for_fitting=True),
+        SinglePointResult(1.0, 0.5, 2.2, is_shallow=False, used_for_fitting=True),
+        SinglePointResult(2.0, 0.0, 3.4, is_shallow=False, used_for_fitting=True)]
     assert_dataclass_almost_equal(actual, expected)
 
 
@@ -145,14 +143,14 @@ def excited_ccd():
     return PotentialCurve(
         CcdId(name="from_1_to_0", carriers=[Carrier.e]),
         charge=1,
-        points=[SinglePoint(3., 1.0, 10.1, is_shallow=False),
-                SinglePoint(2., 0.9, 10.2, is_shallow=False),
-                SinglePoint(1., 0.8, 10.3, is_shallow=False)])
+        single_points=[SinglePointResult(3., 1.0, 10.1, is_shallow=False),
+                       SinglePointResult(2., 0.9, 10.2, is_shallow=False),
+                       SinglePointResult(1., 0.8, 10.3, is_shallow=False)])
 
 
 @pytest.fixture
 def ccd(potential_curve, excited_ccd):
-    return ConfigCoordDiagram(name="Va_O1_1 ⇆ Va_O1_0", potential_curves=[potential_curve, excited_ccd])
+    return Ccd(name="Va_O1_1 ⇆ Va_O1_0", potential_curves=[potential_curve, excited_ccd])
 
 
 def test_captured_carrier(potential_curve, excited_ccd):

@@ -2,11 +2,10 @@
 #  Copyright (c) 2022 Kumagai group.
 from copy import deepcopy
 
-from vise.util.logger import get_logger
-
-from dephon.config_coord import PotentialCurve, ConfigCoordDiagram, CcdId
-from dephon.dephon_init import ConfigCoordDiagInit
+from dephon.ccd_init import CcdInit
+from dephon.config_coord import PotentialCurve, Ccd, CcdId
 from dephon.enum import Carrier, BandEdge
+from vise.util.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -27,12 +26,12 @@ class MakeCcd:
     def __init__(self,
                  ground_ccd: PotentialCurve,
                  excited_ccd: PotentialCurve,
-                 dephon_init: ConfigCoordDiagInit):
+                 ccd_init: CcdInit):
         if abs(ground_ccd.charge - excited_ccd.charge) != 1:
             raise AssertionError(
                 f"The charge difference needs to be 1. Now, ground state "
                 f"{ground_ccd.charge} and excited state {excited_ccd.charge}.")
-        self.dephon_init = dephon_init
+        self.dephon_init = ccd_init
         self.orig_ground_ccd = ground_ccd
         self.orig_excited_ccd = excited_ccd
 
@@ -114,9 +113,9 @@ class MakeCcd:
         return result
 
     @property
-    def ccd(self) -> ConfigCoordDiagram:
+    def ccd(self) -> Ccd:
         ccds = [self._ground_ccd, self._excited_ccd, self._ground_pn_ccd]
         for ccd in ccds:
             ccd.set_quadratic_fitting_range()
 
-        return ConfigCoordDiagram(name=self.dephon_init.name, potential_curves=ccds)
+        return Ccd(name=self.dephon_init.name, potential_curves=ccds)

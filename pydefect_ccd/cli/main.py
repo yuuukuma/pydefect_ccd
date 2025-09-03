@@ -5,18 +5,17 @@ import sys
 import warnings
 from pathlib import Path
 
-from monty.serialization import loadfn
-from pydefect.cli.main import add_sub_parser
-from pymatgen.electronic_structure.core import Spin
-from pymatgen.io.vasp.inputs import UnknownPotcarWarning
-
-from dephon.cli.main_function import make_dephon_init, make_ccd, \
+from dephon.cli.main_function import make_ccd_init, make_ccd, \
     make_ccd_dirs, plot_ccd, plot_eigenvalues, set_quadratic_fitting_q_range, \
     make_wswq_dirs, update_single_point_infos, add_point_infos_to_single_ccd, \
     make_e_p_matrix_element, make_capture_rate, plot_capture_rate, \
     make_ccd_correction
 from dephon.enum import Carrier
 from dephon.version import __version__
+from monty.serialization import loadfn
+from pydefect.cli.main import add_sub_parser
+from pymatgen.electronic_structure.core import Spin
+from pymatgen.io.vasp.inputs import UnknownPotcarWarning
 
 warnings.simplefilter('ignore', UnknownPotcarWarning)
 
@@ -43,9 +42,9 @@ def parse_args_main(args):
     ccd.add_argument(
         "--ccd", type=loadfn, default="ccd.json")
 
-    # -- make_dephon_init -----------------------------------
+    # -- make_ccd_init -----------------------------------
     parser_make_dephon_init = subparsers.add_parser(
-        name="make_dephon_init",
+        name="make_ccd_init",
         description="""Create a `dephon_init.json` file from two directories containing pydefect files.
  If the excited state has one more (less) charge state, n-type (p-type) is assumed.""",
         parents=[unitcell_parser, pbes_parser],
@@ -61,7 +60,7 @@ def parse_args_main(args):
     parser_make_dephon_init.add_argument(
         "-em", "--effective_mass", type=loadfn, required=True,
         help="effective_mass.json file.")
-    parser_make_dephon_init.set_defaults(func=make_dephon_init)
+    parser_make_dephon_init.set_defaults(func=make_ccd_init)
 
     # -- make_ccd_dirs -----------------------------------
     parser_add_ccd_dirs = subparsers.add_parser(

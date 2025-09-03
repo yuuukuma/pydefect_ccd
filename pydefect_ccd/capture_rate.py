@@ -4,12 +4,11 @@ from dataclasses import dataclass
 from typing import List
 
 import numpy as np
+from dephon.config_coord import PotentialCurve
 from monty.json import MSONable
 from nonrad import get_C
 from tabulate import tabulate
 from vise.util.mix_in import ToJsonFileMixIn
-
-from dephon.config_coord import PotentialCurve
 
 
 @dataclass
@@ -58,8 +57,8 @@ def calc_phonon_overlaps(ground_ccd: PotentialCurve,
     print(excited_ccd)
     print(ground_ccd)
 
-    dE = (excited_ccd.ground_point_info.relative_energy
-          - ground_ccd.ground_point_info.relative_energy)
+    dE = (excited_ccd.ground_point_info.corrected_relative_energy
+          - ground_ccd.ground_point_info.corrected_relative_energy)
 
     print(abs(dQ), dE)
     # at Wif=1, volume=1Å^3, g=1

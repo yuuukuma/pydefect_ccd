@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 #  Copyright (c) 2022 Kumagai group.
 import pytest
-from vise.tests.helpers.assertion import assert_msonable, assert_yaml_roundtrip
-
 from dephon.corrections import DephonCorrection
 from dephon.enum import CorrectionType
+from vise.tests.helpers.assertion import assert_msonable, assert_yaml_roundtrip
 
 
 @pytest.fixture
