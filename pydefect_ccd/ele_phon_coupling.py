@@ -36,7 +36,6 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
             at the given Q points.
     """
     charge: int
-    base_disp_ratio: float
     band_edge_index: int
     defect_band_index: int
     spin: Union[Spin, str]

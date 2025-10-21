@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 from vise.util.logger import get_logger
 from vise.util.matplotlib import float_to_int_formatter
 
-from pydefect_ccd.config_coord import Ccd
+from pydefect_ccd.ccd import Ccd
 
 logger = get_logger(__name__)
 
@@ -28,7 +28,7 @@ class CcdPlotter:
 
     def _add_ccd(self):
         ax = self.plt.gca()
-        for imag_infos in self._ccd.potential_curves:
+        for imag_infos in self._ccd.potential_curve_results:
             imag_infos.add_plot(ax, "black")
 
     def _set_labels(self):

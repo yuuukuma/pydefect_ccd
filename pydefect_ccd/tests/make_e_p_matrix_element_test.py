@@ -5,7 +5,7 @@ import pytest
 from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from pymatgen.electronic_structure.core import Spin
 
-from pydefect_ccd.config_coord import PotentialCurve, SinglePointResult, CcdId
+from pydefect_ccd.ccd import PotentialCurve, SinglePointResult, CcdId
 from pydefect_ccd.ele_phon_coupling import InnerProduct, EPMatrixElement
 from pydefect_ccd.enum import Carrier
 from pydefect_ccd.make_e_p_matrix_element import MakeEPMatrixElement
@@ -74,7 +74,7 @@ def single_ccd():
 @pytest.fixture
 def make_e_p_coupling_h_capture(single_ccd):
     return MakeEPMatrixElement(base_disp_ratio=0.0,
-                               single_ccd=single_ccd,
+                               potential_curve=single_ccd,
                                band_edge_index=101,
                                defect_band_index=102,
                                kpoint_index=1,

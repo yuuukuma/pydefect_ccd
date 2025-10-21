@@ -8,8 +8,8 @@ from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from pymatgen.core import Structure, Lattice
 from pymatgen.electronic_structure.core import Spin
 
+from pydefect_ccd.ccd import SinglePointResult, Ccd, PotentialCurve
 from pydefect_ccd.ccd_init import CcdInit
-from pydefect_ccd.config_coord import SinglePointResult, Ccd, PotentialCurve
 from pydefect_ccd.ele_phon_coupling import InnerProduct, EPMatrixElement
 from pydefect_ccd.enum import Carrier
 from pydefect_ccd.relaxed_point import NearEdgeState, RelaxedPoint
@@ -132,7 +132,7 @@ def ccd_init(ground_structure, excited_structure):
 @pytest.fixture
 def ccd(excited_structure, ground_structure, intermediate_structure):
     return Ccd(name="test",
-               potential_curves=[
+               potential_curve_results=[
                    PotentialCurve(name="excited", charge=0,
                                   single_points=[SinglePointResult(-1.0, -0.1, 2.1, False, used_for_fitting=True),
                                                  SinglePointResult(0.0, 0.0, 1.1, False, used_for_fitting=True, conduction_bands=[[cb]], valence_bands=[[vb]]),

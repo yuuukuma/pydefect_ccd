@@ -18,11 +18,12 @@ logger = get_logger(__name__)
 
 @dataclass
 class CcdInit(MSONable, ToJsonFileMixIn):
-    """ Initial information related to the configuration coordination diagram.
+    """ Initial information related to a 1D configuration coordination diagram.
 
     Attributes:
         relaxed_points (List[RelaxedPoint]): List of two relaxed defects.
             The charge state difference must be 1.
+            The first one is set as a reference structure.
         vbm (float): valence band maximum in the unitcell calculation.
         cbm (float): conduction band minimum in the unitcell calculation.
         supercell_vbm (float): vbm in the perfect supercell calculation.
@@ -58,7 +59,7 @@ class CcdInit(MSONable, ToJsonFileMixIn):
     def band_gap(self):
         return self.cbm - self.vbm
 
-    def relaxed_point_info_from_charge(self, charge: int):
+    def relaxed_point_from_charge(self, charge: int):
         for rp in self.relaxed_points:
             if rp.charge == charge:
                 return rp

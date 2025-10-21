@@ -2,10 +2,10 @@
 #  Copyright (c) 2022 Kumagai group.
 import pytest
 
+from pydefect_ccd.ccd import SinglePointResult, PotentialCurve, Ccd
 from pydefect_ccd.ccd_init import CcdInit
-from pydefect_ccd.config_coord import SinglePointResult, PotentialCurve, Ccd
 from pydefect_ccd.enum import Carrier
-from pydefect_ccd.make_config_coord import MakeCcd
+from pydefect_ccd.make_ccd import MakeCcd
 from pydefect_ccd.relaxed_point import RelaxedPoint
 
 band_edges = dict(vbm=1.0, cbm=3.0, supercell_vbm=1.1, supercell_cbm=2.9)
@@ -73,7 +73,7 @@ def test_make_ccd(excited_structure, ground_structure, dephon_init):
                                                        **common)])
 
     actual = MakeCcd(ground, excited, dephon_init).ccd
-    expected = Ccd(name="Va_O", potential_curves=[
+    expected = Ccd(name="Va_O", potential_curve_results=[
         PotentialCurve(CcdId(name="ground"),
                        charge=0,
                        single_points=[SinglePointResult(dQ=0.0,

@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 #  Copyright (c) 2022 Kumagai group.
+from copy import deepcopy
 from dataclasses import dataclass, field
-from itertools import permutations
-from math import isclose
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -19,7 +18,8 @@ from vise.util.matplotlib import float_to_int_formatter
 from vise.util.mix_in import ToJsonFileMixIn
 
 from pydefect_ccd.enum import Carrier
-from pydefect_ccd.relaxed_point import NearEdgeState, _joined_local_orbitals
+from pydefect_ccd.relaxed_point import NearEdgeState, _joined_local_orbitals, \
+    PointMixIn
 from pydefect_ccd.util import spin_to_idx
 
 logger = get_logger(__name__)
@@ -33,17 +33,18 @@ class SinglePointSpec(MSONable, ToJsonFileMixIn):
 
 
 @dataclass
-class SinglePointResult(MSONable, ToJsonFileMixIn):
-    relative_energy: float  # wrt the relaxed energy.
-    correction_energy: float
-    magnetization: float
-    localized_orbitals: List[List[LocalizedOrbital]] \
-        = field(default_factory=list) # [spin][bands]
-    # [spin][bands]
-    valence_bands: List[List[NearEdgeState]] = field(default_factory=list)
-    conduction_bands: List[List[NearEdgeState]] = field(default_factory=list)
+class SinglePointResult(PointMixIn, ToJsonFileMixIn):
+    spec: SinglePointSpec
+    ccd_correction_energy: float  # CCD correction at a fixed structure
     is_shallow: bool = None
+    used_for_fitting: bool = True
     # This needs to be here to make table_for_plot
+
+    @property
+    def dQ(self) -> float: return self.spec.dQ
+
+    @property
+    def disp_ratio(self) -> float: return self.spec.disp_ratio
 
     def near_edge_state(self, spin: Spin, band_index: int) -> NearEdgeState:
         spin_idx = spin_to_idx(spin)
@@ -66,16 +67,14 @@ class SinglePointResult(MSONable, ToJsonFileMixIn):
         raise ValueError
 
     @property
-    def corrected_relative_energy(self):
-        return self.relative_energy + self.correction_energy
+    def ccd_corrected_energy(self):
+        return self.energy + self.ccd_correction_energy
 
     @property
     def table_for_plot(self):
-        tables = {
-                  "corr. energy": self.corrected_energy,
-                  "relative energy": self.corrected_relative_energy,
-                  "used for fitting?": self.used_for_fitting,
+        tables = {"corr. energy": self.ccd_corrected_energy,
                   "is shallow?": self.is_shallow,
+                  "used for fitting?": self.used_for_fitting,
                   "localized orb": _joined_local_orbitals(self.localized_orbitals)}
         return list(tables.keys()), tables.values()
 
@@ -86,29 +85,49 @@ class SinglePointResult(MSONable, ToJsonFileMixIn):
 
 
 @dataclass
-class PotentialCurve(MSONable, ToJsonFileMixIn):
+class PotentialCurveSpec(MSONable, ToJsonFileMixIn):
     charge: int
-    relaxed_energy: float  # bottom energy
-    carriers: List[Carrier] = field(default_factory=list)
-    single_points: Dict[SinglePointSpec, SinglePointResult] \
-        = field(default_factory=dict)
-    charge_to: Optional[int] = None
+    correction_energy: float  # at relaxed structure, e.g., eFNV correction
+    counter_charge: int  # charge state to which the structure shifts
+    Q_diff: float
+
+
+@dataclass
+class PotentialCurveResult(MSONable, ToJsonFileMixIn):
+    spec: PotentialCurveSpec
+    single_points: List[SinglePointResult] = field(default_factory=list)
+    # carriers: List[Carrier] = field(default_factory=list)
+    shifted_energy: float = 0.0  # to set the zero of energy
+
+    @property
+    def charge(self) -> int: return self.spec.charge
+
+    @property
+    def correction_energy(self) -> float: return self.spec.correction_energy
+
+    @property
+    def counter_charge(self) -> int: return self.spec.counter_charge
+
+    @property
+    def Q_diff(self) -> float: return self.spec.Q_diff
+
+    @property
+    def frequency(self) -> float:
+        return self.omega()
 
     def __post_init__(self):
-        has_disp0 = any(isclose(spec.disp_ratio, 0.0)
-                        for spec in self.single_points.keys())
-        assert has_disp0, "single_points must contain disp_ratio=0.0 result"
-
-        self.single_points = dict(sorted(self.single_points.items(),
-                                         key=lambda item: item[1].spec.dQ))
+        self.single_points = list(sorted(self.single_points, key=lambda x: x.dQ))
 
     def dQs_and_energies(self, disp_ratio_range: Tuple[float, float] = None):
         dQs, energies = [], []
-        for spec, result in self.single_points.items():
-            if disp_ratio_range and not (disp_ratio_range[0] <= spec.disp_ratio <= disp_ratio_range[1]):
+        for single_point in self.single_points:
+            if disp_ratio_range and not (disp_ratio_range[0]
+                                         <= single_point.disp_ratio
+                                         <= disp_ratio_range[1]):
                 continue
-            dQs.append(spec.dQ)
-            energies.append(result.corrected_relative_energy)
+            dQs.append(single_point.dQ)
+            corr_energy = single_point.ccd_correction_energy + self.spec.correction_energy
+            energies.append(single_point.energy + corr_energy + self.shifted_energy)
         return dQs, energies
 
     def omega(self,
@@ -127,19 +146,6 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
 
         return get_omega_from_PES(np.array(dQs), np.array(energies), ax=ax, q=q)
 
-    # def dQ_reverted_single_ccd(self) -> "PotentialCurve":
-    #     result = deepcopy(self)
-    #     for point_info in self.single_points:
-    #         if point_info.disp_ratio == 0.0:
-    #             continue
-    #         disp1_dQ = point_info.dQ / point_info.disp_ratio
-    #         break
-    #
-    #     for i in result.single_points:
-    #         i.dQ = (1.0 - i.disp_ratio) * disp1_dQ
-    #     result.single_points.sort(key=lambda x: x.dQ)
-    #     return result
-
     def add_plot(self,
                  ax,
                  color: str,
@@ -150,18 +156,52 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
         ax.scatter(dQs, energies, marker='o', color=color)
         try:
             if spline_fit:
+                label = f"q={self.charge}"
+                carriers = "+".join([str(c) for c in self.carriers])
+                if carriers:
+                    label += "+" + carriers
                 x, y = spline3(dQs, energies, 100, q_range)
-                ax.plot(x, y, label=self.name, color=color)
+                ax.plot(x, y, label=label, color=color)
         except TypeError as e:
-            print(f"{self.name}: {e}")
+            print(f"{self.charge}: {e}")
             pass
 
         if quadratic_fit:
             try:
                 self.omega(ax, plot_q_range=q_range)
             except (ValueError, TypeError, RuntimeError) as e:
-                print(f"{self.name}: {e}")
+                print(f"{self.charge}: {e}")
                 pass
+
+    @property
+    def table_for_plot(self):
+        tables = {"charge": self.charge,
+                  "corr. energy": self.correction_energy,
+                  "carriers": " ".join([str(c) for c in self.carriers]),
+                  "shifted energy": self.shifted_energy}
+        return list(tables.keys()), tables.values()
+
+    def __str__(self):
+        headers, tabulate_data = self.table_for_plot
+        return tabulate([tabulate_data], tablefmt="plain", floatfmt=".3f",
+                        headers=headers)
+
+
+def dQ_revert(pot_curve_result: PotentialCurveResult) -> PotentialCurveResult:
+    new_single_points = []
+    for single_point in pot_curve_result.single_points:
+        new_dis_ratio = 1.0 - single_point.disp_ratio
+        new_dQ = new_dis_ratio * pot_curve_result.spec.Q_diff
+        new_spec = SinglePointSpec(dQ=new_dQ, disp_ratio=new_dis_ratio)
+        new_result = deepcopy(single_point)
+        new_result.spec = new_spec
+        new_single_points.append(new_result)
+
+    return PotentialCurveResult(pot_curve_result.spec,
+                                new_single_points,
+                                pot_curve_result.carriers,
+                                pot_curve_result.shifted_energy)
+
 
     # def __str__(self):
     #     try:
@@ -170,18 +210,18 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
     #         omega = "N.A."
     #     result = [f"name: {self.name}", f"charge: {self.charge}",
     #               f"omega: {omega}"]
-    #
-    #     if self.carriers:
-    #         carriers = " ".join([str(carrier) for carrier in self.carriers])
-    #         result.append(f"carriers: {carriers}")
-    #
-    #     table_data = [x.table_for_plot for x in self.single_points]
-    #     result.append(tabulate(table_data, tablefmt="plain", floatfmt=".3f",
-    #                            headers=_imag_headers + ["omega"]))
-    #     return "\n".join(result)
+
+#         if self.carriers:
+#             carriers = " ".join([str(carrier) for carrier in self.carriers])
+#             result.append(f"carriers: {carriers}")
+
+#         table_data = [x.table_for_plot for x in self.single_points]
+#         result.append(tabulate(table_data, tablefmt="plain", floatfmt=".3f",
+#                                headers=_imag_headers + ["omega"]))
+#         return "\n".join(result)
 
 
-def captured_carrier(initial: PotentialCurve, final: PotentialCurve):
+def captured_carrier(initial: PotentialCurveResult, final: PotentialCurveResult):
     carrier_diff = set(initial.carriers) - set(final.carriers)
     if len(carrier_diff) != 1:
         raise CarrierDiffError
@@ -191,33 +231,21 @@ def captured_carrier(initial: PotentialCurve, final: PotentialCurve):
 @dataclass
 class Ccd(MSONable, ToJsonFileMixIn):
     name: str
-    potential_curves: List[PotentialCurve]
+    ground_curve: PotentialCurveResult
+    excited_curve: PotentialCurveResult
+    # potential_curve_results: List[PotentialCurveResult]
 
-    # def single_ccd(self, name, charge) -> PotentialCurve:
-    #     names = []
-    #     for i in self.potential_curves:
-    #         if i.id == single_ccd_id:
-    #             return i
-    #         names.append(f"{i.id_.__str__()}")
-    #     raise ValueError(f"Choose state name from {'  '.join(names)}")
+    def captured_carrier(self) -> Carrier:
+        charge_diff = self.excited_curve.charge - self.ground_curve.charge
+        carrier_charge = - charge_diff
 
-    def initial_and_final_ccd_from_captured_carrier(
-            self, carrier: Carrier) -> (PotentialCurve, PotentialCurve):
-
-        for i, j in permutations(self.potential_curves, 2):
-            try:
-                if captured_carrier(i, j) == carrier:
-                    return i, j
-            except CarrierDiffError:
-                continue
-        raise CarrierDiffError
+        return Carrier.from_carrier_charge(carrier_charge)
 
     def __str__(self):
         result = [f"name: {self.name}"]
-
-        for imag in self.potential_curves:
-            result.append("-"*50)
-            result.append(imag.__str__())
+        result.append("-"*50)
+        result.append(self.excited_curve.__str__())
+        result.append(self.ground_curve.__str__())
         return "\n".join(result)
 
 
@@ -250,7 +278,8 @@ def spline3(xs, ys, num_points, xrange=None):
 
 
 class CcdPlotter:
-    def __init__(self, ccd: Ccd,
+    def __init__(self,
+                 ccd: Ccd,
                  title: str = None,
                  set_energy_zero: bool = True,
                  quadratic_fit: bool = True,
@@ -275,8 +304,10 @@ class CcdPlotter:
         ax = self.plt.gca()
         if self._q_range:
             ax.set_xlim(self._q_range[0], self._q_range[1])
-        for imag_infos, color in zip(self._ccd.potential_curves, ["red", "blue", "green"]):
-            imag_infos.add_plot(ax, color, self._q_range, self._quadratic_fit, self._spline_fit)
+        for potential_curve_result, color in zip(self._ccd.potential_curve_results, ["red", "blue", "green"]):
+
+            print(potential_curve_result)
+            potential_curve_result.add_plot(ax, color, self._q_range, self._quadratic_fit, self._spline_fit)
 
     def _set_labels(self):
         ax = self.plt.gca()

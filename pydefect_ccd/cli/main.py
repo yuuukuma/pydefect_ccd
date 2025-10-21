@@ -10,11 +10,13 @@ from pydefect.cli.main import add_sub_parser
 from pymatgen.electronic_structure.core import Spin
 from pymatgen.io.vasp.inputs import UnknownPotcarWarning
 
+# make_ccd_dirs, plot_ccd, plot_eigenvalues, set_quadratic_fitting_q_range, \
+# make_wswq_dirs, update_single_point_infos, add_point_infos_to_single_ccd, \
 from pydefect_ccd.cli.main_function import make_ccd_init, make_ccd, \
-    make_ccd_dirs, plot_ccd, plot_eigenvalues, set_quadratic_fitting_q_range, \
-    make_wswq_dirs, update_single_point_infos, add_point_infos_to_single_ccd, \
+    make_ccd_dirs, plot_eigenvalues, make_wswq_dirs, \
     make_e_p_matrix_element, make_capture_rate, plot_capture_rate, \
-    make_ccd_correction
+    make_ccd_corrections, make_single_point_results, \
+    make_potential_curve_result, plot_ccd
 from pydefect_ccd.enum import Carrier
 from pydefect_ccd.version import __version__
 
@@ -49,7 +51,7 @@ def parse_args_main(args):
  If the excited state has one more (less) charge state, n-type (p-type) is assumed.""",
         parents=[unitcell_parser, pbes_parser],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        aliases=['mdi'])
+        aliases=['ci'])
 
     parser_make_ccd_init.add_argument(
         "-fd", "--first_dir", type=Path, required=True,
@@ -58,7 +60,7 @@ def parse_args_main(args):
         "-sd", "--second_dir", type=Path, required=True,
         help="Second directory considered for ccd, e.g., Va_O1_1.")
     parser_make_ccd_init.add_argument(
-        "-em", "--effective_mass", type=loadfn, required=True,
+        "-em", "--effective_mass", type=loadfn,
         help="effective_mass.json file.")
     parser_make_ccd_init.set_defaults(func=make_ccd_init)
 
@@ -69,7 +71,7 @@ def parse_args_main(args):
         diagrams for ground and excited states.""",
         parents=[ccd_init],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        aliases=['mcd'])
+        aliases=['cd'])
 
     parser_add_ccd_dirs.add_argument(
         "-fsr", "--first_to_second_div_ratios", type=float, nargs="+",
@@ -85,51 +87,25 @@ def parse_args_main(args):
     parser_add_ccd_dirs.set_defaults(
         func=make_ccd_dirs)
 
-    # -- update_single_point_infos -----------------------------------
-    parser_update_single_point_infos = subparsers.add_parser(
-        name="update_single_point_infos",
-        description="Update single_point_info.json at each directory. "
-                    "Before running this command, calc_results.json, "
-                    "band_edge_orbital_infos.json, and "
-                    "band_edge_states.json files need to be created using "
-                    "pydefect.",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        parents=[dirs],
-        aliases=['uspi'])
+#     # -- make_ccd -----------------------------------
+#     parser_make_ccd = subparsers.add_parser(
+#         name="make_ccd",
+#         description="Make ccd.json file",
+#         parents=[ccd_init],
+#         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+#         aliases=['mc'])
 
-    parser_update_single_point_infos.set_defaults(
-        func=update_single_point_infos)
+#     parser_make_ccd.add_argument(
+#         "-g", "--ground_ccd", type=loadfn,
+#         help="potential_curve.json file corresponding to _default_single_ccd_for_e_p_coupling ground state.")
+#     parser_make_ccd.add_argument(
+#         "-e", "--excited_ccd", type=loadfn,
+#         help="potential_curve.json file corresponding to an excited state.")
+#     parser_make_ccd.set_defaults(func=make_ccd)
 
-    # -- add_point_infos_to_single_ccd -----------------------------------
-    parser_add_point_infos_to_single_ccd = subparsers.add_parser(
-        name="add_point_infos_to_single_ccd",
-        description="""""",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        parents=[dirs],
-        aliases=['apsc'])
-
-    parser_add_point_infos_to_single_ccd.set_defaults(
-        func=add_point_infos_to_single_ccd)
-
-    # -- make_ccd -----------------------------------
-    parser_make_ccd = subparsers.add_parser(
-        name="make_ccd",
-        description="Make ccd.json file",
-        parents=[ccd_init],
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        aliases=['mc'])
-
-    parser_make_ccd.add_argument(
-        "-g", "--ground_ccd", type=loadfn,
-        help="potential_curve.json file corresponding to _default_single_ccd_for_e_p_coupling ground state.")
-    parser_make_ccd.add_argument(
-        "-e", "--excited_ccd", type=loadfn,
-        help="potential_curve.json file corresponding to an excited state.")
-    parser_make_ccd.set_defaults(func=make_ccd)
-
-    # -- make_ccd_correction -----------------------------------
+    # -- make_ccd_corrections -----------------------------------
     parser_make_ccd_correction = subparsers.add_parser(
-        name="make_ccd_correction",
+        name="make_ccd_corrections",
         description="Make ccd_correction.json and modify "
                     "dephon_correction.yaml",
         parents=[dirs, unitcell_parser],
@@ -137,32 +113,63 @@ def parse_args_main(args):
         aliases=['mcc'])
 
     parser_make_ccd_correction.add_argument(
-        "-s", "--potential_curve", type=loadfn,
+        "-s", "--potential_curve_spec", type=loadfn,
         help="potential_curve.json file.")
-    parser_make_ccd_correction.add_argument(
-        "--to_charge", type=int)
     parser_make_ccd_correction.add_argument(
         "-ndcr", "--no_disp_calc_results", required=True, type=loadfn,
         help="Path to the calc_results.json without displacement.")
     parser_make_ccd_correction.add_argument(
         "-ndde", "--no_disp_defect_entry", required=True, type=loadfn,
         help="Path to the defect_entry.json without displacement.")
-    parser_make_ccd_correction.set_defaults(func=make_ccd_correction)
+    parser_make_ccd_correction.set_defaults(func=make_ccd_corrections)
 
-    # -- set_fitting_q_range -----------------------------------
-    parser_set_fitting_q_range = subparsers.add_parser(
-        name="set_fitting_q_range",
-        description="Set the fitting range for the quadratic potential surface",
+    # -- make_single_point_results -----------------------------------
+    parser_make_single_point_results = subparsers.add_parser(
+        name="make_single_point_results",
+        description="",
+        parents=[dirs],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        aliases=['sfr'])
+        aliases=['mspr'])
+    parser_make_single_point_results.set_defaults(func=make_single_point_results)
 
-    parser_set_fitting_q_range.add_argument(
-        "--ccd", type=loadfn, default="ccd.json")
-    parser_set_fitting_q_range.add_argument(
-        "--single_ccd_name", type=str, required=True)
-    parser_set_fitting_q_range.add_argument(
-        "--q_range", type=float, nargs="+")
-    parser_set_fitting_q_range.set_defaults(func=set_quadratic_fitting_q_range)
+    # -- make_potential_curve_result -----------------------------------
+    parser_make_potential_curve_result = subparsers.add_parser(
+        name="make_potential_curve_result",
+        description="",
+        parents=[dirs],
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        aliases=['mpcr'])
+    parser_make_potential_curve_result.add_argument(
+        "--potential_curve_spec", type=loadfn, default="potential_curve_spec.json")
+
+    parser_make_potential_curve_result.set_defaults(func=make_potential_curve_result)
+
+    # -- make_ccd -----------------------------------
+    parser_make_ccd = subparsers.add_parser(
+        name="make_ccd",
+        description="",
+        parents=[ccd_init],
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        aliases=['mc'])
+    parser_make_ccd.add_argument("--ground_potential_curve", type=loadfn)
+    parser_make_ccd.add_argument("--excited_potential_curve", type=loadfn)
+
+    parser_make_ccd.set_defaults(func=make_ccd)
+    #
+    # # -- set_fitting_q_range -----------------------------------
+    # parser_set_fitting_q_range = subparsers.add_parser(
+    #     name="set_fitting_q_range",
+    #     description="Set the fitting range for the quadratic potential surface",
+    #     formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    #     aliases=['sfr'])
+    #
+    # parser_set_fitting_q_range.add_argument(
+    #     "--ccd", type=loadfn, default="ccd.json")
+    # parser_set_fitting_q_range.add_argument(
+    #     "--single_ccd_name", type=str, required=True)
+    # parser_set_fitting_q_range.add_argument(
+    #     "--q_range", type=float, nargs="+")
+    # parser_set_fitting_q_range.set_defaults(func=set_quadratic_fitting_q_range)
 
     # -- plot_ccd -----------------------------------
     parser_plot_ccd = subparsers.add_parser(

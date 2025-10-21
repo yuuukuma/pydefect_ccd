@@ -9,7 +9,8 @@ from nonrad import get_C
 from tabulate import tabulate
 from vise.util.mix_in import ToJsonFileMixIn
 
-from pydefect_ccd.config_coord import PotentialCurve
+
+# from pydefect_ccd.config_coord import PotentialCurve
 
 
 @dataclass
@@ -50,8 +51,8 @@ class CaptureRate(MSONable, ToJsonFileMixIn):
         return "\n".join(result)
 
 
-def calc_phonon_overlaps(ground_ccd: PotentialCurve,
-                         excited_ccd: PotentialCurve,
+def calc_phonon_overlaps(ground_ccd,
+                         excited_ccd,
                          T: List[float]):
     dQ = excited_ccd.ground_point_info.dQ - ground_ccd.ground_point_info.dQ
 

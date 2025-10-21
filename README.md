@@ -9,7 +9,7 @@ Requirements
 
 License
 -----------------------
-Python code is licensed under the MIT License.
+This code is licensed under the MIT License.
 
 
 Workflow
@@ -30,13 +30,15 @@ have been created using pydefect.
 Before running this command, make sure that `calc_results.json` and  
 `band_edge_states.json` files have been created using pydefect.
 
+
+
 Development notes
 -------------------
 ### Bugs, requests and questions
 Please use the [Issue Tracker](https://github.com/kumagai-group/pydefect_2d/issues) to report bugs, request features.
 
 ### Code contributions
-Although pydefect_2d is free to use, we sincerely appreciate if you help us to improve this code.
+Although pydefect_ccd is free to use, we sincerely appreciate if you help us to improve this code.
 The simplest but most valuable contribution is to send the feature requests and bug reports.
 
 Please report any bugs and issues at PyDefect's [GitHub Issues page](https://github.com/kumagai-group/pydefect_2d).
@@ -46,13 +48,13 @@ Please use the ["Fork and Pull"](https://guides.github.com/activities/forking/) 
 - Add unittests wherever possible including scripts for command line interfaces.
 
 ### Tests
-Run the tests using `pytest pydefect_2d`.
+Run the tests using `pytest pydefect_ccd`.
 
-Citing pydefect_2d
+Citing pydefect_ccd
 ---------------
-If pydefect_2d has been used in your research, please cite the following paper.
+If pydefect_ccd has been used in your research, please temporary cite the following paper.
 
-[Corrections on Formation Energies and Eigenvalues of Point Defect Calculations in Two-Dimensional Materials]<br>
+
 Yu Kumagai<br>
 
 

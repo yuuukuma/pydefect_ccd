@@ -8,7 +8,7 @@ class Carrier(MSONable, ExtendedEnum):
     e, h = "e", "h"
 
     @property
-    def pn(self):
+    def carrier_type(self) -> str:
         return "n" if self is Carrier.e else "p"
 
     @property
@@ -29,8 +29,7 @@ class Carrier(MSONable, ExtendedEnum):
         raise ValueError
 
     def is_occupied(self, occupation):
-        return occupation > 0.1 if self is Carrier.e \
-            else occupation < 0.9
+        return occupation > 0.1 if self is Carrier.e else occupation < 0.9
 
 
 class CorrectionType(MSONable, ExtendedEnum):

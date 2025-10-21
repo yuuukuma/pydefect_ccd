@@ -3,8 +3,8 @@
 
 import pytest
 
-from pydefect_ccd.config_coord import (Ccd, SinglePointResult, CcdPlotter,
-                                       PotentialCurve)
+from pydefect_ccd.ccd import (Ccd, SinglePointResult, CcdPlotter,
+                              PotentialCurve)
 from pydefect_ccd.enum import Carrier
 
 
@@ -28,7 +28,7 @@ def ccd(single_ccd):
         single_points=[SinglePointResult(3., 1.0, 10.1, False),
                        SinglePointResult(2., 0.9, 10.2, False),
                        SinglePointResult(1., 0.8, 10.3, False)])
-    return Ccd(name="Va_O1", potential_curves=[single_ccd, excited_state])
+    return Ccd(name="Va_O1", potential_curve_results=[single_ccd, excited_state])
 
 
 def test_plot_ccd(ccd):

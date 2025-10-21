@@ -6,11 +6,11 @@ from pathlib import Path
 from pydefect.analyzer.band_edge_states import PerfectBandEdgeState
 from vise.analyzer.effective_mass import EffectiveMass
 
+from pydefect_ccd.ccd import Ccd, PotentialCurve
 from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.cli.main import parse_args_main
 from pydefect_ccd.cli.main_function import update_single_point_infos, make_ccd, \
     plot_eigenvalues, add_point_infos_to_single_ccd
-from pydefect_ccd.config_coord import Ccd, PotentialCurve
 
 
 def loadfn_effect(d: dict):

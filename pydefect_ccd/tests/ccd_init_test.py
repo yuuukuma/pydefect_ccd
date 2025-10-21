@@ -21,7 +21,7 @@ def test_dephon_init_dQ(ccd_init):
 
 
 def test_dephon_init_min_point_info_from_charge(ccd_init):
-    actual = ccd_init.relaxed_point_info_from_charge(charge=1)
+    actual = ccd_init.relaxed_point_from_charge(charge=1)
     assert actual == ccd_init.relaxed_points[1]
 
 

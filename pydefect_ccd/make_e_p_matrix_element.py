@@ -6,7 +6,7 @@ import numpy as np
 from pymatgen.electronic_structure.core import Spin
 from vise.util.logger import get_logger
 
-from pydefect_ccd.config_coord import PotentialCurve
+from pydefect_ccd.ccd import PotentialCurveResult
 from pydefect_ccd.ele_phon_coupling import EPMatrixElement, InnerProduct
 from pydefect_ccd.util import spin_to_idx
 
@@ -18,21 +18,19 @@ wswq_type = Dict[Optional[Tuple[int, int]], Dict[Tuple[int, int], complex]]
 
 class MakeEPMatrixElement:
     def __init__(self,
-                 base_disp_ratio: float,
-                 single_ccd: PotentialCurve,
+                 potential_curve_result: PotentialCurveResult,
+                 disp_ratio: float,
                  band_edge_index: int,
                  defect_band_index: int,
                  kpoint_index: int,
                  spin: Spin,
                  dQ_wswq_pairs: List[Tuple[float, wswq_type]],
-                 energy_diff: float = None
-                 ):
-        self.charge = single_ccd.charge
-        self.base_disp_ratio = base_disp_ratio
+                 energy_diff: float = None):
+        self.charge = potential_curve_result.charge
         self.band_edge_index = band_edge_index
         self.defect_band_index = defect_band_index
 
-        single_point_info = single_ccd.get_single_point_by_disp_ratio(base_disp_ratio)
+        single_point_info = potential_curve_result.get_single_point_by_disp_ratio(disp_ratio)
         if energy_diff:
             self.energy_diff = energy_diff
         else:
@@ -48,7 +46,6 @@ class MakeEPMatrixElement:
         inner_prods = {dQ: self._add_inner_products(wswq, dQ)
                        for dQ, wswq in self.dQ_wswq_pairs}
         return EPMatrixElement(charge=self.charge,
-                               base_disp_ratio=self.base_disp_ratio,
                                band_edge_index=self.band_edge_index,
                                defect_band_index=self.defect_band_index,
                                spin=self.spin,

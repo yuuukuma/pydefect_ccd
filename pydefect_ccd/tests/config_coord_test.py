@@ -7,7 +7,7 @@ import pytest
 from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from vise.tests.helpers.assertion import assert_dataclass_almost_equal
 
-from pydefect_ccd.config_coord import Ccd, SinglePointResult, CcdPlotter, \
+from pydefect_ccd.ccd import Ccd, SinglePointResult, CcdPlotter, \
     PotentialCurve, spline3, captured_carrier, CarrierDiffError
 from pydefect_ccd.enum import CorrectionType, Carrier
 
@@ -151,7 +151,7 @@ def excited_ccd():
 
 @pytest.fixture
 def ccd(potential_curve, excited_ccd):
-    return Ccd(name="Va_O1_1 ⇆ Va_O1_0", potential_curves=[potential_curve, excited_ccd])
+    return Ccd(name="Va_O1_1 ⇆ Va_O1_0", potential_curve_results=[potential_curve, excited_ccd])
 
 
 def test_captured_carrier(potential_curve, excited_ccd):
@@ -170,7 +170,7 @@ def test_ccd_single_ccd(ccd, potential_curve):
 
 
 def test_ccd_initial_and_final_ccd_from_captured_carrier(ccd, potential_curve, excited_ccd):
-    actual = ccd.initial_and_final_ccd_from_captured_carrier(Carrier.h)
+    actual = ccd.initial_and_final_curves_from_captured_carrier(Carrier.h)
     expected = (potential_curve, excited_ccd)
     assert actual == expected
 

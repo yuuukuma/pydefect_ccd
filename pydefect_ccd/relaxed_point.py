@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 #  Copyright (c) 2024 Kumagai group.
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from monty.json import MSONable
 from pydefect.analyzer.band_edge_states import LocalizedOrbital
-from pymatgen.core import Structure
+from pymatgen.core import Structure, IStructure
 from vise.util.structure_symmetrizer import num_sym_op
 
 
@@ -40,8 +40,18 @@ def _joined_local_orbitals(localized_orbitals) -> str:
     return ", ".join(lo_str)
 
 
+@dataclass(kw_only=True)
+class PointMixIn(MSONable):
+    # [spin][bands]
+    energy: float # Bare energy obtained from DFT calculation
+    magnetization: float
+    localized_orbitals: Optional[List[List[LocalizedOrbital]]] = field(default=None)
+    valence_bands: Optional[List[List[LocalizedOrbital]]] = field(default=None)
+    conduction_bands: Optional[List[List[LocalizedOrbital]]] = field(default=None)
+
+
 @dataclass
-class RelaxedPoint(MSONable):
+class RelaxedPoint(PointMixIn):
     """Information at the relaxed structure for a given charge state
 
     Attributes:
@@ -62,15 +72,10 @@ class RelaxedPoint(MSONable):
     """
     name: str
     charge: int
-    structure: Structure
-    energy: float
     correction_energy: float
-    magnetization: float
-    localized_orbitals: List[List[LocalizedOrbital]]
+    structure: Structure | IStructure
     initial_site_symmetry: str
     final_site_symmetry: str
-    valence_bands: List[List[NearEdgeState]]  # by spin
-    conduction_bands: List[List[NearEdgeState]]  # by spin
     parsed_dir: str
 
     @property
