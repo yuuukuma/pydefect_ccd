@@ -40,7 +40,8 @@ class NearEdgeState(MSONable):
         return ", ".join(x)
 
 
-def _joined_local_orbitals(localized_orbitals) -> str:
+def _joined_local_orbital_info(localized_orbitals: List[LocalizedOrbital]
+                               ) -> str:
     lo_str = []
     for lo_by_spin, spin in zip(localized_orbitals, ["up", "down"]):
         for lo_by_band in lo_by_spin:
@@ -51,8 +52,13 @@ def _joined_local_orbitals(localized_orbitals) -> str:
 
 @dataclass(kw_only=True)
 class PointMixIn(MSONable):
-    # [spin][bands]
-    energy: float  # Bare energy obtained from DFT calculation
+    """Mix-in class that stores information for a fixed structural point.
+
+    Indices for orbitals and bands are organized as [spin][band].
+    Attributes:
+        energy: Bare energy obtained from DFT calculations.
+    """
+    energy: float
     magnetization: float
     localized_orbitals: Optional[List[List[LocalizedOrbital]]] = field(default=None)
     valence_bands: Optional[List[List[NearEdgeState]]] = field(default=None)
@@ -64,11 +70,12 @@ class RelaxedPoint(PointMixIn):
     """Information at the relaxed structure for a given charge state
 
     Attributes:
+        name: The defect name.
         charge: The charge state.
+        correction_energy: Correction energy estimated e.g. by eFNV method.
         structure: The atomic configuration.
         energy: Formation energy at Ef=VBM and chemical potentials
             being standard states.
-        correction_energy: Correction energy estimated e.g. by eFNV method.
         magnetization: Magnetization
         localized_orbitals: List of localized orbitals at each spin channel.
             [Spin up orbitals, Spin down orbitals]
