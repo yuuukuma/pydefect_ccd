@@ -12,20 +12,29 @@ from vise.util.structure_symmetrizer import num_sym_op
 
 @dataclass
 class NearEdgeState(MSONable):
-    band_index: int  # begin from 1.
+    """Information about band-edge states near the VBM or CBM.
+
+    Note: In this code, we assume the Gamma point only.
+
+    Attributes:
+        band_index: Index of the band (begin from 1).
+        kpt_coord: Coordinates of the k-point in fractional coordinates.
+        kpt_index: Index of the k-point (begin from 1).
+        eigenvalue: Eigenvalue of the state (in eV).
+        occupation: Occupation number of the state.
+    """
+
+    band_index: int
     kpt_coord: List[float]
-    kpt_weight: float
-    kpt_index: int  # begin from 1.
+    kpt_index: int
     eigenvalue: float
     occupation: float
 
     def __str__(self):
         k_coord = " ".join([f"{x:.2f}" for x in self.kpt_coord])
-        k = [f"index : {self.kpt_index}",
-             f"coord: {k_coord}",
-             f"weight: {self.kpt_weight}"]
+        k_info = [f"index : {self.kpt_index}", f"coord: {k_coord}"]
         x = [f"band index: {self.band_index}",
-             f"kpt info: ({', '.join(k)})",
+             f"kpt info: ({', '.join(k_info)})",
              f"eigenvalue: {self.eigenvalue:.2f}",
              f"occupation: {self.occupation:.2f}"]
         return ", ".join(x)
@@ -43,11 +52,11 @@ def _joined_local_orbitals(localized_orbitals) -> str:
 @dataclass(kw_only=True)
 class PointMixIn(MSONable):
     # [spin][bands]
-    energy: float # Bare energy obtained from DFT calculation
+    energy: float  # Bare energy obtained from DFT calculation
     magnetization: float
     localized_orbitals: Optional[List[List[LocalizedOrbital]]] = field(default=None)
-    valence_bands: Optional[List[List[LocalizedOrbital]]] = field(default=None)
-    conduction_bands: Optional[List[List[LocalizedOrbital]]] = field(default=None)
+    valence_bands: Optional[List[List[NearEdgeState]]] = field(default=None)
+    conduction_bands: Optional[List[List[NearEdgeState]]] = field(default=None)
 
 
 @dataclass
@@ -87,12 +96,6 @@ class RelaxedPoint(PointMixIn):
         return self.energy + self.correction_energy
 
     @property
-    def degeneracy_by_symmetry_reduction(self) -> float:
-        initial_num_sym_op = num_sym_op[self.initial_site_symmetry]
-        final_num_sym_op = num_sym_op[self.final_site_symmetry]
-        return initial_num_sym_op / final_num_sym_op
-
-    @property
     def dir_path(self) -> Path:
         return Path(self.parsed_dir)
 
@@ -101,7 +104,7 @@ class RelaxedPoint(PointMixIn):
         return abs(self.magnetization) > 0.95
 
     @property
-    def relevant_band_indices(self) -> set:
+    def related_band_indices(self) -> set:
         result = set()
 
         def add(bands):
@@ -116,3 +119,10 @@ class RelaxedPoint(PointMixIn):
         add(self.localized_orbitals)
         add(self.conduction_bands)
         return result
+
+    @property
+    def degeneracy_by_symmetry_reduction(self) -> float:
+        initial_num_sym_op = num_sym_op[self.initial_site_symmetry]
+        final_num_sym_op = num_sym_op[self.final_site_symmetry]
+        return initial_num_sym_op / final_num_sym_op
+

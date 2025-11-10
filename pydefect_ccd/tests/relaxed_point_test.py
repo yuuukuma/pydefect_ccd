@@ -9,14 +9,14 @@ from pydefect_ccd.relaxed_point import NearEdgeState, RelaxedPoint
 
 vb_nes = NearEdgeState(band_index=1,
                        kpt_coord=[0.0]*3,
-                       kpt_weight=1.0,
                        kpt_index=1,
                        eigenvalue=1.5,
                        occupation=1.0)
 
 
 def test_near_edge_state_str():
-    print(vb_nes)
+    expected = "band index: 1, kpt info: (index : 1, coord: 0.00 0.00 0.00), eigenvalue: 1.50, occupation: 1.00"
+    assert str(vb_nes) == expected
 
 
 @pytest.fixture
@@ -27,7 +27,6 @@ def relaxed_point(ground_structure):
                                 orbitals={"O": [0.0, 1.0, 0.0]})
     cb_nes_up = NearEdgeState(band_index=2,
                               kpt_coord=[0.0]*3,
-                              kpt_weight=1.0,
                               kpt_index=1,
                               eigenvalue=2.5,
                               occupation=0.0)
@@ -48,4 +47,8 @@ def relaxed_point(ground_structure):
 
 
 def test_relevant_band_indices(relaxed_point):
-    assert relaxed_point.relevant_band_indices == {1, 2, 3}
+    assert relaxed_point.related_band_indices == {1, 2, 3}
+
+
+def test_minimum_point_info_degeneracy_by_symm_reduction(relaxed_point):
+    assert relaxed_point.degeneracy_by_symmetry_reduction == 2
