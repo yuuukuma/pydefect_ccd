@@ -11,9 +11,18 @@ def test_json_roundtrip(ccd_init, tmpdir):
     assert_json_roundtrip(ccd_init, tmpdir)
 
 
-def test_init_dQ(ccd_init):
+def test_dQ(ccd_init):
     expected = sqrt((0.1*10)**2*6 * Element.H.atomic_mass)
     assert ccd_init.dQ == pytest.approx(expected)
+
+
+def test_dR(ccd_init):
+    expected = sqrt((0.1*10)**2*6)
+    assert ccd_init.dR == pytest.approx(expected)
+
+
+def test_modal_mass(ccd_init):
+    assert ccd_init.modal_mass == pytest.approx(Element.H.atomic_mass)
 
 
 def test_relaxed_point_from_charge(ccd_init):

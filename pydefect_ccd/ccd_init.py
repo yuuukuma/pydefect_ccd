@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #  Copyright (c) 2022 Kumagai group.
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 from monty.json import MSONable
 from pymatgen.analysis.defects.ccd import get_dQ
@@ -45,21 +45,21 @@ class CcdInit(MSONable, ToJsonFileMixIn):
     def __post_init__(self):
         assert len(self.relaxed_points) == 2
 
-    def effective_mass(self, carrier: Carrier):
+    def effective_mass(self, carrier: Carrier) -> Optional[float]:
         if carrier is Carrier.e:
             return self.ave_electron_mass
         return self.ave_hole_mass
 
     @property
-    def name(self):
+    def name(self) -> str:
         return (f"{self.relaxed_points[0].full_name} "
                 f"⇆ {self.relaxed_points[1].full_name}")
 
     @property
-    def band_gap(self):
+    def band_gap(self) -> float:
         return self.cbm - self.vbm
 
-    def relaxed_point_from_charge(self, charge: int):
+    def relaxed_point_from_charge(self, charge: int) -> RelaxedPoint:
         for rp in self.relaxed_points:
             if rp.charge == charge:
                 return rp
@@ -67,23 +67,27 @@ class CcdInit(MSONable, ToJsonFileMixIn):
             raise ValueError(f"Charge {charge} does not exist.")
 
     @property
-    def volume(self):
+    def volume(self) -> float:
+        """ Volume of the supercell structure in Å^3. """
         assert (self.relaxed_points[0].structure.volume
                 == self.relaxed_points[1].structure.volume)
         return self.relaxed_points[0].structure.volume
 
     @property
     def dQ(self):
+        """ Unit: amu^{1/2} Å. """
         return abs(get_dQ(self.relaxed_points[0].structure,
                           self.relaxed_points[1].structure))
 
     @property
     def dR(self):
+        """ Unit: Å."""
         return abs(get_dR(self.relaxed_points[0].structure,
                           self.relaxed_points[1].structure))
 
     @property
     def modal_mass(self):
+        """ Unit: amu^{1/2}."""
         return (self.dQ / self.dR) ** 2
 
     def __str__(self):
