@@ -18,7 +18,8 @@ from vise.util.matplotlib import float_to_int_formatter
 from vise.util.mix_in import ToJsonFileMixIn
 
 from pydefect_ccd.enum import Carrier
-from pydefect_ccd.relaxed_point import NearEdgeState, _joined_local_orbitals, \
+from pydefect_ccd.relaxed_point import NearEdgeState, \
+    _joined_local_orbital_info, \
     PointMixIn
 from pydefect_ccd.util import spin_to_idx
 
@@ -33,11 +34,10 @@ class SinglePointSpec(MSONable, ToJsonFileMixIn):
 
 
 @dataclass
-class SinglePointResult(PointMixIn, ToJsonFileMixIn):
+class SinglePoint(PointMixIn, ToJsonFileMixIn):
     spec: SinglePointSpec
     ccd_correction_energy: float  # CCD correction at a fixed structure
     is_shallow: bool = None
-    used_for_fitting: bool = True
     # This needs to be here to make table_for_plot
 
     @property
@@ -74,8 +74,7 @@ class SinglePointResult(PointMixIn, ToJsonFileMixIn):
     def table_for_plot(self):
         tables = {"corr. energy": self.ccd_corrected_energy,
                   "is shallow?": self.is_shallow,
-                  "used for fitting?": self.used_for_fitting,
-                  "localized orb": _joined_local_orbitals(self.localized_orbitals)}
+                  "localized orb": _joined_local_orbital_info(self.localized_orbitals)}
         return list(tables.keys()), tables.values()
 
     def __str__(self):
@@ -93,10 +92,9 @@ class PotentialCurveSpec(MSONable, ToJsonFileMixIn):
 
 
 @dataclass
-class PotentialCurveResult(MSONable, ToJsonFileMixIn):
+class PotentialCurve(MSONable, ToJsonFileMixIn):
     spec: PotentialCurveSpec
-    single_points: List[SinglePointResult] = field(default_factory=list)
-    # carriers: List[Carrier] = field(default_factory=list)
+    single_points: List[SinglePoint] = field(default_factory=list)
     shifted_energy: float = 0.0  # to set the zero of energy
 
     @property
@@ -111,14 +109,18 @@ class PotentialCurveResult(MSONable, ToJsonFileMixIn):
     @property
     def Q_diff(self) -> float: return self.spec.Q_diff
 
-    @property
-    def frequency(self) -> float:
-        return self.omega()
-
     def __post_init__(self):
         self.single_points = list(sorted(self.single_points, key=lambda x: x.dQ))
 
     def dQs_and_energies(self, disp_ratio_range: Tuple[float, float] = None):
+        """
+
+        Energy for the ccd is the sum of bare DFT energy at a fixed structure,
+        FNV correction energy, shifted energy, and CCD correction energy.
+
+        Returns:
+
+        """
         dQs, energies = [], []
         for single_point in self.single_points:
             if disp_ratio_range and not (disp_ratio_range[0]
@@ -126,25 +128,10 @@ class PotentialCurveResult(MSONable, ToJsonFileMixIn):
                                          <= disp_ratio_range[1]):
                 continue
             dQs.append(single_point.dQ)
-            corr_energy = single_point.ccd_correction_energy + self.spec.correction_energy
-            energies.append(single_point.energy + corr_energy + self.shifted_energy)
+            energy = (single_point.energy + single_point.ccd_correction_energy
+                      + self.spec.correction_energy + self.shifted_energy)
+            energies.append(energy)
         return dQs, energies
-
-    def omega(self,
-              ax: Axes = None,
-              plot_q_range: Optional[List[float]] = None,
-              color: str = None):
-
-        dQs, energies = self.dQs_and_energies()
-
-        if len(dQs) < 3:
-            raise ValueError("The number of Q points is not sufficient for "
-                             "calculating omega.")
-
-        q = np.linspace(plot_q_range[0], plot_q_range[1], 1000) \
-            if plot_q_range else None
-
-        return get_omega_from_PES(np.array(dQs), np.array(energies), ax=ax, q=q)
 
     def add_plot(self,
                  ax,
@@ -157,9 +144,9 @@ class PotentialCurveResult(MSONable, ToJsonFileMixIn):
         try:
             if spline_fit:
                 label = f"q={self.charge}"
-                carriers = "+".join([str(c) for c in self.carriers])
-                if carriers:
-                    label += "+" + carriers
+#                carriers = "+".join([str(c) for c in self.carriers])
+#                 if carriers:
+#                     label += "+" + carriers
                 x, y = spline3(dQs, energies, 100, q_range)
                 ax.plot(x, y, label=label, color=color)
         except TypeError as e:
@@ -168,7 +155,7 @@ class PotentialCurveResult(MSONable, ToJsonFileMixIn):
 
         if quadratic_fit:
             try:
-                self.omega(ax, plot_q_range=q_range)
+                calc_omega(dQs, energies, ax, plot_q_range=q_range)
             except (ValueError, TypeError, RuntimeError) as e:
                 print(f"{self.charge}: {e}")
                 pass
@@ -177,7 +164,8 @@ class PotentialCurveResult(MSONable, ToJsonFileMixIn):
     def table_for_plot(self):
         tables = {"charge": self.charge,
                   "corr. energy": self.correction_energy,
-                  "carriers": " ".join([str(c) for c in self.carriers]),
+                  "counter charge": self.counter_charge,
+                  "Q diff": self.Q_diff,
                   "shifted energy": self.shifted_energy}
         return list(tables.keys()), tables.values()
 
@@ -187,7 +175,26 @@ class PotentialCurveResult(MSONable, ToJsonFileMixIn):
                         headers=headers)
 
 
-def dQ_revert(pot_curve_result: PotentialCurveResult) -> PotentialCurveResult:
+def calc_omega(dQs: List[float],
+               energies: List[float],
+               ax: Axes = None,
+               plot_q_range: Optional[List[float]] = None):
+    if len(dQs) < 3:
+        raise ValueError("The number of Q points must be >= 3.")
+
+    if plot_q_range is None:
+        q = None
+    else:
+        try:
+            start, end = plot_q_range
+        except Exception:
+            raise TypeError("plot_q_range must be a sequence of two numbers")
+        q = np.linspace(start, end, 1000)
+
+    return get_omega_from_PES(np.array(dQs), np.array(energies), ax=ax, q=q)
+
+
+def dQ_revert(pot_curve_result: PotentialCurve) -> PotentialCurve:
     new_single_points = []
     for single_point in pot_curve_result.single_points:
         new_dis_ratio = 1.0 - single_point.disp_ratio
@@ -197,10 +204,9 @@ def dQ_revert(pot_curve_result: PotentialCurveResult) -> PotentialCurveResult:
         new_result.spec = new_spec
         new_single_points.append(new_result)
 
-    return PotentialCurveResult(pot_curve_result.spec,
-                                new_single_points,
-                                pot_curve_result.carriers,
-                                pot_curve_result.shifted_energy)
+    return PotentialCurve(pot_curve_result.spec,
+                          new_single_points,
+                          pot_curve_result.shifted_energy)
 
 
     # def __str__(self):
@@ -221,20 +227,14 @@ def dQ_revert(pot_curve_result: PotentialCurveResult) -> PotentialCurveResult:
 #         return "\n".join(result)
 
 
-def captured_carrier(initial: PotentialCurveResult, final: PotentialCurveResult):
-    carrier_diff = set(initial.carriers) - set(final.carriers)
-    if len(carrier_diff) != 1:
-        raise CarrierDiffError
-    return carrier_diff.pop()
-
-
 @dataclass
 class Ccd(MSONable, ToJsonFileMixIn):
     name: str
-    ground_curve: PotentialCurveResult
-    excited_curve: PotentialCurveResult
+    ground_curve: PotentialCurve
+    excited_curve: PotentialCurve
     # potential_curve_results: List[PotentialCurveResult]
 
+    @property
     def captured_carrier(self) -> Carrier:
         charge_diff = self.excited_curve.charge - self.ground_curve.charge
         carrier_charge = - charge_diff
@@ -258,23 +258,36 @@ def spline3(xs, ys, num_points, xrange=None):
         num_points (int): Number of interpolated points including end points.
 
     Returns:
-        Tuple of
+        Tuple of (x_spline, y_spline) as numpy arrays.
     """
-    #   tck : tuple
-    #         (t,c,k) _default_single_ccd_for_e_p_coupling tuple containing the vector of knots, the B-spline
-    #         coefficients, and the degree of the spline.
-    tck = interpolate.splprep([xs, ys], k=5)[0]
+    xs, ys = np.asarray(xs), np.asarray(ys)
 
-    if xrange:
-        x_dist = max(xs) - min(xs)
-        _min = (xrange[0] - min(xs)) / x_dist
-        _max = (xrange[1] - min(xs)) / x_dist
+    if num_points < 2:
+        raise ValueError("num_points must be >= 2")
+
+    # desired degree is 3 (cubic)
+    max_k = max(1, min(3, len(xs) - 1))
+    if len(xs) < 2:
+        raise ValueError("At least two points are required.")
+
+    # prepare spline; use s=0 to force interpolation
+    tck = interpolate.splprep([xs, ys], k=max_k, s=0)[0]
+
+    if xrange is not None:
+        x_dist = float(np.max(xs) - np.min(xs))
+        if x_dist == 0.0:
+            raise ValueError("xs must not be all equal")
+        _min = (xrange[0] - np.min(xs)) / x_dist
+        _max = (xrange[1] - np.min(xs)) / x_dist
+        # clamp to [0, 1]
+        _min = max(0.0, min(1.0, _min))
+        _max = max(0.0, min(1.0, _max))
     else:
         _min, _max = 0.0, 1.0
 
     u = np.linspace(_min, _max, num=num_points, endpoint=True)
     spline = interpolate.splev(u, tck)
-    return spline[0], spline[1]
+    return np.asarray(spline[0]), np.asarray(spline[1])
 
 
 class CcdPlotter:
@@ -304,10 +317,9 @@ class CcdPlotter:
         ax = self.plt.gca()
         if self._q_range:
             ax.set_xlim(self._q_range[0], self._q_range[1])
-        for potential_curve_result, color in zip(self._ccd.potential_curve_results, ["red", "blue", "green"]):
 
-            print(potential_curve_result)
-            potential_curve_result.add_plot(ax, color, self._q_range, self._quadratic_fit, self._spline_fit)
+        self._ccd.ground_curve.add_plot(ax, "red", self._q_range, self._quadratic_fit, self._spline_fit)
+        self._ccd.excited_curve.add_plot(ax, "blue", self._q_range, self._quadratic_fit, self._spline_fit)
 
     def _set_labels(self):
         ax = self.plt.gca()
@@ -322,6 +334,3 @@ class CcdPlotter:
         self.plt.gca().xaxis.set_major_formatter(float_to_int_formatter)
         self.plt.gca().yaxis.set_major_formatter(float_to_int_formatter)
 
-
-class CarrierDiffError(Exception):
-    pass

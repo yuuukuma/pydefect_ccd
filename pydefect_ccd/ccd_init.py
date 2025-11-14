@@ -10,7 +10,7 @@ from vise.util.logger import get_logger
 from vise.util.mix_in import ToJsonFileMixIn
 
 from pydefect_ccd.enum import Carrier
-from pydefect_ccd.relaxed_point import _joined_local_orbitals, RelaxedPoint
+from pydefect_ccd.relaxed_point import _joined_local_orbital_info, RelaxedPoint
 from pydefect_ccd.util import get_dR
 
 logger = get_logger(__name__)
@@ -123,7 +123,7 @@ class CcdInit(MSONable, ToJsonFileMixIn):
                  min_info.final_site_symmetry, min_info.energy,
                  min_info.correction_energy, min_info.corrected_energy,
                  min_info.magnetization,
-                 _joined_local_orbitals(min_info.localized_orbitals)])
+                 _joined_local_orbital_info(min_info.localized_orbitals)])
             if last_energy:
                 table[-1].append(last_energy - min_info.corrected_energy)
             last_energy = min_info.corrected_energy
