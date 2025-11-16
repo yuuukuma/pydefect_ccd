@@ -8,7 +8,6 @@ from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from pymatgen.core import Structure, Lattice
 from pymatgen.electronic_structure.core import Spin
 
-from pydefect_ccd.ccd import SinglePointResult, Ccd, PotentialCurve
 from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.ele_phon_coupling import InnerProduct, EPMatrixElement
 from pydefect_ccd.enum import Carrier
@@ -77,13 +76,11 @@ direct
 vb = NearEdgeState(band_index=1,
                    kpt_coord=[0.0]*3,
                    kpt_index=1,
-                   kpt_weight=1.0,
                    eigenvalue=1.0,
                    occupation=1.0)
 cb = NearEdgeState(band_index=2,
                    kpt_coord=[0.0]*3,
                    kpt_index=1,
-                   kpt_weight=1.0,
                    eigenvalue=3.0,
                    occupation=0.0)
 
@@ -129,18 +126,27 @@ def ccd_init(ground_structure, excited_structure):
                    ave_static_diele_const=13.0)
 
 
-@pytest.fixture
-def ccd(excited_structure, ground_structure, intermediate_structure):
-    return Ccd(name="test",
-               potential_curve_results=[
-                   PotentialCurve(name="excited", charge=0,
-                                  single_points=[SinglePointResult(-1.0, -0.1, 2.1, False, used_for_fitting=True),
-                                                 SinglePointResult(0.0, 0.0, 1.1, False, used_for_fitting=True, conduction_bands=[[cb]], valence_bands=[[vb]]),
-                                                 SinglePointResult(1.0, 0.1, 2.2, False, used_for_fitting=True)]),
-                   PotentialCurve(name="ground", charge=1,
-                                  single_points=[SinglePointResult(-1.0, -0.1, 1.1, False, used_for_fitting=False),
-                                                 SinglePointResult(0.0, 0.0, 0.1, False, used_for_fitting=True, conduction_bands=[[cb]], valence_bands=[[vb]]),
-                                                 SinglePointResult(1.0, 0.1, 1.2, False, used_for_fitting=True)])])
+# @pytest.fixture
+# def ccd(excited_structure, ground_structure, intermediate_structure):
+#     ground_spec = PotentialCurveSpec(charge=1, counter_charge=0,
+#                                      correction_energy=0.0, Q_diff=1.0)
+#     ground_single_points = [SinglePoint(SinglePointSpec(-1.0, -0.1), 1.1, False, used_for_fitting=False),
+#                    SinglePoint(0.0, 0.0, 0.1, False, used_for_fitting=True, conduction_bands=[[cb]], valence_bands=[[vb]]),
+#                    SinglePoint(1.0, 0.1, 1.2, False, used_for_fitting=True)])])
+#
+#     ground_curve = PotentialCurve(ground_spec,
+#                                   single_points=
+#                                   single_points=[SinglePoint(-1.0, -0.1, 1.1, False, used_for_fitting=False),
+#                                                  SinglePoint(0.0, 0.0, 0.1, False, used_for_fitting=True, conduction_bands=[[cb]], valence_bands=[[vb]]),
+#                                                  SinglePoint(1.0, 0.1, 1.2, False, used_for_fitting=True)])])
+#     PotentialCurve(name="excited", charge=0,
+#
+#     return Ccd(name="test",
+#                ground_curve=
+#
+#                                   single_points=[SinglePoint(-1.0, -0.1, 2.1, False, used_for_fitting=True),
+#                                                  SinglePoint(0.0, 0.0, 1.1, False, used_for_fitting=True, conduction_bands=[[cb]], valence_bands=[[vb]]),
+#                                                  SinglePoint(1.0, 0.1, 2.2, False, used_for_fitting=True)]),
 
 
 @pytest.fixture(scope="session")

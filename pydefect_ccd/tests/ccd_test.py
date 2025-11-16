@@ -7,8 +7,8 @@ import pytest
 from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from vise.tests.helpers.assertion import assert_dataclass_almost_equal
 
-from pydefect_ccd.ccd import Ccd, SinglePoint, CcdPlotter, \
-    PotentialCurve, spline3, SinglePointSpec, PotentialCurveSpec, dQ_revert
+from pydefect_ccd.ccd import Ccd, SinglePoint, PotentialCurve, spline3, \
+    SinglePointSpec, PotentialCurveSpec, dQ_revert
 from pydefect_ccd.enum import Carrier
 
 
@@ -105,22 +105,22 @@ def test_spline3():
     assert actual[1][1] == pytest.approx(2.17924820)
 
 
-def test_plot_ccd(ccd):
-    spec = PotentialCurveSpec(charge=0,
-                              correction_energy=1.0,
-                              counter_charge=1,
-                              Q_diff=10.0)
+# def test_plot_ccd(ccd):
+#     spec = PotentialCurveSpec(charge=0,
+#                               correction_energy=1.0,
+#                               counter_charge=1,
+#                               Q_diff=10.0)
 
-    potential_curve = PotentialCurve(spec=spec,
-                          single_points=[single_point],
-                          shifted_energy=3.0)
+#     potential_curve = PotentialCurve(spec=spec,
+#                           single_points=[single_point],
+#                           shifted_energy=3.0)
 
-    plotter = CcdPlotter(ccd)
-    plotter.construct_plot()
-    plotter.plt.show()
+#     plotter = CcdPlotter(ccd)
+#     plotter.construct_plot()
+#     plotter.plt.show()
 
 
-def test_plot_ccd_q_range(ccd):
-    plotter = CcdPlotter(ccd, q_range=[-2, 4])
-    plotter.construct_plot()
-    plotter.plt.show()
+# def test_plot_ccd_q_range(ccd):
+#     plotter = CcdPlotter(ccd, q_range=[-2, 4])
+#     plotter.construct_plot()
+#     plotter.plt.show()

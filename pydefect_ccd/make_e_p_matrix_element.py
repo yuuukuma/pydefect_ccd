@@ -6,7 +6,7 @@ import numpy as np
 from pymatgen.electronic_structure.core import Spin
 from vise.util.logger import get_logger
 
-from pydefect_ccd.ccd import PotentialCurveResult
+from pydefect_ccd.ccd import PotentialCurve
 from pydefect_ccd.ele_phon_coupling import EPMatrixElement, InnerProduct
 from pydefect_ccd.util import spin_to_idx
 
@@ -18,7 +18,7 @@ wswq_type = Dict[Optional[Tuple[int, int]], Dict[Tuple[int, int], complex]]
 
 class MakeEPMatrixElement:
     def __init__(self,
-                 potential_curve_result: PotentialCurveResult,
+                 potential_curve_result: PotentialCurve,
                  disp_ratio: float,
                  band_edge_index: int,
                  defect_band_index: int,

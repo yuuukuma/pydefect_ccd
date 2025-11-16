@@ -2,7 +2,7 @@
 #  Copyright (c) 2022 Kumagai group.
 import pytest
 
-from pydefect_ccd.ccd import SinglePointResult, PotentialCurve, Ccd
+from pydefect_ccd.ccd import SinglePoint, PotentialCurve, Ccd
 from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.enum import Carrier
 from pydefect_ccd.make_ccd import MakeCcd
@@ -53,66 +53,66 @@ common = dict(is_shallow=False, used_for_fitting=True)
 def test_make_ccd(excited_structure, ground_structure, dephon_init):
     ground = PotentialCurve(CcdId(name="from_0_to_1"),
                             charge=0,
-                            single_points=[SinglePointResult(dQ=0.0,
-                                                             disp_ratio=0.0,
-                                                             corrected_energy=-100.0,
-                                                             **common),
-                                           SinglePointResult(dQ=10.0,
-                                                      disp_ratio=1.0,
-                                                      corrected_energy=-90.0,
-                                                      **common)])
-    excited = PotentialCurve(CcdId(name="from_1_to_0"),
-                             charge=1,
-                             single_points=[SinglePointResult(dQ=0.0,
-                                                              disp_ratio=0.0,
-                                                              corrected_energy=-100.0,
-                                                              **common),
-                                            SinglePointResult(dQ=10.0,
+                            single_points=[SinglePoint(dQ=0.0,
+                                                       disp_ratio=0.0,
+                                                       corrected_energy=-100.0,
+                                                       **common),
+                                           SinglePoint(dQ=10.0,
                                                        disp_ratio=1.0,
                                                        corrected_energy=-90.0,
                                                        **common)])
+    excited = PotentialCurve(CcdId(name="from_1_to_0"),
+                             charge=1,
+                             single_points=[SinglePoint(dQ=0.0,
+                                                        disp_ratio=0.0,
+                                                        corrected_energy=-100.0,
+                                                        **common),
+                                            SinglePoint(dQ=10.0,
+                                                        disp_ratio=1.0,
+                                                        corrected_energy=-90.0,
+                                                        **common)])
 
     actual = MakeCcd(ground, excited, dephon_init).ccd
     expected = Ccd(name="Va_O", potential_curve_results=[
         PotentialCurve(CcdId(name="ground"),
                        charge=0,
-                       single_points=[SinglePointResult(dQ=0.0,
-                                                        disp_ratio=0.0,
-                                                        corrected_energy=-100.0,
-                                                        base_energy=-100.0,
-                                                        **common),
-                                      SinglePointResult(dQ=10.0,
-                                                 disp_ratio=1.0,
-                                                 corrected_energy=-90.0,
-                                                 base_energy=-100.0,
-                                                 **common)]),
+                       single_points=[SinglePoint(dQ=0.0,
+                                                  disp_ratio=0.0,
+                                                  corrected_energy=-100.0,
+                                                  base_energy=-100.0,
+                                                  **common),
+                                      SinglePoint(dQ=10.0,
+                                                  disp_ratio=1.0,
+                                                  corrected_energy=-90.0,
+                                                  base_energy=-100.0,
+                                                  **common)]),
         PotentialCurve(CcdId(name="excited", carriers=[Carrier.e]),
                        charge=1,
-                       single_points=[SinglePointResult(dQ=0.0,
-                                                        disp_ratio=1.0,
-                                                        # same as excited
-                                                        corrected_energy=-87.0,
-                                                        base_energy=-100.0,
-                                                        **common),
-                                      SinglePointResult(dQ=10.0,
-                                                 disp_ratio=0.0,
-                                                 # same as excited
-                                                 corrected_energy=-97.0,
-                                                 base_energy=-100.0,
-                                                 **common)]),
+                       single_points=[SinglePoint(dQ=0.0,
+                                                  disp_ratio=1.0,
+                                                  # same as excited
+                                                  corrected_energy=-87.0,
+                                                  base_energy=-100.0,
+                                                  **common),
+                                      SinglePoint(dQ=10.0,
+                                                  disp_ratio=0.0,
+                                                  # same as excited
+                                                  corrected_energy=-97.0,
+                                                  base_energy=-100.0,
+                                                  **common)]),
         PotentialCurve(CcdId(name="ground", carriers=[Carrier.h,
                                                       Carrier.e]),
                        charge=0,
-                       single_points=[SinglePointResult(dQ=0.0,
-                                                        disp_ratio=0.0,
-                                                        # band gap is added to ground
-                                                        corrected_energy=-98.0,
-                                                        base_energy=-100.0,
-                                                        **common),
-                                      SinglePointResult(dQ=10.0,
-                                                 disp_ratio=1.0,
-                                                 corrected_energy=-88.0,
-                                                 base_energy=-100.0,
-                                                 **common)])])
+                       single_points=[SinglePoint(dQ=0.0,
+                                                  disp_ratio=0.0,
+                                                  # band gap is added to ground
+                                                  corrected_energy=-98.0,
+                                                  base_energy=-100.0,
+                                                  **common),
+                                      SinglePoint(dQ=10.0,
+                                                  disp_ratio=1.0,
+                                                  corrected_energy=-88.0,
+                                                  base_energy=-100.0,
+                                                  **common)])])
     assert actual == expected
 

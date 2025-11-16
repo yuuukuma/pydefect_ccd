@@ -99,7 +99,7 @@ def parse_args_main(args):
 #         "-g", "--ground_ccd", type=loadfn,
 #         help="potential_curve.json file corresponding to _default_single_ccd_for_e_p_coupling ground state.")
 #     parser_make_ccd.add_argument(
-#         "-e", "--excited_ccd", type=loadfn,
+#         "-e", "--potential_curve_final", type=loadfn,
 #         help="potential_curve.json file corresponding to an excited state.")
 #     parser_make_ccd.set_defaults(func=make_ccd)
 

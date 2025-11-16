@@ -28,9 +28,10 @@ from vise.input_set.prior_info import PriorInfo
 from vise.util.file_transfer import FileLink
 from vise.util.logger import get_logger
 
-from pydefect_ccd.capture_rate import calc_phonon_overlaps, CaptureRate
-from pydefect_ccd.ccd import SinglePointResult, CcdPlotter, \
-    SinglePointSpec, PotentialCurveSpec, PotentialCurveResult
+from pydefect_ccd.capture_rate import \
+    calc_summed_squared_transition_moment_integral, CaptureRate
+from pydefect_ccd.ccd import SinglePoint, CcdPlotter, \
+    SinglePointSpec, PotentialCurveSpec, PotentialCurve
 from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.ele_phon_coupling import EPMatrixElement
 from pydefect_ccd.make_ccd import MakeCcd
@@ -250,7 +251,7 @@ def make_single_point_results(args: Namespace):
         localized_orbitals, valence_bands, conduction_bands = _get_band_edge_info(
             band_edge_orbital_infos, band_edge_states)
 
-        single_point_result = SinglePointResult(
+        single_point_result = SinglePoint(
             spec=spec,
             energy=calc_results.energy,
             ccd_correction_energy=ccd_correction.correction_energy,
@@ -266,12 +267,12 @@ def make_single_point_results(args: Namespace):
 
 
 def make_potential_curve_result(args: Namespace):
-    def _inner(dir_: Path) -> SinglePointResult:
+    def _inner(dir_: Path) -> SinglePoint:
         return loadfn(dir_ / "single_point_result.json")
 
     single_points = parse_dirs(args.dirs, _inner, verbose=True)
-    potential_curve_result = PotentialCurveResult(args.potential_curve_spec,
-                                                  single_points)
+    potential_curve_result = PotentialCurve(args.potential_curve_spec,
+                                            single_points)
     potential_curve_result.to_json_file("potential_curve_result.json")
 
 
@@ -399,13 +400,13 @@ def make_capture_rate(args: Namespace):
     i_deg = i_min_info.degeneracy_by_symmetry_reduction
     f_deg = f_min_info.degeneracy_by_symmetry_reduction
 
-    phonon_overlaps = calc_phonon_overlaps(i_ccd, f_ccd, args.temperatures)
+    phonon_overlaps = calc_summed_squared_transition_moment_integral(i_ccd, f_ccd, args.temperatures)
     em = dephon_init.effective_mass(args.captured_carrier)
     velocities = thermal_velocity(np.array(args.temperatures), em)
     spin_factor = 0.5 if i_min_info.is_spin_polarized else 1.0
 
     cap_rate = CaptureRate(Wif=e_p_matrix_elem.e_p_matrix_element(),
-                           summed_phonon_overlaps=phonon_overlaps,
+                           summed_squared_transition_moment_integral=phonon_overlaps,
                            velocities=velocities,
                            temperatures=args.temperatures,
                            site_degeneracy=f_deg / i_deg,

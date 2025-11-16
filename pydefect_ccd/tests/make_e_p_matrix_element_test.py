@@ -5,7 +5,7 @@ import pytest
 from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from pymatgen.electronic_structure.core import Spin
 
-from pydefect_ccd.ccd import PotentialCurve, SinglePointResult, CcdId
+from pydefect_ccd.ccd import PotentialCurve, SinglePoint, CcdId
 from pydefect_ccd.ele_phon_coupling import InnerProduct, EPMatrixElement
 from pydefect_ccd.enum import Carrier
 from pydefect_ccd.make_e_p_matrix_element import MakeEPMatrixElement
@@ -60,12 +60,12 @@ def single_ccd():
                         occupation=1.0)
 
     single_point_info = \
-        SinglePointResult(dQ=1.0,
-                          disp_ratio=0.0,
-                          magnetization=-1.0,
-                          localized_orbitals=[[l_orb_lower, l_orb_upper], []],
-                          valence_bands=[[vbm], []],
-                          conduction_bands=[[cbm], []])
+        SinglePoint(dQ=1.0,
+                    disp_ratio=0.0,
+                    magnetization=-1.0,
+                    localized_orbitals=[[l_orb_lower, l_orb_upper], []],
+                    valence_bands=[[vbm], []],
+                    conduction_bands=[[cbm], []])
     return PotentialCurve(CcdId("excited", carriers=[Carrier.e]),
                           charge=0,
                           single_points=[single_point_info])
