@@ -17,13 +17,18 @@ from pydefect_ccd.ccd import PotentialCurve
 
 @dataclass
 class CaptureRate(MSONable, ToJsonFileMixIn):
+    Z: int
     Wif: float
     summed_squared_transition_moment_integral: List[float]  # as a function of temperature
-    velocities: List[float]  # characteristic carrier velocity in [cm / s]
     temperatures: List[float]
     site_degeneracy: float
     spin_selection_factor: float
     volume: float  # in [cm3]
+    uniform_scaling_factor: float  # to scale the capture rate
+    velocities: List[float] = None # characteristic carrier velocity in [cm / s]
+
+    def _sommerfeldt_scaling_factor(self):
+        return
 
     @property
     def capture_rate(self) -> np.array:

@@ -10,22 +10,20 @@ from pydefect.cli.main import add_sub_parser
 from pymatgen.electronic_structure.core import Spin
 from pymatgen.io.vasp.inputs import UnknownPotcarWarning
 
-# make_ccd_dirs, plot_ccd, plot_eigenvalues, set_quadratic_fitting_q_range, \
-# make_wswq_dirs, update_single_point_infos, add_point_infos_to_single_ccd, \
 from pydefect_ccd.cli.main_function import make_ccd_init, make_ccd, \
     make_ccd_dirs, plot_eigenvalues, make_wswq_dirs, \
     make_e_p_matrix_element, make_capture_rate, plot_capture_rate, \
-    make_ccd_corrections, make_single_point_results, \
-    make_potential_curve_result, plot_ccd
+    make_ccd_corrections, plot_ccd
 from pydefect_ccd.enum import Carrier
 from pydefect_ccd.version import __version__
 
 warnings.simplefilter('ignore', UnknownPotcarWarning)
 
-description = """Helper package for calculating the non-radiative carrier 
-capture rates trapped by point defects."""
+description = """Package for calculating the 1D configuration coordination 
+diagram (ccd) of point defects and non-radiative carrier capture rates trapped 
+by these."""
 
-epilog = f"Author: Yu Kumagai Version: {__version__}"
+epilog = f"Author: Yu Kumagai, Version: {__version__}"
 
 
 def parse_args_main(args):
@@ -47,8 +45,9 @@ def parse_args_main(args):
     # -- make_ccd_init -----------------------------------
     parser_make_ccd_init = subparsers.add_parser(
         name="make_ccd_init",
-        description="""Create a `ccd_init.json` file from two directories containing pydefect files.
- If the excited state has one more (less) charge state, n-type (p-type) is assumed.""",
+        description="""Create a `ccd_init.json` file from two directories 
+containing pydefect files. If the excited state has one more (less) charge 
+state, n-type (p-type) is assumed.""",
         parents=[unitcell_parser, pbes_parser],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=['ci'])
@@ -60,15 +59,15 @@ def parse_args_main(args):
         "-sd", "--second_dir", type=Path, required=True,
         help="Second directory considered for ccd, e.g., Va_O1_1.")
     parser_make_ccd_init.add_argument(
-        "-em", "--effective_mass", type=loadfn,
+        "-em", "--effective_mass", type=loadfn, default=None,
         help="effective_mass.json file.")
     parser_make_ccd_init.set_defaults(func=make_ccd_init)
 
     # -- make_ccd_dirs -----------------------------------
     parser_add_ccd_dirs = subparsers.add_parser(
         name="make_ccd_dirs",
-        description=""" Make directories to calculate configuration coordinate 
-        diagrams for ground and excited states.""",
+        description=""" Make directories to calculate CCD between two charge 
+states.""",
         parents=[ccd_init],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=['cd'])
@@ -84,8 +83,7 @@ def parse_args_main(args):
     parser_add_ccd_dirs.add_argument(
         "-d", "--calc_dir", type=Path, default=Path.cwd(),
         help="Directory where directories are created.")
-    parser_add_ccd_dirs.set_defaults(
-        func=make_ccd_dirs)
+    parser_add_ccd_dirs.set_defaults(func=make_ccd_dirs)
 
 #     # -- make_ccd -----------------------------------
 #     parser_make_ccd = subparsers.add_parser(
@@ -155,21 +153,6 @@ def parse_args_main(args):
     parser_make_ccd.add_argument("--excited_potential_curve", type=loadfn)
 
     parser_make_ccd.set_defaults(func=make_ccd)
-    #
-    # # -- set_fitting_q_range -----------------------------------
-    # parser_set_fitting_q_range = subparsers.add_parser(
-    #     name="set_fitting_q_range",
-    #     description="Set the fitting range for the quadratic potential surface",
-    #     formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    #     aliases=['sfr'])
-    #
-    # parser_set_fitting_q_range.add_argument(
-    #     "--ccd", type=loadfn, default="ccd.json")
-    # parser_set_fitting_q_range.add_argument(
-    #     "--single_ccd_name", type=str, required=True)
-    # parser_set_fitting_q_range.add_argument(
-    #     "--q_range", type=float, nargs="+")
-    # parser_set_fitting_q_range.set_defaults(func=set_quadratic_fitting_q_range)
 
     # -- plot_ccd -----------------------------------
     parser_plot_ccd = subparsers.add_parser(
@@ -183,7 +166,9 @@ def parse_args_main(args):
     parser_plot_ccd.add_argument(
         "--fig_name", type=str, default="ccd.pdf")
     parser_plot_ccd.add_argument(
-        "--q_range", type=float, nargs="+")
+        "--ground_q_range", type=float, nargs="+")
+    parser_plot_ccd.add_argument(
+        "--excited_q_range", type=float, nargs="+")
     parser_plot_ccd.add_argument(
         "--no_quadratic_fit",  dest="quadratic_fit",  action="store_false")
     parser_plot_ccd.add_argument(

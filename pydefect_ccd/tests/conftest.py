@@ -168,7 +168,7 @@ def e_p_matrix_elem():
                            spin=Spin.down,
                            eigenvalue_diff=0.1,
                            kpt_idx=1,
-                           inner_products={-1.0: ip_1, 0.0: ip_2, 1.0: ip_3})
+                           abs_inner_products={-1.0: ip_1, 0.0: ip_2, 1.0: ip_3})
 
 
 @pytest.fixture

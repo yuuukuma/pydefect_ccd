@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
 import numpy as np
-from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from monty.json import MSONable
 from nonrad.ccd import get_omega_from_PES
@@ -299,18 +298,22 @@ def spline3(xs, ys, num_points, xrange=None):
 class CcdPlotter:
     def __init__(self,
                  ccd: Ccd,
+                 plt,
                  title: str = None,
                  set_energy_zero: bool = True,
                  quadratic_fit: bool = True,
                  spline_fit: bool = True,
-                 q_range: list = None):
+                 ground_q_range: list = None,
+                 excited_q_range: list = None):
         self._title = title or ""
         self._ccd = ccd
         self._set_energy_zero = set_energy_zero
         self._quadratic_fit = quadratic_fit
         self._spline_fit = spline_fit
+        self._ground_q_range = ground_q_range
+        self._excited_q_range = excited_q_range
+
         self.plt = plt
-        self._q_range = q_range
 
     def construct_plot(self):
         self._add_ccd()

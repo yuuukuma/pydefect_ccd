@@ -10,7 +10,7 @@ from vise.util.matplotlib import float_to_int_formatter
 logger = get_logger(__name__)
 
 
-class PotCurveEigenvalPlotter:
+class EigenvalPlotter:
     def __init__(self,
                  orb_infos: List[BandEdgeOrbitalInfos],
                  disp_ratios: List[float],

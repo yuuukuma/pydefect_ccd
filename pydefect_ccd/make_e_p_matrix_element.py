@@ -55,7 +55,7 @@ class MakeEPMatrixElement:
                                spin=self.spin,
                                eigenvalue_diff=self.energy_diff,
                                kpt_idx=self.kpt_index,
-                               inner_products=inner_prods)
+                               abs_inner_products=inner_prods)
 
     def _add_inner_products(self, wswq: wswq_type, dQ: float):
         """    Returns

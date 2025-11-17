@@ -58,8 +58,8 @@ def test_make_e_p_matrix_element(single_point):
                                spin=Spin.up,
                                eigenvalue_diff=1.0,
                                kpt_idx=1,
-                               inner_products={0.0: InnerProduct(0.0),
-                                               0.1: InnerProduct(50.0)})
+                               abs_inner_products={0.0: InnerProduct(0.0),
+                                                   0.1: InnerProduct(50.0)})
     assert actual == expected
 
 

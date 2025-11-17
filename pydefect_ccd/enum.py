@@ -31,12 +31,3 @@ class Carrier(MSONable, ExtendedEnum):
     def is_occupied(self, occupation):
         return occupation > 0.1 if self is Carrier.e else occupation < 0.9
 
-
-class CorrectionType(MSONable, ExtendedEnum):
-    extended_FNV = "extended FNV"
-    kumagai2023 = "kumagai2023"
-
-
-class BandEdge(MSONable, ExtendedEnum):
-    vbm, cbm = "vbm", "cbm"
-

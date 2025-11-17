@@ -21,25 +21,25 @@ inner_prod_2 = InnerProduct(abs_inner_product=1.2)
 
 
 def test_inner_prod_vs_q(e_p_matrix_elem):
-    e_p_matrix_elem.inner_products = {0.0: inner_prod_1, 1.0: inner_prod_2}
+    e_p_matrix_elem.abs_inner_products = {0.0: inner_prod_1, 1.0: inner_prod_2}
     assert e_p_matrix_elem._inner_prod_vs_q == ([0.0, 1.0], [0.2, 1.2])
 
 
 def test_e_p_matrix_elem_str(e_p_matrix_elem):
-    e_p_matrix_elem.inner_products = {0.0: inner_prod_1, 1.0: inner_prod_2}
+    e_p_matrix_elem.abs_inner_products = {0.0: inner_prod_1, 1.0: inner_prod_2}
     print(e_p_matrix_elem)
 
 
 def test_e_p_matrix_element_less_inner_prod(e_p_matrix_elem):
-    e_p_matrix_elem.inner_products = {}
+    e_p_matrix_elem.abs_inner_products = {}
     assert e_p_matrix_elem.e_p_matrix_element() is None
 
-    e_p_matrix_elem.inner_products = {0.0: inner_prod_1}
+    e_p_matrix_elem.abs_inner_products = {0.0: inner_prod_1}
     assert e_p_matrix_elem.e_p_matrix_element() is None
 
 
 def test_e_p_matrix_element(e_p_matrix_elem):
-    e_p_matrix_elem.inner_products = {0.0: inner_prod_1, 1.0: inner_prod_2}
+    e_p_matrix_elem.abs_inner_products = {0.0: inner_prod_1, 1.0: inner_prod_2}
     ax = plt.gca()
     assert_almost_equal(e_p_matrix_elem.e_p_matrix_element(ax), 1.0)
     plt.show()

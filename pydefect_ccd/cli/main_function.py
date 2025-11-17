@@ -36,7 +36,7 @@ from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.ele_phon_coupling import EPMatrixElement
 from pydefect_ccd.make_ccd import MakeCcd
 from pydefect_ccd.make_e_p_matrix_element import MakeEPMatrixElement
-from pydefect_ccd.plot_eigenvalues import PotCurveEigenvalPlotter
+from pydefect_ccd.plot_eigenvalues import EigenvalPlotter
 from pydefect_ccd.relaxed_point import NearEdgeState, RelaxedPoint
 from pydefect_ccd.util import spin_to_idx
 
@@ -239,7 +239,7 @@ def make_ccd_corrections(args):
     parse_dirs(args.dirs, _inner, True, output_filename="ccd_correction.json")
 
 
-def make_single_point_results(args: Namespace):
+def make_single_points(args: Namespace):
     def _inner(dir_: Path):
         calc_results = get_calc_results(dir_, False)
         ccd_correction = loadfn(dir_ / "ccd_correction.json")
@@ -248,10 +248,10 @@ def make_single_point_results(args: Namespace):
 
         spec: SinglePointSpec = loadfn(dir_ / "single_point_spec.json")
 
-        localized_orbitals, valence_bands, conduction_bands = _get_band_edge_info(
-            band_edge_orbital_infos, band_edge_states)
+        localized_orbitals, valence_bands, conduction_bands \
+            = _get_band_edge_info(band_edge_orbital_infos, band_edge_states)
 
-        single_point_result = SinglePoint(
+        single_point = SinglePoint(
             spec=spec,
             energy=calc_results.energy,
             ccd_correction_energy=ccd_correction.correction_energy,
@@ -261,44 +261,40 @@ def make_single_point_results(args: Namespace):
             conduction_bands=conduction_bands,
             is_shallow=band_edge_states.is_shallow)
 
-        single_point_result.to_json_file(dir_ / "single_point_result.json")
+        single_point.to_json_file(dir_ / "single_point.json")
 
     parse_dirs(args.dirs, _inner, verbose=True)
 
 
-def make_potential_curve_result(args: Namespace):
+def make_potential_curve(args: Namespace):
     def _inner(dir_: Path) -> SinglePoint:
-        return loadfn(dir_ / "single_point_result.json")
+        return loadfn(dir_ / "single_point.json")
 
     single_points = parse_dirs(args.dirs, _inner, verbose=True)
-    potential_curve_result = PotentialCurve(args.potential_curve_spec,
-                                            single_points)
-    potential_curve_result.to_json_file("potential_curve_result.json")
+    potential_curve = PotentialCurve(args.potential_curve_spec, single_points)
+    potential_curve.to_json_file("potential_curve.json")
 
 
 def make_ccd(args: Namespace):
     ccd = MakeCcd(args.ground_potential_curve,
                   args.excited_potential_curve,
-                  args.ccd_init).ccd
+                  args.ccd_init.vbm,
+                  args.ccd_init.cbm,
+                  args.ccd_init.name).ccd
     print(ccd)
     ccd.to_json_file()
 
 
-# def set_quadratic_fitting_q_range(args: Namespace):
-#     single_ccd = args.ccd.potential_curve(args.single_ccd_name)
-#     single_ccd.set_quadratic_fitting_range(args.q_range)
-#     print(args.ccd)
-#     args.ccd.to_json_file()
-
-
 def plot_ccd(args: Namespace):
     plotter = CcdPlotter(args.ccd,
-                         q_range=args.q_range,
+                         plt,
+                         ground_q_range=args.ground_q_range,
+                         excited_q_range=args.excited_q_range,
                          quadratic_fit=args.quadratic_fit,
                          spline_fit=args.spline_fit)
     plotter.construct_plot()
-    plotter.plt.savefig(args.fig_name)
-    plotter.plt.show()
+    plt.savefig(args.fig_name)
+    plt.show()
 
 
 def plot_eigenvalues(args: Namespace):
@@ -319,10 +315,10 @@ def plot_eigenvalues(args: Namespace):
         disp_ratios.append(single_point_info.disp_ratio)
 
     vbm, cbm = args.ccd_init.supercell_vbm, args.ccd_init.supercell_cbm
-    eigval_plotter = PotCurveEigenvalPlotter(orb_infos, disp_ratios, vbm, cbm,
-                                             y_range=args.y_range)
+    eigval_plotter = EigenvalPlotter(orb_infos, disp_ratios, vbm, cbm,
+                                     y_range=args.y_range)
     eigval_plotter.construct_plot()
-    eigval_plotter.plt.savefig("potential_curve_eigenvalues.pdf")
+    eigval_plotter.plt.savefig("eigenvalues.pdf")
     eigval_plotter.plt.show()
 
 
@@ -358,14 +354,18 @@ def _make_wswq_dir(dir_, ccd_init: CcdInit):
 
 def make_e_p_matrix_element(args: Namespace):
     dQ_wswq_pairs = []
+
     for d in args.dirs:
         wswq_file = d / "wswq" / "WSWQ"
-        single_point_info = loadfn(d / "single_point_info.json")
-        dQ_wswq_pairs.append((single_point_info.dQ, _read_WSWQ(wswq_file)))
+        single_point: SinglePoint = loadfn(d / "single_point.json")
+        dQ_wswq_pairs.append((single_point.dQ, _read_WSWQ(wswq_file)))
+        if single_point.disp_ratio == 0.0:
+            base_single_point = single_point
 
     make_e_p_matrix_elem = MakeEPMatrixElement(
-        base_disp_ratio=args.base_disp,
-        potential_curve=args.single_ccd,
+        name=args.ccd_init.name,
+        charge=args.ccd_init.relaxed_points[0].charge,
+        base_single_point=base_single_point,
         band_edge_index=args.band_edge_index,
         defect_band_index=args.defect_band_index,
         kpoint_index=args.kpoint_index,

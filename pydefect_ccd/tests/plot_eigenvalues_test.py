@@ -4,7 +4,7 @@ from copy import deepcopy
 
 from pydefect.analyzer.band_edge_states import BandEdgeOrbitalInfos, OrbitalInfo
 
-from pydefect_ccd.plot_eigenvalues import PotCurveEigenvalPlotter
+from pydefect_ccd.plot_eigenvalues import EigenvalPlotter
 
 
 def test_eigenvalue_plotter(mocker):
@@ -33,10 +33,10 @@ def test_eigenvalue_plotter(mocker):
     i4 = deepcopy(i1)
     i4.orbital_infos[0][0][2].energy = 0.3
 
-    plotter = PotCurveEigenvalPlotter(orb_infos=[i1, i2, i3, i4],
-                                      disp_ratios=[-0.1, 0.0, 0.4, 0.8],
-                                      supercell_vbm=-1.0,
-                                      supercell_cbm=1.0)
+    plotter = EigenvalPlotter(orb_infos=[i1, i2, i3, i4],
+                              disp_ratios=[-0.1, 0.0, 0.4, 0.8],
+                              supercell_vbm=-1.0,
+                              supercell_cbm=1.0)
     plotter.construct_plot()
     plotter.plt.savefig("test.png")
     # plotter.plt.show()
