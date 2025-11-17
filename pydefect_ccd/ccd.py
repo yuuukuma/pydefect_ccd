@@ -112,6 +112,12 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
     def __post_init__(self):
         self.single_points = list(sorted(self.single_points, key=lambda x: x.dQ))
 
+    def single_point_from_disp(self, disp_ratio: float):
+        for sp in self.single_points:
+            if np.isclose(sp.disp_ratio, disp_ratio):
+                return sp
+        raise ValueError(f"No single point found for disp_ratio={disp_ratio}")
+
     def dQs_and_energies(self, disp_ratio_range: Tuple[float, float] = None):
         """
 

@@ -35,15 +35,14 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
         inner_products: List of \bra_{psi_i(0)} | S(0) |\ket_{psi_f(Q)}
             at the given Q points.
     """
+    name: str
     charge: int
+    base_disp_ratio: float
     band_edge_index: int
     defect_band_index: int
     spin: Union[Spin, str]
     eigenvalue_diff: float
     kpt_idx: int
-#    kpt_weigh: float
-    # Currently, symmetry is assumed not to be changed depending on dQ.
-#    kpt_coord: List[float]
     # key dQ:
     inner_products: Dict[float, InnerProduct] = field(default_factory=dict)
 
