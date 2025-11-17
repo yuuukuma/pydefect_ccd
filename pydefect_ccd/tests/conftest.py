@@ -39,6 +39,7 @@ direct
 
 @pytest.fixture(scope="session")
 def ground_structure():
+    # The dQ between ground and excited is 0.6 amu^1/2 A
     return Structure.from_str("""Mg4 O4
 10.0
 1.0 0.0 0.0
