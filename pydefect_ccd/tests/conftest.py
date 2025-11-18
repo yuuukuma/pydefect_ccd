@@ -6,11 +6,8 @@ from pathlib import Path
 import pytest
 from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from pymatgen.core import Structure, Lattice
-from pymatgen.electronic_structure.core import Spin
 
 from pydefect_ccd.ccd_init import CcdInit
-from pydefect_ccd.ele_phon_coupling import InnerProduct, EPMatrixElement
-from pydefect_ccd.enum import Carrier
 from pydefect_ccd.relaxed_point import NearEdgeState, RelaxedPoint
 
 
@@ -127,58 +124,8 @@ def ccd_init(ground_structure, excited_structure):
                    ave_static_diele_const=13.0)
 
 
-# @pytest.fixture
-# def ccd(excited_structure, ground_structure, intermediate_structure):
-#     ground_spec = PotentialCurveSpec(charge=1, counter_charge=0,
-#                                      correction_energy=0.0, Q_diff=1.0)
-#     ground_single_points = [SinglePoint(SinglePointSpec(-1.0, -0.1), 1.1, False, used_for_fitting=False),
-#                    SinglePoint(0.0, 0.0, 0.1, False, used_for_fitting=True, conduction_bands=[[cb]], valence_bands=[[vb]]),
-#                    SinglePoint(1.0, 0.1, 1.2, False, used_for_fitting=True)])])
-#
-#     ground_curve = PotentialCurve(ground_spec,
-#                                   single_points=
-#                                   single_points=[SinglePoint(-1.0, -0.1, 1.1, False, used_for_fitting=False),
-#                                                  SinglePoint(0.0, 0.0, 0.1, False, used_for_fitting=True, conduction_bands=[[cb]], valence_bands=[[vb]]),
-#                                                  SinglePoint(1.0, 0.1, 1.2, False, used_for_fitting=True)])])
-#     PotentialCurve(name="excited", charge=0,
-#
-#     return Ccd(name="test",
-#                ground_curve=
-#
-#                                   single_points=[SinglePoint(-1.0, -0.1, 2.1, False, used_for_fitting=True),
-#                                                  SinglePoint(0.0, 0.0, 1.1, False, used_for_fitting=True, conduction_bands=[[cb]], valence_bands=[[vb]]),
-#                                                  SinglePoint(1.0, 0.1, 2.2, False, used_for_fitting=True)]),
-
-
 @pytest.fixture(scope="session")
 def sc_structure():
     lattice = Lattice.cubic(1.0)
     coords = [[0.0, 0.0, 0.0]]
     return Structure(lattice=lattice, species=["H"], coords=coords)
-
-
-@pytest.fixture
-def e_p_matrix_elem():
-    ip_1 = InnerProduct(abs_inner_product=20.0, used_for_fitting=False)
-    ip_2 = InnerProduct(abs_inner_product=1.0, used_for_fitting=True)
-    ip_3 = InnerProduct(abs_inner_product=2.0, used_for_fitting=True)
-
-    return EPMatrixElement(charge=1,
-                           defect_band_index=2,
-                           spin=Spin.down,
-                           eigenvalue_diff=0.1,
-                           kpt_idx=1,
-                           abs_inner_products={-1.0: ip_1, 0.0: ip_2, 1.0: ip_3})
-
-
-@pytest.fixture
-def e_p_coupling(e_p_matrix_elem):
-    return EPCoupling(
-        charge=1,
-        base_disp=0.0,
-        captured_carrier=Carrier.e,
-        volume=100.0,
-        ave_captured_carrier_mass=1.0,
-        ave_static_diele_const=2.0,
-        band_edge_index=1,
-        e_p_matrix_elements=[e_p_matrix_elem])

@@ -5,11 +5,10 @@ from typing import Union, Dict, List
 
 import numpy as np
 from monty.json import MSONable
+from nonrad.scaling import sommerfeld_parameter
 from pymatgen.electronic_structure.core import Spin
 from tabulate import tabulate
 from vise.util.mix_in import ToJsonFileMixIn
-
-from pydefect_ccd.util import spin_to_idx
 
 
 @dataclass
@@ -21,7 +20,7 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
     Attributes:
         band_edge_index: The band index for band edges starting from 1.
         eigenvalue_diff: The eigenvalue difference from final to initial states
-        inner_products: List of \bra_{psi_i(0)} | S(0) |\ket_{psi_f(Q)}
+        abs_inner_prods: List of \bra_{psi_i(0)} | S(0) |\ket_{psi_f(Q)}
             at the given Q points.
     """
     name: str
@@ -32,11 +31,18 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
     eigenvalue_diff: float
     # key dQ, val: |\bra_{psi_i(0)} | S(0) |\ket_{psi_f(Q)}|
     abs_inner_prods: Dict[float, float] = field(default_factory=dict)
+    # TODO : implement fit_q_range
     fit_q_range: List[float] = None
 
     def __post_init__(self):
+        self.dQs, self.inner_prods = list(zip(*self.abs_inner_prods.items()))
         if isinstance(self.spin, str):
             self.spin = Spin[self.spin]
+        try:
+            self.grad, self.const = np.polyfit(self.dQs, self.inner_prods, 1)
+        except np.RankWarning:
+            print(f"Cannot fit inner products vs dQ for {self.name}.")
+            self.grad, self.const = None, None
 
     @property
     def _json_filename(self):
@@ -53,28 +59,12 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
         result["spin"] = result["spin"].name
         return result
 
-    @property
-    def spin_idx(self):
-        return spin_to_idx(self.spin)
-
-    @property
-    def dQs(self):
-        return [dQ for dQ in self.abs_inner_products.keys()]
-
-    def __call__(self, ax=None) -> float:
+    def plot(self, ax=None) -> None:
         """ Evaluated by computing the slope of inner products"""
-        # TODO: implement fit_q_range
-
-        grad, const = np.polyfit(self.dQs, self.abs_inner_prods, 1)
-
-        if ax:
-            ax.scatter(self.dQs, self.abs_inner_prods)
-
-            x = np.arange(min(self.dQs), max(self.dQs), 0.01)
-            y = x * grad + const
-            ax.plot(x, y, alpha=0.5)
-
-        return grad
+        ax.scatter(self.dQs, self.abs_inner_prods)
+        x = np.arange(min(self.dQs), max(self.dQs), 0.01)
+        y = x * self.grad + self.const
+        ax.plot(x, y, alpha=0.5)
 
     def __str__(self):
         result = []
@@ -82,13 +72,11 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
                  ["defect band index", self.defect_band_index],
                  ["spin", self.spin.name],
                  ["eigenvalue difference", round(self.eigenvalue_diff, 3)],
-                 ["e-p matrix element", self()]]
+                 ["W_if", self.grad]]
 
         result.append(tabulate(table, tablefmt="plain", floatfmt=".3f"))
 
-        inner_prods = []
-        for dQ, ip in self.abs_inner_prods.items():
-            inner_prods.append([dQ, ip.abs_inner_product, ip.used_for_fitting])
+        inner_prods = [[dQ, aip] for dQ, aip in self.abs_inner_prods.items()]
 
         result.append(tabulate(inner_prods,
                                headers=["dQ", "inner product",
@@ -101,6 +89,8 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
 @dataclass
 class EPCoupling(MSONable, ToJsonFileMixIn):
     """ E-P coupling constants between defect band and multiple band edges
+
+    f(T) * V * W_if^2
 
     To define the localized orbitals, we need to determine the charge and
     displacement (base_disp).
@@ -115,28 +105,41 @@ class EPCoupling(MSONable, ToJsonFileMixIn):
     """
     e_p_matrix_elements: List[float]
     charge: int
+    T: Union[float, np.ndarray]
     volume: float
     ave_captured_carrier_mass: float
     ave_static_diele_const: float
+    uniform_scaling_factor: float = 1.0
 
     def __str__(self):
+        # todo: update
         result = []
         mass = round(self.ave_captured_carrier_mass, 2)
         diele_const = round(self.ave_static_diele_const, 2)
         table = [["charge", self.charge],
-                 ["base disp", self.base_disp],
-                 ["captured carrier", self.captured_carrier],
                  ["volume", round(self.volume, 2)],
                  ["averaged carrier mass", mass],
                  ["averaged static dielectric constant", diele_const]]
         result.append(tabulate(table, tablefmt="plain", floatfmt=".3f"))
-
-        if self.e_p_matrix_element:
-            result.append("-" * 50)
-            result.append(self.e_p_matrix_element.__str__())
-
         return "\n".join(result)
 
     @property
-    def wif(self):
-        return self.e_p_matrix_element()
+    def f(self):
+        return self.uniform_scaling_factor * self.sommerfeld_scaling_factor
+
+    @property
+    def sommerfeld_scaling_factor(self) -> Union[float, np.ndarray]:
+        if self.charge:
+            return 1.0
+        return sommerfeld_parameter(self.T,
+                                    self.charge,
+                                    self.ave_captured_carrier_mass,
+                                    self.ave_static_diele_const)
+
+    def __call__(self,  method: str = "average") -> float:
+        """ E-P coupling constant W_if """
+        if method == "average":
+            ep = np.mean(self.e_p_matrix_elements)
+        else:
+            raise NotImplementedError(f"{method} is not implemented.")
+        return self.f * self.volume * ep
