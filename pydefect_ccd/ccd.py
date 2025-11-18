@@ -144,6 +144,15 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
                 return sp
         raise ValueError(f"No single point found for disp_ratio={disp_ratio}")
 
+    @property
+    def lowest_energy_single_point(self) -> SinglePoint:
+        return min(self.single_points, key=lambda sp: sp.ccd_corrected_energy)
+
+    @property
+    def lowest_energy(self) -> float:
+        return self.lowest_energy_single_point.ccd_corrected_energy + \
+                self.spec.correction_energy + self.shifted_energy
+
     def dQs_and_energies(self, disp_ratio_range: Tuple[float, float] = None):
         """
 
@@ -271,6 +280,15 @@ class Ccd(MSONable, ToJsonFileMixIn):
     ground_curve: PotentialCurve
     excited_curve: PotentialCurve
     # potential_curve_results: List[PotentialCurveResult]
+
+    @property
+    def dQ(self) -> float:
+        return self.excited_curve.Q_diff
+
+    @property
+    def dE(self) -> float:
+        return (self.excited_curve.lowest_energy
+                - self.ground_curve.lowest_energy)
 
     @property
     def captured_carrier(self) -> Carrier:

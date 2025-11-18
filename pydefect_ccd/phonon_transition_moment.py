@@ -5,10 +5,13 @@ from typing import Union, List
 
 import numpy as np
 from monty.json import MSONable
+from nonrad import get_C
 from qmsolve import Eigenstates
 from scipy.constants import constants, physical_constants
 from tabulate import tabulate
 from vise.util.mix_in import ToJsonFileMixIn
+
+from pydefect_ccd.ccd import Ccd, QuadraticCurve
 
 AMU = physical_constants["unified atomic mass unit"]  # [kg]
 electron_mass = constants.m_e  # [kg]
@@ -41,6 +44,27 @@ class PhononEigenstates(MSONable, ToJsonFileMixIn):
                   tabulate(self.energies, headers=["Energy (eV)"],
                            tablefmt="plain", floatfmt=".3f")]
         return "\n".join(result)
+
+
+def harmonic_phonon_transition_moment(dQ: float,
+                                      dE: float,
+                                      wi: float,
+                                      wf: float,
+                                      T: Union[float, np.ndarray] = 300.
+                                      ) -> Union[float, np.ndarray]:
+    R = get_C(dQ, dE, wi, wf, T=T, Wif=1.0, volume=2*np.pi, g=1)
+    return R
+
+
+def harmonic_phonon_transition_moment_from_ccd(ccd: Ccd, T: List[float],
+                                               ) -> np.ndarray:
+    """Within harmonic approximation"""
+    assert isinstance(ccd.ground_curve.fitted_curve, QuadraticCurve)
+    assert isinstance(ccd.excited_curve.fitted_curve, QuadraticCurve)
+    wi = ccd.excited_curve.fitted_curve.omega
+    wj = ccd.ground_curve.fitted_curve.omega
+
+    return harmonic_phonon_transition_moment(ccd.dQ, ccd.dE, wi, wj, np.array(T))
 
 
 def eigen2phonon_eigen(eigen: Eigenstates) -> PhononEigenstates:

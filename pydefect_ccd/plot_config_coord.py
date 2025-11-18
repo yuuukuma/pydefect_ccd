@@ -11,7 +11,8 @@ logger = get_logger(__name__)
 
 
 class CcdPlotter:
-    def __init__(self, ccd: Ccd,
+    def __init__(self,
+                 ccd: Ccd,
                  title: str = None,
                  set_energy_zero: bool = True):
         self._title = title or ""
@@ -28,8 +29,8 @@ class CcdPlotter:
 
     def _add_ccd(self):
         ax = self.plt.gca()
-        for imag_infos in self._ccd.potential_curve_results:
-            imag_infos.add_plot(ax, "black")
+        self._ccd.ground_curve.add_plot(ax, "black")
+        self._ccd.excited_curve.add_plot(ax, "black")
 
     def _set_labels(self):
         ax = self.plt.gca()

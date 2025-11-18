@@ -35,14 +35,16 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
     fit_q_range: List[float] = None
 
     def __post_init__(self):
-        self.dQs, self.inner_prods = list(zip(*self.abs_inner_prods.items()))
+        self.dQs, self.abs_inner_prods_tuple \
+            = list(zip(*self.abs_inner_prods.items()))
         if isinstance(self.spin, str):
             self.spin = Spin[self.spin]
         try:
-            self.grad, self.const = np.polyfit(self.dQs, self.inner_prods, 1)
+            self.Wif, self.const = np.polyfit(self.dQs,
+                                              self.abs_inner_prods_tuple, 1)
         except np.RankWarning:
             print(f"Cannot fit inner products vs dQ for {self.name}.")
-            self.grad, self.const = None, None
+            self.Wif, self.const = None, None
 
     @property
     def _json_filename(self):
@@ -63,7 +65,7 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
         """ Evaluated by computing the slope of inner products"""
         ax.scatter(self.dQs, self.abs_inner_prods)
         x = np.arange(min(self.dQs), max(self.dQs), 0.01)
-        y = x * self.grad + self.const
+        y = x * self.Wif + self.const
         ax.plot(x, y, alpha=0.5)
 
     def __str__(self):
@@ -72,7 +74,7 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
                  ["defect band index", self.defect_band_index],
                  ["spin", self.spin.name],
                  ["eigenvalue difference", round(self.eigenvalue_diff, 3)],
-                 ["W_if", self.grad]]
+                 ["W_if", self.Wif]]
 
         result.append(tabulate(table, tablefmt="plain", floatfmt=".3f"))
 
@@ -129,7 +131,7 @@ class EPCoupling(MSONable, ToJsonFileMixIn):
 
     @property
     def sommerfeld_scaling_factor(self) -> Union[float, np.ndarray]:
-        if self.charge:
+        if self.charge == 0:
             return 1.0
         return sommerfeld_parameter(self.T,
                                     self.charge,
