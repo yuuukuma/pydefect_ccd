@@ -7,7 +7,7 @@ from pymatgen.electronic_structure.core import Spin
 from vise.util.logger import get_logger
 
 from pydefect_ccd.ccd import SinglePoint
-from pydefect_ccd.ele_phon_coupling import EPMatrixElement, InnerProduct
+from pydefect_ccd.ele_phon_coupling import EPMatrixElement
 from pydefect_ccd.util import spin_to_idx
 
 logger = get_logger(__name__)
@@ -45,28 +45,20 @@ class MakeEPMatrixElement:
         self.dQ_wswq_pairs = dQ_wswq_pairs
 
     def make(self):
-        inner_prods = {dQ: self._add_inner_products(wswq, dQ)
+        inner_prods = {dQ: self._inner_prod(wswq, dQ)
                        for dQ, wswq in self.dQ_wswq_pairs}
         return EPMatrixElement(name=self.name,
-                               charge=self.charge,
                                base_disp_ratio=self.base_disp_ratio,
                                band_edge_index=self.band_edge_index,
                                defect_band_index=self.defect_band_index,
                                spin=self.spin,
                                eigenvalue_diff=self.energy_diff,
-                               kpt_idx=self.kpt_index,
-                               abs_inner_products=inner_prods)
+                               abs_inner_prods=inner_prods)
 
-    def _add_inner_products(self, wswq: wswq_type, dQ: float):
-        """    Returns
-        -------
-        dict(dict)
-            a dict of dicts that takes keys (spin, kpoint) and (initial, final)
-            as indices and maps it to a complex number"""
+    def _inner_prod(self, wswq: wswq_type, dQ: float) -> float:
         spin_kpt_pair = (spin_to_idx(self.spin, True), self.kpt_index)
         band_indices = (self.band_edge_index, self.defect_band_index)
-        braket = np.abs(wswq[spin_kpt_pair][tuple(band_indices)]) * np.sign(dQ)
-        return InnerProduct(abs_inner_product=braket)
+        return float(np.abs(wswq[spin_kpt_pair][tuple(band_indices)]) * np.sign(dQ))
 
 
 

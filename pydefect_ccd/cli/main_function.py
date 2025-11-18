@@ -377,7 +377,7 @@ def make_e_p_matrix_element(args: Namespace):
     e_p_matrix_elem.to_json_file()
 
     try:
-        e_p_matrix_elem.e_p_matrix_element(plt.gca())
+        grad = e_p_matrix_elem(plt.gca())
         plt.xlabel("dQ (amu$^{1/2}$Å)")
         plt.savefig(f"e_p_matrix_element_{e_p_matrix_elem.index_info}.pdf")
         plt.show()

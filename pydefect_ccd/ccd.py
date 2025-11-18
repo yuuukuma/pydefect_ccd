@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 #  Copyright (c) 2022 Kumagai group.
+from abc import ABC, abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
-from matplotlib.axes import Axes
 from monty.json import MSONable
-from nonrad.ccd import get_omega_from_PES
 from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from pymatgen.electronic_structure.core import Spin
 from scipy import interpolate
+from scipy.optimize import curve_fit
 from tabulate import tabulate
 from vise.util.logger import get_logger
 from vise.util.matplotlib import float_to_int_formatter
@@ -91,10 +91,33 @@ class PotentialCurveSpec(MSONable, ToJsonFileMixIn):
 
 
 @dataclass
+class Curve(ABC):
+    @abstractmethod
+    def __call__(self, x: Union[float, np.array]) -> Union[float, np.array]:
+        pass
+
+
+@dataclass
+class QuadraticCurve(MSONable, Curve):
+    omega: float
+    Q0: float
+    disp_ratio_range: Tuple[float, float]
+
+    def __call__(self, x: Union[float, np.array]) -> Union[float, np.array]:
+        return self.omega * x**2 + self.Q0
+
+    def __str__(self):
+        return (f"QuadraticCurve: omega={self.omega:.5f}, Q0={self.Q0:.5f}, "
+                f"disp_ratio_range=({self.disp_ratio_range[0]:.3f}, "
+                f"{self.disp_ratio_range[1]:.3f})")
+
+
+@dataclass
 class PotentialCurve(MSONable, ToJsonFileMixIn):
     spec: PotentialCurveSpec
     single_points: List[SinglePoint] = field(default_factory=list)
     shifted_energy: float = 0.0  # to set the zero of energy
+    fitted_curve: Curve = None  # TODO: revert
 
     @property
     def charge(self) -> int: return self.spec.charge
@@ -107,6 +130,10 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
 
     @property
     def Q_diff(self) -> float: return self.spec.Q_diff
+
+    @property
+    def dQs(self) -> List[float]:
+        return [sp.dQ for sp in self.single_points]
 
     def __post_init__(self):
         self.single_points = list(sorted(self.single_points, key=lambda x: x.dQ))
@@ -138,13 +165,26 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
             energies.append(energy)
         return dQs, energies
 
+    def add_quadratic_curve(self,
+                            disp_ratio_range: Tuple[float, float] = None,
+                            fixed_Q0: bool = True):
+        dQs, energies = self.dQs_and_energies(disp_ratio_range)
+        if len(dQs) < 3:
+            raise ValueError("The number of Q points must be >= 3.")
+
+        if fixed_Q0:
+            Q0 = self.single_point_from_disp(0.0).dQ
+        else:
+            Q0 = None
+        omega, Q0 = calc_omega_and_Q0(dQs, energies, Q0)
+        self.fitted_curve = QuadraticCurve(omega, Q0, disp_ratio_range)
+
     def add_plot(self,
                  ax,
                  color: str,
                  q_range: Optional[List[float]] = None,
-                 quadratic_fit: bool = True,
                  spline_fit: bool = True):
-        dQs, energies = self.dQs_and_energies()
+        dQs, energies = self.dQs_and_energies(q_range)
         ax.scatter(dQs, energies, marker='o', color=color)
         try:
             if spline_fit:
@@ -158,12 +198,11 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
             print(f"{self.charge}: {e}")
             pass
 
-        if quadratic_fit:
-            try:
-                calc_omega(dQs, energies, ax, plot_q_range=q_range)
-            except (ValueError, TypeError, RuntimeError) as e:
-                print(f"{self.charge}: {e}")
-                pass
+        if self.fitted_curve:
+            q_max, q_min = np.max(self.dQs), np.min(self.dQs)
+            q_L = q_max - q_min
+            qs = np.linspace(q_min - 0.1 * q_L, q_max + 0.1 * q_L, 1000)
+            ax.plot(qs, self.fitted_curve(qs))
 
     @property
     def table_for_plot(self):
@@ -180,23 +219,17 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
                         headers=headers)
 
 
-def calc_omega(dQs: List[float],
-               energies: List[float],
-               ax: Axes = None,
-               plot_q_range: Optional[List[float]] = None):
-    if len(dQs) < 3:
-        raise ValueError("The number of Q points must be >= 3.")
+def calc_omega_and_Q0(Qs: List[float],
+                      energies: List[float],
+                      Q0: float) -> Tuple[float, float]:
+    def f(Q, omega, Q0, dE):
+        return 0.5 * omega**2 * (Q - Q0)**2 + dE
 
-    if plot_q_range is None:
-        q = None
-    else:
-        try:
-            start, end = plot_q_range
-        except Exception:
-            raise TypeError("plot_q_range must be a sequence of two numbers")
-        q = np.linspace(start, end, 1000)
-
-    return get_omega_from_PES(np.array(dQs), np.array(energies), ax=ax, q=q)
+    # set bounds to restrict Q0 to the given Q0 value
+    bounds = (-np.inf, np.inf) if Q0 is None else \
+        ([-np.inf, Q0 - 1e-10, -np.inf], [np.inf, Q0, np.inf])
+    popt, _ = curve_fit(f, Qs, energies, bounds=bounds)
+    return popt[0], popt[2]
 
 
 def dQ_revert(pot_curve_result: PotentialCurve) -> PotentialCurve:
@@ -327,8 +360,10 @@ class CcdPlotter:
         if self._q_range:
             ax.set_xlim(self._q_range[0], self._q_range[1])
 
-        self._ccd.ground_curve.add_plot(ax, "red", self._q_range, self._quadratic_fit, self._spline_fit)
-        self._ccd.excited_curve.add_plot(ax, "blue", self._q_range, self._quadratic_fit, self._spline_fit)
+        self._ccd.ground_curve.add_plot(ax, "red", self._ground_q_range,
+                                        self._quadratic_fit, self._spline_fit)
+        self._ccd.excited_curve.add_plot(ax, "blue", self._excited_q_range,
+                                         self._quadratic_fit, self._spline_fit)
 
     def _set_labels(self):
         ax = self.plt.gca()
