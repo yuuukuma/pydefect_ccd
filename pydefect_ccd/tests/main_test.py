@@ -9,8 +9,7 @@ from vise.analyzer.effective_mass import EffectiveMass
 from pydefect_ccd.ccd import Ccd, PotentialCurve
 from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.cli.main import parse_args_main
-from pydefect_ccd.cli.main_function import update_single_point_infos, make_ccd, \
-    plot_eigenvalues, add_point_infos_to_single_ccd
+from pydefect_ccd.cli.main_function import make_ccd, plot_eigenvalues
 
 
 def loadfn_effect(d: dict):
@@ -72,18 +71,6 @@ def test_main_make_dirs(mocker):
         second_to_first_div_ratios=[0.1],
         calc_dir=Path("dirname"),
         func=parsed_args.func)
-    assert parsed_args == expected
-
-
-def test_main_update_single_point_infos():
-    parsed_args = parse_args_main(["uspi", "-d", "disp_0.0"])
-    expected = Namespace(dirs=[Path("disp_0.0")], func=update_single_point_infos)
-    assert parsed_args == expected
-
-
-def test_main_add_point_infos_to_single_ccd():
-    parsed_args = parse_args_main(["apsc", "-d", "disp_0.0"])
-    expected = Namespace(dirs=[Path("disp_0.0")], func=add_point_infos_to_single_ccd)
     assert parsed_args == expected
 
 

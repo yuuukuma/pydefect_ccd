@@ -6,7 +6,7 @@ from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from pymatgen.electronic_structure.core import Spin
 
 from pydefect_ccd.ccd import SinglePoint, SinglePointSpec
-from pydefect_ccd.ele_phon_coupling import InnerProduct, EPMatrixElement
+from pydefect_ccd.ele_phon_coupling import EPMatrixElement
 from pydefect_ccd.make_e_p_matrix_element import MakeEPMatrixElement
 from pydefect_ccd.relaxed_point import NearEdgeState
 
@@ -51,15 +51,12 @@ def test_make_e_p_matrix_element(single_point):
 
     actual = maker.make()
     expected = EPMatrixElement(name="test",
-                               charge=0,
                                base_disp_ratio=0.0,
                                band_edge_index=101,
                                defect_band_index=102,
                                spin=Spin.up,
                                eigenvalue_diff=1.0,
-                               kpt_idx=1,
-                               abs_inner_products={0.0: InnerProduct(0.0),
-                                                   0.1: InnerProduct(50.0)})
+                               abs_inner_prods={0.0: 0.0, 0.1: 50.0})
     assert actual == expected
 
 

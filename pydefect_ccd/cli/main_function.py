@@ -29,7 +29,7 @@ from vise.util.file_transfer import FileLink
 from vise.util.logger import get_logger
 
 from pydefect_ccd.capture_rate import \
-    calc_summed_squared_transition_moment_integral, CaptureRate
+    calc_summed_squared_transition_moment, CaptureRate
 from pydefect_ccd.ccd import SinglePoint, CcdPlotter, \
     SinglePointSpec, PotentialCurveSpec, PotentialCurve
 from pydefect_ccd.ccd_init import CcdInit
@@ -400,13 +400,13 @@ def make_capture_rate(args: Namespace):
     i_deg = i_min_info.degeneracy_by_symmetry_reduction
     f_deg = f_min_info.degeneracy_by_symmetry_reduction
 
-    phonon_overlaps = calc_summed_squared_transition_moment_integral(i_ccd, f_ccd, args.temperatures)
+    phonon_overlaps = calc_summed_squared_transition_moment(i_ccd, f_ccd, args.temperatures)
     em = dephon_init.effective_mass(args.captured_carrier)
     velocities = thermal_velocity(np.array(args.temperatures), em)
     spin_factor = 0.5 if i_min_info.is_spin_polarized else 1.0
 
     cap_rate = CaptureRate(Wif=e_p_matrix_elem.e_p_matrix_element(),
-                           summed_squared_transition_moment_integral=phonon_overlaps,
+                           summed_squared_transition_moment=phonon_overlaps,
                            velocities=velocities,
                            temperatures=args.temperatures,
                            site_degeneracy=f_deg / i_deg,
