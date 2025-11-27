@@ -1,62 +1,92 @@
 pydefect_ccd
 ===========
 
+pydefect_ccd is a tool to generate input files to calculate configuration 
+coordinate diagrams for point defects in semiconductors and insulators.
+The supported package is only VASP so far.
+
+The detailed theory is written in the following paper:
+
+
+
 Requirements
 ------------
-- Python 3.10 or higher
+- Python 3.12 or higher
+- nonrad 
+- pymatgen
 - [pydefect](https://github.com/kumagai-group/pydefect)
 - see requirements.txt for others
 
-License
+[vise](https://github.com/kumagai-group/vise) is also recommended to generate 
+VASP input files and analyze VASP output files.
+
+- License
 -----------------------
 This code is licensed under the MIT License.
 
 
 Workflow
 -----------------------------------------
-The workflow is depicted above.
+The workflow is depicted below.
+Here, I show an example using C-on-N defect in GaN.
 
 1. Create a `ccd_init.json` file from two directories containing pydefect files. 
 If the excited state has one more (less) charge state, n-type (p-type) is assumed.
+```bash
+pydefect_ccd make_ccd_init -u ../unitcell.yaml -pbes ../perfect/perfect_band_edge_state.json -fd ../C_N1_-1 -sd ../C_N1_0 -em ../effective_mass.json
+```
+The defect in `first_dir` needs to show higher formation energy than that in `second_dir`.
+For example, in the above command, the formation energy of C_N1_-1
 
-2. Make directories to calculate configuration coordinate diagrams for ground and excited states.
+You can always check the json files using the `pydefect_print` command in pydefect.
 
-3. Update `single_point_info.json` in each directory.  
-Before running this command, make sure that the `calc_results.json`, 
-`band_edge_orbital_infos.json`,  and `band_edge_states.json` files 
-have been created using pydefect.
+2. We next construct the directories for CCD calculations.
+```bash
+pydefect_ccd make_ccd_dirs --ccd_init ccd_init.json 
+```
 
-4. Create `single_point_info.json` in each directory.  
-Before running this command, make sure that `calc_results.json` and  
-`band_edge_states.json` files have been created using pydefect.
+3. After finishing the VASP calculations in each directory, 
+run the following commands to generate the pydefect `calc_results.json`, 
+`band_edge_orbital_infos.json`, and `band_edge_states.json` files 
+in each directory.
+```bash
+pydefect_vasp cr -d disp*
+pydefect ds -d disp*
+pydefect deoi -d disp* 
+````
 
+4. We can also evaluate the corrections for the CCD calculations.
+The details are written in 
+[this paper](https://doi.org/10.1103/PhysRevB.107.L220101).
+```bash
+pydefect_ccd make_ccd_corrections 
+```
 
+5. We then create `single_point_info.json` in each directory, which
+summarize the calculation result for each single point, with the following command.
+```bash
+pydefect_ccd make_single_point_results
+```
 
-Development notes
--------------------
-### Bugs, requests and questions
-Please use the [Issue Tracker](https://github.com/kumagai-group/pydefect_2d/issues) to report bugs, request features.
+6.
+```bash
+pydefect_ccd make_potential_curve_result
+```
 
-### Code contributions
-Although pydefect_ccd is free to use, we sincerely appreciate if you help us to improve this code.
-The simplest but most valuable contribution is to send the feature requests and bug reports.
-
-Please report any bugs and issues at PyDefect's [GitHub Issues page](https://github.com/kumagai-group/pydefect_2d).
-Please use the ["Fork and Pull"](https://guides.github.com/activities/forking/) workflow to make contributions and stick as closely as possible to the following:
-
-- Code style follows [PEP8](http://www.python.org/dev/peps/pep-0008) and [Google's writing style](https://google.github.io/styleguide/pyguide.html).
-- Add unittests wherever possible including scripts for command line interfaces.
-
-### Tests
-Run the tests using `pytest pydefect_ccd`.
 
 Citing pydefect_ccd
 ---------------
-If pydefect_ccd has been used in your research, please temporary cite the following paper.
-
+If pydefect_ccd has been used in your research, please temporary cite 
+the following paper.
 
 Yu Kumagai<br>
 
+Please cite the following papers:
+- Theory: 
+[Alkauskas, Yan, Van de Walle, PRB (2014).](https://doi.org/10.1103/PhysRevB.90.075202)
+
+- Code:
+[Turiansky et al., omput. Phys. Commun. (2021).](https://www.sciencedirect.com/science/article/abs/pii/S0010465521001685)
 
 Contact info
 --------------
