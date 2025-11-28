@@ -27,7 +27,6 @@ This code is licensed under the MIT License.
 
 Workflow
 -----------------------------------------
-The workflow is depicted below.
 Here, I show an example using C-on-N defect in GaN.
 
 1. Create a `ccd_init.json` file from two directories containing pydefect files. 
@@ -51,37 +50,61 @@ run the following commands to generate the pydefect `calc_results.json`,
 in each directory.
 ```bash
 pydefect_vasp cr -d disp*
-pydefect ds -d disp*
-pydefect deoi -d disp* 
+pydefect_vasp beoi -d disp_* -pbes ../../../perfect/perfect_band_edge_state.json --no_participation_ratio
+pydefect bes -d disp_* -pbes ../../../perfect/perfect_band_edge_state.json
 ````
 
 4. We can also evaluate the corrections for the CCD calculations.
 The details are written in 
 [this paper](https://doi.org/10.1103/PhysRevB.107.L220101).
+Note that this correction is needed even for neutral defects.
 ```bash
-pydefect_ccd make_ccd_corrections 
+pydefect_ccd make_ccd_corrections -d disp_* -u ../unitcell/unitcell.yaml -ndcr ../../../C_N1_-1/calc_results.json -ndde ../../../C_N1_-1/defect_entry.json -p potential_curve_spec.json
 ```
 
 5. We then create `single_point_info.json` in each directory, which
 summarize the calculation result for each single point, with the following command.
 ```bash
-pydefect_ccd make_single_point_results
+pydefect_ccd make_single_point_results -d disp_* 
 ```
 
 6.
 ```bash
-pydefect_ccd make_potential_curve_result
+pydefect_ccd make_potential_curve_result -d disp_*
 ```
+
+7.
+```bash
+pydefect_ccd make_ccd -d disp_* --ccd_init ccd_init.json --ground_potential_curve q_0/potential_curve.json --excited_potential_curve q_-1/potential_curve.json
+```
+
+
+8.
+```bash
+pydefect_ccd plot_ccd --ccd ccd.json
+```
+Now the following figure is obtained.
+![ccd_default.png](readme_figs/ccd_default.png)
+
+
+9.
+```bash
+pydefect_ccd plot_eigenvalues --ccd_init ../ccd_init.json -d disp_*
+```
+Now the following figure is obtained.
+![eigenvalues_q_-1.png](readme_figs/eigenvalues_q_-1.png)
+![eigenvalues_q_0.png](readme_figs/eigenvalues_q_0.png)
+
 
 
 Citing pydefect_ccd
 ---------------
-If pydefect_ccd has been used in your research, please temporary cite 
-the following paper.
+If pydefect_ccd has been used in your research, 
+please cite the following paper.
 
 Yu Kumagai<br>
 
-Please cite the following papers:
+In addition, please cite the following papers:
 - Theory: 
 [Alkauskas, Yan, Van de Walle, PRB (2014).](https://doi.org/10.1103/PhysRevB.90.075202)
 
