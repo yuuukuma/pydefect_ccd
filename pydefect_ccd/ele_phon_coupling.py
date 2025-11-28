@@ -30,21 +30,21 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
     spin: Union[Spin, str]
     eigenvalue_diff: float
     # key dQ, val: |\bra_{psi_i(0)} | S(0) |\ket_{psi_f(Q)}|
-    abs_inner_prods: Dict[float, float] = field(default_factory=dict)
+    dQs: List[float] = field(default_factory=list)
+    abs_inner_prods: List[float] = field(default_factory=list)
     # TODO : implement fit_q_range
     fit_q_range: List[float] = None
 
     def __post_init__(self):
-        self.dQs, self.abs_inner_prods_tuple \
-            = list(zip(*self.abs_inner_prods.items()))
         if isinstance(self.spin, str):
             self.spin = Spin[self.spin]
         try:
-            self.Wif, self.const = np.polyfit(self.dQs,
-                                              self.abs_inner_prods_tuple, 1)
-        except np.RankWarning:
+            self.Wif, self.const = np.polyfit(self.dQs, self.abs_inner_prods, 1)
+        except:
             print(f"Cannot fit inner products vs dQ for {self.name}.")
             self.Wif, self.const = None, None
+
+        print(100*"-", type(self.dQs[0]))
 
     @property
     def _json_filename(self):

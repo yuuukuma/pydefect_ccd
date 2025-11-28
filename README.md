@@ -95,6 +95,10 @@ Now the following figure is obtained.
 ![eigenvalues_q_-1.png](readme_figs/eigenvalues_q_-1.png)
 ![eigenvalues_q_0.png](readme_figs/eigenvalues_q_0.png)
 
+TIPS
+add more disps
+
+
 
 
 Citing pydefect_ccd
