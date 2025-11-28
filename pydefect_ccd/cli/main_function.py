@@ -35,7 +35,7 @@ from pydefect_ccd.ccd import SinglePoint, CcdPlotter, \
 from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.ele_phon_coupling import EPMatrixElement
 from pydefect_ccd.make_ccd import MakeCcd
-from pydefect_ccd.make_e_p_matrix_element import MakeEPMatrixElement
+from pydefect_ccd.make_e_p_matrix_element import make_ep_matrix_element
 from pydefect_ccd.plot_eigenvalues import EigenvalPlotter
 from pydefect_ccd.relaxed_point import NearEdgeState, RelaxedPoint
 from pydefect_ccd.util import spin_to_idx
@@ -49,10 +49,8 @@ def _make_near_edge_states(band_edge_orbital_infos: BandEdgeOrbitalInfos,
                            threshold: float = 0.1):
     result = []
     info_by_spin = band_edge_orbital_infos.orbital_infos[spin_to_idx(spin)]
-    for k_idx, (orb_info_by_kpt, k_coords, k_weight) in \
-        enumerate(zip(info_by_spin,
-                      band_edge_orbital_infos.kpt_coords,
-                      band_edge_orbital_infos.kpt_weights)):
+    for k_idx, (orb_info_by_kpt, k_coords) in \
+        enumerate(zip(info_by_spin, band_edge_orbital_infos.kpt_coords)):
         k_idx_from_1 = k_idx + 1
         for rel_idx, info_by_band in enumerate(orb_info_by_kpt):
             e_from_band_edge = abs(info_by_band.energy - edge_energy)
@@ -61,7 +59,6 @@ def _make_near_edge_states(band_edge_orbital_infos: BandEdgeOrbitalInfos,
             band_idx = rel_idx + band_edge_orbital_infos.lowest_band_index + 1
             result.append(NearEdgeState(band_idx,
                                         k_coords,
-                                        k_weight,
                                         k_idx_from_1,
                                         info_by_band.energy,
                                         info_by_band.occupation))
@@ -107,6 +104,7 @@ def _get_band_edge_info(band_edge_orbital_infos: BandEdgeOrbitalInfos,
         localized_orbitals.append(los)
         valence_bands.append(_make_near_edge_states(band_edge_orbital_infos,
                                                     spin,
+
                                                     state.vbm_info.energy))
         conduction_bands.append(_make_near_edge_states(band_edge_orbital_infos,
                                                        spin,
@@ -147,11 +145,11 @@ def make_ccd_init(args: Namespace):
                        ave_electron_mass=ave_electron_mass,
                        ave_static_diele_const=args.unitcell.ave_ele_diele)
 
-    if path.exists() is False:
+    if not path.exists():
         path.mkdir(parents=True)
 
     vise_yaml = (path / "vise.yaml")
-    if vise_yaml.exists() is False:
+    if not vise_yaml.exists():
         vise_yaml.write_text("""task: defect
 user_incar_settings:
   NSW: 1""")
@@ -181,7 +179,7 @@ def make_ccd_dirs(args: Namespace):
         dirpath.mkdir(exist_ok=True)
 
         spec_file = dirpath / "potential_curve_spec.json"
-        if spec_file.exists() is False:
+        if not spec_file.exists():
             spec = PotentialCurveSpec(
                 rp_i.charge, rp_i.correction_energy, rp_f.charge, Q_diff)
             spec.to_json_file(spec_file)
@@ -307,12 +305,12 @@ def plot_eigenvalues(args: Namespace):
             logger.info(f"band_edge_orbital_infos.json does not exist in {d}")
             continue
         try:
-            single_point_info = loadfn(Path(d) / "single_point_result.json")
+            single_point = loadfn(Path(d) / "single_point.json")
         except FileNotFoundError:
             logger.info(f"single_point_info.json does not exist in {d}")
             continue
         orb_infos.append(orb_info)
-        disp_ratios.append(single_point_info.disp_ratio)
+        disp_ratios.append(single_point.disp_ratio)
 
     vbm, cbm = args.ccd_init.supercell_vbm, args.ccd_init.supercell_cbm
     eigval_plotter = EigenvalPlotter(orb_infos, disp_ratios, vbm, cbm,
@@ -324,7 +322,7 @@ def plot_eigenvalues(args: Namespace):
 
 def make_wswq_dirs(args: Namespace):
     for dir_ in args.dirs:
-        _make_wswq_dir(dir_, args.dephon_init)
+        _make_wswq_dir(dir_, args.ccd_init)
 
 
 def _make_wswq_dir(dir_, ccd_init: CcdInit):
@@ -353,31 +351,39 @@ def _make_wswq_dir(dir_, ccd_init: CcdInit):
 
 
 def make_e_p_matrix_element(args: Namespace):
-    dQ_wswq_pairs = []
+    dQs, wswqs = [], []
 
+    base_single_point = None
     for d in args.dirs:
         wswq_file = d / "wswq" / "WSWQ"
+        WSWQ = _read_WSWQ(wswq_file)  # keys: (spin, kpoint) and (initial, final)
+        spin_kpt_index = (spin_to_idx(args.spin, True), 1)  # k-point index is 1
+        band_index = tuple(sorted((args.band_edge_index, args.defect_band_index)))
+
         single_point: SinglePoint = loadfn(d / "single_point.json")
-        dQ_wswq_pairs.append((single_point.dQ, _read_WSWQ(wswq_file)))
+        dQs.append(single_point.dQ)
+        wswqs.append(WSWQ[spin_kpt_index][band_index])
+
         if single_point.disp_ratio == 0.0:
             base_single_point = single_point
 
-    make_e_p_matrix_elem = MakeEPMatrixElement(
+    if base_single_point is None:
+        raise ValueError("At least one of the dirs must have disp_ratio of 0.0")
+
+    e_p_matrix_elem = make_ep_matrix_element(
         name=args.ccd_init.name,
-        charge=args.ccd_init.relaxed_points[0].charge,
         base_single_point=base_single_point,
         band_edge_index=args.band_edge_index,
         defect_band_index=args.defect_band_index,
-        kpoint_index=args.kpoint_index,
         spin=args.spin,
-        dQ_wswq_pairs=dQ_wswq_pairs,
+        dQs=dQs,
+        wswqs=wswqs,
         energy_diff=args.energy_diff)
-    e_p_matrix_elem = make_e_p_matrix_elem.make()
     print(e_p_matrix_elem)
     e_p_matrix_elem.to_json_file()
 
     try:
-        grad = e_p_matrix_elem(plt.gca())
+        # grad = e_p_matrix_elem(plt.gca())
         plt.xlabel("dQ (amu$^{1/2}$Å)")
         plt.savefig(f"e_p_matrix_element_{e_p_matrix_elem.index_info}.pdf")
         plt.show()
@@ -386,22 +392,20 @@ def make_e_p_matrix_element(args: Namespace):
 
 
 def make_capture_rate(args: Namespace):
-    dephon_init: CcdInit = args.dephon_init
+    ccd_init: CcdInit = args.ccd_init
     e_p_matrix_elem: EPMatrixElement = args.e_p_matrix_elem
-    if e_p_matrix_elem.e_p_matrix_element is None:
-        raise ValueError
 
     f_ccd, i_ccd = args.ccd.initial_and_final_curves_from_captured_carrier(args.captured_carrier)
     print(i_ccd)
     print(f_ccd)
 
-    i_min_info = dephon_init.relaxed_point_from_charge(i_ccd.charge)
-    f_min_info = dephon_init.relaxed_point_from_charge(f_ccd.charge)
+    i_min_info = ccd_init.relaxed_point_from_charge(i_ccd.charge)
+    f_min_info = ccd_init.relaxed_point_from_charge(f_ccd.charge)
     i_deg = i_min_info.degeneracy_by_symmetry_reduction
     f_deg = f_min_info.degeneracy_by_symmetry_reduction
 
     phonon_overlaps = calc_summed_squared_transition_moment(i_ccd, f_ccd, args.temperatures)
-    em = dephon_init.effective_mass(args.captured_carrier)
+    em = ccd_init.effective_mass(args.captured_carrier)
     velocities = thermal_velocity(np.array(args.temperatures), em)
     spin_factor = 0.5 if i_min_info.is_spin_polarized else 1.0
 
@@ -411,7 +415,7 @@ def make_capture_rate(args: Namespace):
                            temperatures=args.temperatures,
                            site_degeneracy=f_deg / i_deg,
                            spin_selection_factor=spin_factor,
-                           volume=dephon_init.volume)
+                           volume=ccd_init.volume)
     print(cap_rate)
     cap_rate.to_json_file()
 

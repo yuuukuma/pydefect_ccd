@@ -223,10 +223,13 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
         return list(tables.keys()), tables.values()
 
     def __str__(self):
+        # TODO: improve
         headers, tabulate_data = self.table_for_plot
-        return tabulate([tabulate_data], tablefmt="plain", floatfmt=".3f",
+        table = tabulate([tabulate_data], tablefmt="plain", floatfmt=".3f",
                         headers=headers)
-
+        single_points = "\n".join([str(sp) for sp in self.single_points])
+        fc = str(self.fitted_curve) if self.fitted_curve else "fitted curve is N.A."
+        return table + "\n" + fc + "\n" + single_points
 
 def calc_omega_and_Q0(Qs: List[float],
                       energies: List[float],
@@ -375,13 +378,12 @@ class CcdPlotter:
 
     def _add_ccd(self):
         ax = self.plt.gca()
-        if self._q_range:
-            ax.set_xlim(self._q_range[0], self._q_range[1])
+        # if self._q_range:
+        #     ax.set_xlim(self._q_range[0], self._q_range[1])
 
-        self._ccd.ground_curve.add_plot(ax, "red", self._ground_q_range,
-                                        self._quadratic_fit, self._spline_fit)
-        self._ccd.excited_curve.add_plot(ax, "blue", self._excited_q_range,
-                                         self._quadratic_fit, self._spline_fit)
+        if self._quadratic_fit:
+            self._ccd.ground_curve.add_plot(ax, "red", self._ground_q_range, self._spline_fit)
+            self._ccd.excited_curve.add_plot(ax, "blue", self._excited_q_range, self._spline_fit)
 
     def _set_labels(self):
         ax = self.plt.gca()

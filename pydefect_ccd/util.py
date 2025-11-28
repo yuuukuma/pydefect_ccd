@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 from typing import List
 
+import numpy as np
 from numpy import sqrt, sum
 from pymatgen.core import Structure
 from pymatgen.electronic_structure.core import Spin
@@ -65,3 +66,23 @@ def get_dR(ground: Structure, excited: Structure) -> float:
         The Summed atomic displacement distance in float
     """
     return sqrt(sum([x.distance(y) ** 2 for x, y in zip(ground, excited)]))
+
+
+def get_dQ(ground: Structure, excited: Structure) -> float:
+    """Calculate configuration coordinate difference.
+
+    Args:
+        ground : pymatgen structure corresponding to the ground (final) state
+        excited : pymatgen structure corresponding to the excited (initial) state
+
+    Returns:
+        (float):  the dQ value (amu^{1/2} Angstrom)
+    """
+    return np.sqrt(
+        np.sum(
+            [
+                x[0].distance(x[1]) ** 2 * x[0].specie.atomic_mass
+                for x in zip(ground, excited)
+            ],
+        ),
+    )

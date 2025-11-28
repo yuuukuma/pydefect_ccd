@@ -4,4 +4,3 @@ monty
 pymatgen
 tabulate
 nonrad
-pymatgen-analysis-defects

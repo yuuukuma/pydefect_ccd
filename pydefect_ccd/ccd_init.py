@@ -4,14 +4,13 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from monty.json import MSONable
-from pymatgen.analysis.defects.ccd import get_dQ
 from tabulate import tabulate
 from vise.util.logger import get_logger
 from vise.util.mix_in import ToJsonFileMixIn
 
 from pydefect_ccd.enum import Carrier
 from pydefect_ccd.relaxed_point import _joined_local_orbital_info, RelaxedPoint
-from pydefect_ccd.util import get_dR
+from pydefect_ccd.util import get_dR, get_dQ
 
 logger = get_logger(__name__)
 

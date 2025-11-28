@@ -13,7 +13,7 @@ from pymatgen.io.vasp.inputs import UnknownPotcarWarning
 from pydefect_ccd.cli.main_function import make_ccd_init, make_ccd, \
     make_ccd_dirs, plot_eigenvalues, make_wswq_dirs, \
     make_e_p_matrix_element, make_capture_rate, plot_capture_rate, \
-    make_ccd_corrections, plot_ccd
+    make_ccd_corrections, plot_ccd, make_single_points, make_potential_curve
 from pydefect_ccd.enum import Carrier
 from pydefect_ccd.version import __version__
 
@@ -41,6 +41,11 @@ def parse_args_main(args):
     ccd = argparse.ArgumentParser(description="", add_help=False)
     ccd.add_argument(
         "--ccd", type=loadfn, default="ccd.json")
+
+    pot_curve_spec = argparse.ArgumentParser(description="", add_help=False)
+    pot_curve_spec.add_argument(
+        "-p", "--potential_curve_spec", type=loadfn,
+        help="potential_curve.json file.", default="potential_curve_spec.json")
 
     # -- make_ccd_init -----------------------------------
     parser_make_ccd_init = subparsers.add_parser(
@@ -74,11 +79,11 @@ states.""",
 
     parser_add_ccd_dirs.add_argument(
         "-fsr", "--first_to_second_div_ratios", type=float, nargs="+",
-        default=[-0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+        default=[-0.2, -0.1, 0.0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0],
         help="Dividing ratios from first to second charge state structures.")
     parser_add_ccd_dirs.add_argument(
         "-sfr", "--second_to_first_div_ratios", type=float, nargs="+",
-        default=[-0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+        default=[-0.2, -0.1, 0.0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0],
         help="Dividing ratios from second to first charge state structures.")
     parser_add_ccd_dirs.add_argument(
         "-d", "--calc_dir", type=Path, default=Path.cwd(),
@@ -104,15 +109,11 @@ states.""",
     # -- make_ccd_corrections -----------------------------------
     parser_make_ccd_correction = subparsers.add_parser(
         name="make_ccd_corrections",
-        description="Make ccd_correction.json and modify "
-                    "dephon_correction.yaml",
-        parents=[dirs, unitcell_parser],
+        description="Make ccd_correction.json files",
+        parents=[pot_curve_spec, dirs, unitcell_parser],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=['mcc'])
 
-    parser_make_ccd_correction.add_argument(
-        "-s", "--potential_curve_spec", type=loadfn,
-        help="potential_curve.json file.")
     parser_make_ccd_correction.add_argument(
         "-ndcr", "--no_disp_calc_results", required=True, type=loadfn,
         help="Path to the calc_results.json without displacement.")
@@ -128,19 +129,16 @@ states.""",
         parents=[dirs],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=['mspr'])
-    parser_make_single_point_results.set_defaults(func=make_single_point_results)
+    parser_make_single_point_results.set_defaults(func=make_single_points)
 
     # -- make_potential_curve_result -----------------------------------
     parser_make_potential_curve_result = subparsers.add_parser(
         name="make_potential_curve_result",
         description="",
-        parents=[dirs],
+        parents=[pot_curve_spec, dirs],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=['mpcr'])
-    parser_make_potential_curve_result.add_argument(
-        "--potential_curve_spec", type=loadfn, default="potential_curve_spec.json")
-
-    parser_make_potential_curve_result.set_defaults(func=make_potential_curve_result)
+    parser_make_potential_curve_result.set_defaults(func=make_potential_curve)
 
     # -- make_ccd -----------------------------------
     parser_make_ccd = subparsers.add_parser(
@@ -227,12 +225,10 @@ states.""",
     parser_make_e_p_matrix_element = subparsers.add_parser(
         name="make_e_p_matrix_element",
         description="Make directories for calculating WSWQ files.",
+        parents=[ccd_init],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=['mepme'])
 
-    parser_make_e_p_matrix_element.add_argument(
-        "--base_disp", type=float, required=True,
-        help="Base displacement that must exist in potential_curve.json file.")
     parser_make_e_p_matrix_element.add_argument(
         "--potential_curve", type=loadfn, required=True,
         help="potential_curve.json filename.")
@@ -241,9 +237,7 @@ states.""",
     parser_make_e_p_matrix_element.add_argument(
         "--defect_band_index", type=int)
     parser_make_e_p_matrix_element.add_argument(
-        "--kpoint_index", type=int, required=True)
-    parser_make_e_p_matrix_element.add_argument(
-        "--spin", type=Spin.__getattr__, required=True)
+        "--spin", type=Spin.__getitem__, required=True)
     parser_make_e_p_matrix_element.add_argument(
         "--energy_diff", type=float)
     parser_make_e_p_matrix_element.add_argument(

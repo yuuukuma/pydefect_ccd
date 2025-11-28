@@ -40,7 +40,7 @@ class NearEdgeState(MSONable):
         return ", ".join(x)
 
 
-def _joined_local_orbital_info(localized_orbitals: List[LocalizedOrbital]
+def _joined_local_orbital_info(localized_orbitals: List[List[LocalizedOrbital]]
                                ) -> str:
     lo_str = []
     for lo_by_spin, spin in zip(localized_orbitals, ["up", "down"]):
