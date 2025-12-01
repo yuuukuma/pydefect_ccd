@@ -90,22 +90,6 @@ states.""",
         help="Directory where directories are created.")
     parser_add_ccd_dirs.set_defaults(func=make_ccd_dirs)
 
-#     # -- make_ccd -----------------------------------
-#     parser_make_ccd = subparsers.add_parser(
-#         name="make_ccd",
-#         description="Make ccd.json file",
-#         parents=[ccd_init],
-#         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-#         aliases=['mc'])
-
-#     parser_make_ccd.add_argument(
-#         "-g", "--ground_ccd", type=loadfn,
-#         help="potential_curve.json file corresponding to _default_single_ccd_for_e_p_coupling ground state.")
-#     parser_make_ccd.add_argument(
-#         "-e", "--potential_curve_final", type=loadfn,
-#         help="potential_curve.json file corresponding to an excited state.")
-#     parser_make_ccd.set_defaults(func=make_ccd)
-
     # -- make_ccd_corrections -----------------------------------
     parser_make_ccd_correction = subparsers.add_parser(
         name="make_ccd_corrections",
@@ -188,25 +172,6 @@ states.""",
         help="Energy range in y-axis")
     parser_plot_eigenvalues.set_defaults(func=plot_eigenvalues)
 
-    # # -- make_initial_e_p_coupling -----------------------------------
-    # parser_make_initial_e_p_coupling = subparsers.add_parser(
-    #     name="make_initial_e_p_coupling",
-    #     parents=[ccd_init, ccd],
-    #     description="Make initial e_p_coupling.json file.",
-    #     formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    #     aliases=['miepc'])
-
-    # parser_make_initial_e_p_coupling.add_argument(
-    #     "-cc", "--captured_carrier", type=Carrier, required=True,
-    #     choices=Carrier.name_list())
-    # parser_make_initial_e_p_coupling.add_argument(
-    #     "-d", "--disp", type=float, default=0.0)
-    # parser_make_initial_e_p_coupling.add_argument(
-    #     "--charge_for_e_p_coupling", type=int,
-    #     help="Default is a charge with smaller absolute value.")
-    # parser_make_initial_e_p_coupling.set_defaults(
-    #     func=make_initial_e_p_coupling)
-
     # -- make_wswq_dirs -----------------------------------
     parser_make_wswq_dirs = subparsers.add_parser(
         name="make_wswq_dirs",
@@ -238,8 +203,9 @@ states.""",
         "--defect_band_index", type=int)
     parser_make_e_p_matrix_element.add_argument(
         "--spin", type=Spin.__getitem__, required=True)
-    parser_make_e_p_matrix_element.add_argument(
-        "--energy_diff", type=float)
+    # parser_make_e_p_matrix_element.add_argument(
+    #     "--energy_diff", type=float,
+    #     help="This is needed when the localized state is not automatically determined.")
     parser_make_e_p_matrix_element.add_argument(
         "--dirs", type=Path, nargs="+", required=True)
 

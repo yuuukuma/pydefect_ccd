@@ -19,25 +19,25 @@ HARTREE2EV = physical_constants["Hartree energy in eV"]
 AUL2ANGSTROM = physical_constants["atomic unit of length"] * 10**10
 
 
-def harmonic_phonon_transition_moment(dQ: float,
-                                      dE: float,
-                                      wi: float,
-                                      wf: float,
-                                      T: Union[float, np.ndarray] = 300.
-                                      ) -> Union[float, np.ndarray]:
+def summed_squared_transition_moment(dQ: float,
+                                     dE: float,
+                                     wi: float,
+                                     wf: float,
+                                     T: Union[float, np.ndarray] = 300.
+                                     ) -> Union[float, np.ndarray]:
     R = get_C(dQ, dE, wi, wf, T=T, Wif=1.0, volume=2*np.pi, g=1)
     return R
 
 
-def harmonic_phonon_transition_moment_from_ccd(ccd: Ccd, T: List[float],
-                                               ) -> np.ndarray:
+def summed_squared_transition_moment_from_ccd(ccd: Ccd, T: List[float],
+                                              ) -> np.ndarray:
     """Within harmonic approximation"""
     assert isinstance(ccd.ground_curve.fitted_curve, QuadraticCurve)
     assert isinstance(ccd.excited_curve.fitted_curve, QuadraticCurve)
     wi = ccd.excited_curve.fitted_curve.omega
     wj = ccd.ground_curve.fitted_curve.omega
 
-    return harmonic_phonon_transition_moment(ccd.dQ, ccd.dE, wi, wj, np.array(T))
+    return summed_squared_transition_moment(ccd.dQ, ccd.dE, wi, wj, np.array(T))
 
 
 @dataclass

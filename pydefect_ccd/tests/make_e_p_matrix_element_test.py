@@ -7,7 +7,7 @@ from pymatgen.electronic_structure.core import Spin
 
 from pydefect_ccd.ccd import SinglePoint, SinglePointSpec
 from pydefect_ccd.ele_phon_coupling import EPMatrixElement
-from pydefect_ccd.make_e_p_matrix_element import MakeEPMatrixElement
+from pydefect_ccd.make_e_p_matrix_element import make_ep_matrix_element
 from pydefect_ccd.relaxed_point import NearEdgeState
 
 
@@ -38,25 +38,23 @@ def single_point():
 
 
 def test_make_e_p_matrix_element(single_point):
-    maker = MakeEPMatrixElement(
+    actual = make_ep_matrix_element(
         name="test",
-        charge=0,
         base_single_point=single_point,
         band_edge_index=101,
         defect_band_index=102,
-        kpoint_index=1,
         spin=Spin.up,
-        dQ_wswq_pairs=[(0.0, {(1, 1): {(101, 102): 3.0 + 4.0j}}),
-                       (0.1, {(1, 1): {(101, 102): 30.0 + 40.0j}})])
+        dQs=[0.0, 0.1],
+        wswqs=[3.0 + 4.0j,  30.0 + 40.0j])
 
-    actual = maker.make()
     expected = EPMatrixElement(name="test",
                                base_disp_ratio=0.0,
                                band_edge_index=101,
                                defect_band_index=102,
                                spin=Spin.up,
                                eigenvalue_diff=1.0,
-                               abs_inner_prods={0.0: 0.0, 0.1: 50.0})
+                               dQs=[0.0, 0.1],
+                               abs_inner_prods=[0.0, 50.0])
     assert actual == expected
 
 

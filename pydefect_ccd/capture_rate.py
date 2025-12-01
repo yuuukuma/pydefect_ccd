@@ -15,34 +15,35 @@ from pydefect_ccd.ccd import PotentialCurve, QuadraticCurve
 @dataclass
 class CaptureRate(MSONable, ToJsonFileMixIn):
     Ts: List[float]
-    ep_coupling: List[float]
+    W_if: List[float]
     summed_squared_transition_moment: List[float]  # as a function of T
     site_degeneracy: float
     velocities: List[float] = None # characteristic carrier velocity in [cm / s]
+    # TODO: add spin selection factor
 
     @property
     def capture_rate(self) -> np.array:
         return (2 * np.pi * self.site_degeneracy
-                * np.array(self.ep_coupling) ** 2
+                * np.array(self.W_if) ** 2
                 * np.array(self.summed_squared_transition_moment))
 
     @property
     def Wif(self):
-        return self.ep_coupling
+        return self.W_if
 
     def __str__(self):
-        header = [["Wif:", f"{self.ep_coupling:.1e}"],
+        header = [["Wif:", f"{self.W_if:.1e}"],
                   ["site degeneracy:", f"{self.site_degeneracy}"]]
 
         result = [tabulate(header, tablefmt="plain")]
 
         table = []
         columns = ["T [K]", "Phonon overlap []", "C [cm3/s]", "v [cm2/s]", "c / v [cm2]"]
-        for T, phonon_overlap, rate, v in zip(self.Ts,
-                                              self.summed_squared_transition_moment,
-                                              self.capture_rate,
-                                              self.velocities):
-            table.append([T, phonon_overlap, rate, v, rate / v])
+        for T, transition_moment, rate, v in zip(self.Ts,
+                                                 self.summed_squared_transition_moment,
+                                                 self.capture_rate,
+                                                 self.velocities):
+            table.append([T, transition_moment, rate, v, rate / v])
 
         result.append(
             tabulate(table, headers=columns, tablefmt="plain",

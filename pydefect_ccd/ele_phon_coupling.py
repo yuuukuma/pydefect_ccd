@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #  Copyright (c) 2022 Kumagai group.
 from dataclasses import dataclass, field
-from typing import Union, Dict, List
+from typing import Union, Dict, List, Optional
 
 import numpy as np
 from monty.json import MSONable
@@ -39,16 +39,24 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
         if isinstance(self.spin, str):
             self.spin = Spin[self.spin]
         try:
-            self.Wif, self.const = np.polyfit(self.dQs, self.abs_inner_prods, 1)
+            self.grad, self.const = np.polyfit(self.dQs, self.abs_inner_prods, 1)
         except:
             print(f"Cannot fit inner products vs dQ for {self.name}.")
-            self.Wif, self.const = None, None
+            self.grad, self.const = None, None
 
-        print(100*"-", type(self.dQs[0]))
+    @property
+    def W_if_tilde(self) -> float:
+        """ E-P matrix element W_if tilde """
+        return self.grad * self.eigenvalue_diff
 
     @property
     def _json_filename(self):
         return self._filename + "_" + self.index_info + ".json"
+
+    def to_json_file(self, filename: Optional[str] = None) -> None:
+        if filename is None:
+            filename = self._json_filename
+        super().to_json_file(filename)
 
     @property
     def index_info(self):
@@ -65,7 +73,7 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
         """ Evaluated by computing the slope of inner products"""
         ax.scatter(self.dQs, self.abs_inner_prods)
         x = np.arange(min(self.dQs), max(self.dQs), 0.01)
-        y = x * self.Wif + self.const
+        y = x * self.grad + self.const
         ax.plot(x, y, alpha=0.5)
 
     def __str__(self):
@@ -74,11 +82,10 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
                  ["defect band index", self.defect_band_index],
                  ["spin", self.spin.name],
                  ["eigenvalue difference", round(self.eigenvalue_diff, 3)],
-                 ["W_if", self.Wif]]
+                 ["W_if", self.grad]]
 
         result.append(tabulate(table, tablefmt="plain", floatfmt=".3f"))
-
-        inner_prods = [[dQ, aip] for dQ, aip in self.abs_inner_prods.items()]
+        inner_prods = [[dQ, aip] for dQ, aip in zip(self.dQs, self.abs_inner_prods)]
 
         result.append(tabulate(inner_prods,
                                headers=["dQ", "inner product",
@@ -105,12 +112,12 @@ class EPCoupling(MSONable, ToJsonFileMixIn):
             This is needed to calculate the Sommerfeld parameter.
 
     """
-    e_p_matrix_elements: List[float]
+    W_if_tilde: List[float]
     charge: int
     T: Union[float, np.ndarray]
     volume: float
-    ave_captured_carrier_mass: float
-    ave_static_diele_const: float
+    ave_captured_carrier_mass: float = None
+    ave_static_diele_const: float = None
     uniform_scaling_factor: float = 1.0
 
     def __str__(self):
@@ -138,10 +145,11 @@ class EPCoupling(MSONable, ToJsonFileMixIn):
                                     self.ave_captured_carrier_mass,
                                     self.ave_static_diele_const)
 
-    def __call__(self,  method: str = "average") -> float:
+    def W_if(self,  method: str = "average") -> float:
         """ E-P coupling constant W_if """
         if method == "average":
-            ep = np.mean(self.e_p_matrix_elements)
+            ep = np.mean(self.W_if_tilde)
         else:
             raise NotImplementedError(f"{method} is not implemented.")
-        return self.f * self.volume * ep
+
+        return self.f * self.volume * float(ep)

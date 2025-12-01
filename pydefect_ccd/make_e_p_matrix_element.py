@@ -18,18 +18,14 @@ def make_ep_matrix_element(name: str,
                            defect_band_index: int,
                            spin: Spin,
                            dQs: List[float],
-                           wswqs: List[complex],
-                           energy_diff: float = None) -> EPMatrixElement:
+                           wswqs: List[complex]) -> EPMatrixElement:
     assert len(dQs) == len(wswqs)
 
     base_disp_ratio = base_single_point.disp_ratio
 
-    if energy_diff:
-        eigenvalue_diff = energy_diff
-    else:
-        band_edge_state = base_single_point.near_edge_state(spin, band_edge_index)
-        defect_state = base_single_point.localized_orbital(spin, defect_band_index)
-        eigenvalue_diff = abs(band_edge_state.eigenvalue - defect_state.ave_energy)
+    band_edge_state = base_single_point.near_edge_state(spin, band_edge_index)
+    defect_state = base_single_point.near_edge_state(spin, defect_band_index)
+    eigenvalue_diff = abs(band_edge_state.eigenvalue - defect_state.eigenvalue)
 
     abs_inner_prods = [float(np.abs(wswq) * np.sign(dQ))
                        for dQ, wswq in zip(dQs, wswqs)]

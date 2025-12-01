@@ -16,12 +16,13 @@ def e_p_matrix_elem():
                            defect_band_index=2,
                            spin=Spin.down,
                            eigenvalue_diff=0.1,
-                           abs_inner_prods={-1.0: 20.0, 0.0: 1.0, 1.0: 2.0})
+                            dQs=[-1.0, 0.0, 1.0],
+                           abs_inner_prods=[20.0, 1.0, 2.0])
 
 
 @pytest.fixture
 def e_p_coupling(e_p_matrix_elem):
-    return EPCoupling(e_p_matrix_elements=[1.0],
+    return EPCoupling(W_if_tilde=[1.0],
                       charge=1,
                       T=np.array([300.0]),
                       volume=100.0,
@@ -31,11 +32,6 @@ def e_p_coupling(e_p_matrix_elem):
 
 def test_e_p_coupling_to_json_file(e_p_coupling, tmpdir):
     assert_json_roundtrip(e_p_coupling, tmpdir)
-
-
-def test_inner_prod_vs_q(e_p_matrix_elem):
-    assert e_p_matrix_elem.dQs == (-1.0, 0.0, 1.0)
-    assert e_p_matrix_elem.abs_inner_prods_tuple == (20.0, 1.0, 2.0)
 
 
 def test_e_p_matrix_element(e_p_coupling):

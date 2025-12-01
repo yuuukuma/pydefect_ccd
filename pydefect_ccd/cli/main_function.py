@@ -33,7 +33,7 @@ from pydefect_ccd.capture_rate import \
 from pydefect_ccd.ccd import SinglePoint, CcdPlotter, \
     SinglePointSpec, PotentialCurveSpec, PotentialCurve
 from pydefect_ccd.ccd_init import CcdInit
-from pydefect_ccd.ele_phon_coupling import EPMatrixElement
+from pydefect_ccd.ele_phon_coupling import EPMatrixElement, EPCoupling
 from pydefect_ccd.make_ccd import MakeCcd
 from pydefect_ccd.make_e_p_matrix_element import make_ep_matrix_element
 from pydefect_ccd.plot_eigenvalues import EigenvalPlotter
@@ -377,10 +377,16 @@ def make_e_p_matrix_element(args: Namespace):
         defect_band_index=args.defect_band_index,
         spin=args.spin,
         dQs=dQs,
-        wswqs=wswqs,
-        energy_diff=args.energy_diff)
+        wswqs=wswqs)
     print(e_p_matrix_elem)
     e_p_matrix_elem.to_json_file()
+
+    e_p_coupling = EPCoupling(e_p_matrix_elem.grad,
+                              charge=0,
+                              T=args.temperatures,
+                              volume=args.ccd_init.volume,
+                              )
+    e_p_coupling.to_json_file()
 
     try:
         # grad = e_p_matrix_elem(plt.gca())
@@ -393,7 +399,6 @@ def make_e_p_matrix_element(args: Namespace):
 
 def make_capture_rate(args: Namespace):
     ccd_init: CcdInit = args.ccd_init
-    e_p_matrix_elem: EPMatrixElement = args.e_p_matrix_elem
 
     f_ccd, i_ccd = args.ccd.initial_and_final_curves_from_captured_carrier(args.captured_carrier)
     print(i_ccd)
@@ -404,25 +409,24 @@ def make_capture_rate(args: Namespace):
     i_deg = i_min_info.degeneracy_by_symmetry_reduction
     f_deg = f_min_info.degeneracy_by_symmetry_reduction
 
-    phonon_overlaps = calc_summed_squared_transition_moment(i_ccd, f_ccd, args.temperatures)
+    summed_squared_transition_moment \
+        = calc_summed_squared_transition_moment(i_ccd, f_ccd, args.temperatures)
     em = ccd_init.effective_mass(args.captured_carrier)
     velocities = thermal_velocity(np.array(args.temperatures), em)
-    spin_factor = 0.5 if i_min_info.is_spin_polarized else 1.0
+    # spin_factor = 0.5 if i_min_info.is_spin_polarized else 1.0
 
-    cap_rate = CaptureRate(Wif=e_p_matrix_elem.e_p_matrix_element(),
-                           summed_squared_transition_moment=phonon_overlaps,
+    cap_rate = CaptureRate(args.temperatures,
+                           args.e_p_coupling.W_if.
+                           summed_squared_transition_moment,
                            velocities=velocities,
-                           temperatures=args.temperatures,
-                           site_degeneracy=f_deg / i_deg,
-                           spin_selection_factor=spin_factor,
-                           volume=ccd_init.volume)
+                           site_degeneracy=f_deg / i_deg)
     print(cap_rate)
     cap_rate.to_json_file()
 
 
 def plot_capture_rate(args: Namespace):
     cap: CaptureRate = args.capture_rate
-    plt.scatter(cap.temperatures, cap.capture_rate, marker='o')
+    plt.scatter(cap.Ts, cap.capture_rate, marker='o')
     plt.gca().set_yscale("log")
     plt.savefig("capture_rate.pdf")
     plt.show()
