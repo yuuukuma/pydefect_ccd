@@ -51,14 +51,13 @@ def _joined_local_orbital_info(localized_orbitals: List[List[LocalizedOrbital]]
 
 
 @dataclass(kw_only=True)
-class PointMixIn(MSONable):
+class OrbitalInfoMixIn(MSONable):
     """Mix-in class that stores information for a fixed structural point.
 
     Indices for orbitals and bands are organized as [spin][band].
     Attributes:
         energy: Bare energy obtained from DFT calculations.
     """
-    energy: float
     magnetization: float
     localized_orbitals: Optional[List[List[LocalizedOrbital]]] = field(default=None)
     valence_bands: Optional[List[List[NearEdgeState]]] = field(default=None)
@@ -66,7 +65,7 @@ class PointMixIn(MSONable):
 
 
 @dataclass
-class RelaxedPoint(PointMixIn):
+class RelaxedPoint(OrbitalInfoMixIn):
     """Information at the relaxed structure for a given charge state
 
     Attributes:
@@ -74,7 +73,7 @@ class RelaxedPoint(PointMixIn):
         charge: The charge state.
         correction_energy: Correction energy estimated e.g. by eFNV method.
         structure: The atomic configuration.
-        energy: Formation energy at Ef=VBM and chemical potentials
+        formation_energy: Formation energy at Ef=VBM and chemical potentials
             being standard states.
         magnetization: Magnetization
         localized_orbitals: List of localized orbitals at each spin channel.
@@ -88,6 +87,7 @@ class RelaxedPoint(PointMixIn):
     """
     name: str
     charge: int
+    formation_energy: float  # formation energy
     correction_energy: float
     structure: Structure | IStructure
     initial_site_symmetry: str
@@ -100,7 +100,7 @@ class RelaxedPoint(PointMixIn):
 
     @property
     def corrected_energy(self) -> float:
-        return self.energy + self.correction_energy
+        return self.formation_energy + self.correction_energy
 
     @property
     def dir_path(self) -> Path:

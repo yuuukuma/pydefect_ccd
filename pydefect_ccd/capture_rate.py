@@ -53,8 +53,8 @@ def calc_summed_squared_transition_moment(
         excited_curve: PotentialCurve,
         Ts: List[float]):
     """Within harmonic approximation"""
-    dQ = excited_curve.Q_diff - ground_curve.Q_diff
-    dE = excited_curve.lowest_energy - ground_curve.lowest_energy
+    dQ = excited_curve.Q_diff
+    dE = abs(excited_curve.lowest_energy - ground_curve.lowest_energy)
 
     assert isinstance(ground_curve.fitted_curve, QuadraticCurve)
     assert isinstance(excited_curve.fitted_curve, QuadraticCurve)
@@ -66,5 +66,6 @@ def calc_summed_squared_transition_moment(
                    wf=excited_curve.fitted_curve.omega_in_eV,
                    T=np.array(Ts),
                    Wif=1, volume=1, g=1)
+    print(dQ, dE, ground_curve.fitted_curve.omega_in_eV, excited_curve.fitted_curve.omega_in_eV)
     return list(result)
 

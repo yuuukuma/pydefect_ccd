@@ -21,7 +21,7 @@ from nonrad.constants import AMU2KG, ANGS2M, EV2J, HBAR
 from pydefect_ccd.enum import Carrier
 from pydefect_ccd.relaxed_point import NearEdgeState, \
     _joined_local_orbital_info, \
-    PointMixIn
+    OrbitalInfoMixIn
 from pydefect_ccd.util import spin_to_idx
 
 logger = get_logger(__name__)
@@ -35,7 +35,8 @@ class SinglePointSpec(MSONable, ToJsonFileMixIn):
 
 
 @dataclass
-class SinglePoint(PointMixIn, ToJsonFileMixIn):
+class SinglePoint(OrbitalInfoMixIn, ToJsonFileMixIn):
+    energy: float  # bare total energy
     spec: SinglePointSpec
     ccd_correction_energy: float  # CCD correction at a fixed structure
     is_shallow: bool = None
@@ -72,16 +73,19 @@ class SinglePoint(PointMixIn, ToJsonFileMixIn):
         return self.energy + self.ccd_correction_energy
 
     @property
-    def table_for_plot(self):
-        tables = {"corr. energy": self.ccd_corrected_energy,
-                  "is shallow?": self.is_shallow,
-                  "localized orb": _joined_local_orbital_info(self.localized_orbitals)}
-        return list(tables.keys()), tables.values()
+    def table_headers(self):
+        return ["corrected energy", "is shallow?", "localized orb"]
+
+    def table_values(self,
+                     correction_energy: float = 0.0,
+                     shifted_energy: float = 0.0):
+        localized_orbitals = _joined_local_orbital_info(self.localized_orbitals)
+        energy = self.energy + correction_energy + self.ccd_correction_energy + shifted_energy
+        return [energy, self.is_shallow, localized_orbitals]
 
     def __str__(self):
-        headers, tabulate_data = self.table_for_plot
-        return tabulate([tabulate_data], tablefmt="plain", floatfmt=".3f",
-                        headers=headers)
+        return tabulate([self.table_values()], tablefmt="plain", floatfmt=".3f",
+                        headers=self.table_headers)
 
 
 @dataclass
@@ -111,7 +115,7 @@ class QuadraticCurve(MSONable, Curve):
         return HBAR * self.omega * np.sqrt(EV2J / (ANGS2M**2 * AMU2KG))
 
     def __call__(self, Q: Union[float, np.array]) -> Union[float, np.array]:
-        return self.omega * (Q - self.Q0)**2 + self.dE
+        return self.omega ** 2 * (Q - self.Q0)**2 + self.dE
 
     def __str__(self):
         f = (f"QuadraticCurve: omega={self.omega_in_eV:.5f} eV, "
@@ -229,6 +233,7 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
     @property
     def table_for_plot(self):
         tables = {"charge": self.charge,
+                  "lowest energy": self.lowest_energy,
                   "corr. energy": self.correction_energy,
                   "counter charge": self.counter_charge,
                   "Q diff": self.Q_diff,
@@ -240,16 +245,20 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
         headers, tabulate_data = self.table_for_plot
         table = tabulate([tabulate_data], tablefmt="plain", floatfmt=".3f",
                         headers=headers)
-        single_points = "\n".join([str(sp) for sp in self.single_points])
         fc = str(self.fitted_curve) if self.fitted_curve else "fitted curve is N.A."
-        return table + "\n" + fc + "\n" + single_points
+        print(self.correction_energy)
+        d = [sp.table_values(self.correction_energy, self.shifted_energy)
+             for sp in self.single_points]
+        table_2 = tabulate(d, tablefmt="plain", floatfmt=".3f",
+                           headers=self.single_points[0].table_headers)
+        return table + "\n" + fc + "\n" + table_2
 
 def calc_omega_and_Q0(Qs: List[float],
                       energies: List[float],
                       Q0: Optional[float]) -> Tuple[float, float, float]:
     def f(Q, omega, Q0, dE):
         # Q is a variable, while the others are fitting parameters.
-        return 0.5 * omega * (Q - Q0)**2 + dE
+        return 0.5 * omega**2 * (Q - Q0)**2 + dE
 
     # set bounds to restrict Q0 to the given Q0 value
     bounds = (-np.inf, np.inf) if Q0 is None else \

@@ -119,7 +119,7 @@ class CcdInit(MSONable, ToJsonFileMixIn):
                     localized_state_idxs.append(f"{spin}-{ss.band_idx}")
             table.append(
                 [min_info.charge, min_info.initial_site_symmetry,
-                 min_info.final_site_symmetry, min_info.energy,
+                 min_info.final_site_symmetry, min_info.formation_energy,
                  min_info.correction_energy, min_info.corrected_energy,
                  min_info.magnetization,
                  _joined_local_orbital_info(min_info.localized_orbitals)])

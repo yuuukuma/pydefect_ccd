@@ -35,7 +35,7 @@ def relaxed_point(ground_structure):
     return RelaxedPoint(name="test",
                         charge=-1,
                         structure=ground_structure,
-                        energy=-90.0,
+                        formation_energy=-90.0,
                         correction_energy=1.0,
                         magnetization=1.0,
                         localized_orbitals=[[], [orb_info]],

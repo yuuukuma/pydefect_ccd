@@ -42,6 +42,7 @@ class MakeCcd:
 
         self._ground_curve = deepcopy(ground_curve)
         self._excited_curve = deepcopy(excited_curve)
+        self._lowest_energy = ground_curve.lowest_energy
 
         self._set_shifted_energy(self._ground_curve)
         self._set_shifted_energy(self._excited_curve)
@@ -71,7 +72,7 @@ class MakeCcd:
             band_edge = self._vbm
         else:
             raise ValueError
-        curve.shifted_energy = band_edge * curve.charge
+        curve.shifted_energy = band_edge * curve.charge - self._lowest_energy
 
     @property
     def ccd(self) -> Ccd:

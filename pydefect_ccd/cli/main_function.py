@@ -80,7 +80,7 @@ def _make_relaxed_point_from_dir(_dir: Path):
         name=energy_info.name,
         charge=energy_info.charge,
         structure=calc_results.structure,
-        energy=energy_info.defect_energy.formation_energy,
+        formation_energy=energy_info.defect_energy.formation_energy,
         correction_energy=energy_info.defect_energy.total_correction,
         magnetization=calc_results.magnetization,
         localized_orbitals=localized_orbitals,
@@ -139,8 +139,8 @@ def make_ccd_init(args: Namespace):
                        vbm=args.unitcell.vbm,
                        cbm=args.unitcell.cbm,
                        supercell_volume=volume,
-                       supercell_vbm=args.p_state.vbm_info.energy,
-                       supercell_cbm=args.p_state.cbm_info.energy,
+                       supercell_vbm=args.p_state.vbm_info.formation_energy,
+                       supercell_cbm=args.p_state.cbm_info.formation_energy,
                        ave_hole_mass=ave_hole_mass,
                        ave_electron_mass=ave_electron_mass,
                        ave_static_diele_const=args.unitcell.ave_ele_diele)
@@ -412,13 +412,14 @@ def make_capture_rate(args: Namespace):
         = calc_summed_squared_transition_moment(args.ccd.excited_curve,
                                                 args.ccd.ground_curve,
                                                 args.temperatures)
+
     carrier = args.ccd.captured_carrier
     em = ccd_init.effective_mass(carrier)
     velocities = thermal_velocity(np.array(args.temperatures), em)
     # spin_factor = 0.5 if i_min_info.is_spin_polarized else 1.0
 
     cap_rate = CaptureRate(args.temperatures,
-                           args.e_p_coupling.W_if,
+                           args.e_p_coupling.W_if(),
                            summed_squared_transition_moment,
                            velocities=velocities,
                            site_degeneracy=f_deg / i_deg)
