@@ -8,7 +8,7 @@ from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from vise.tests.helpers.assertion import assert_dataclass_almost_equal
 
 from pydefect_ccd.ccd import Ccd, SinglePoint, PotentialCurve, spline3, \
-    SinglePointSpec, PotentialCurveSpec, dQ_revert
+    SinglePointSpec, PotentialCurveSpec, dQ_revert, calc_omega_and_Q0
 from pydefect_ccd.enum import Carrier
 
 
@@ -103,6 +103,24 @@ def test_spline3():
     y = [0.0, 1.0, 8.0, 28.0]
     actual = spline3(x, y, num_points=11)
     assert actual[1][1] == pytest.approx(2.17924820)
+
+
+def _make_energies(omega, Q0, dE, Qs):
+    return 0.5 * omega * (Qs - Q0)**2 + dE
+
+
+def test_calc_omega_and_Q0_variable_Q0():
+    omega_true = 2.0
+    Q0_true = 0.5
+    dE_true = -0.1
+    Qs = np.array([-1.0, 0.0, 1.0, 2.0])
+    energies = _make_energies(omega_true, Q0_true, dE_true, Qs)
+
+    omega, Q0, dE = calc_omega_and_Q0(list(Qs), list(energies), None)
+
+    assert pytest.approx(omega_true, rel=1e-6) == omega
+    assert pytest.approx(Q0_true, rel=1e-6) == Q0
+    assert pytest.approx(dE_true, rel=1e-6) == dE
 
 
 # def test_plot_ccd(ccd):

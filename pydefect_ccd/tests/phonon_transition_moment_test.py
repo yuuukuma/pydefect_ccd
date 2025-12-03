@@ -1,27 +1,20 @@
-# import pytest
-# from matplotlib import pyplot as plt
-# from qmsolve import eV, Å, init_visualization, SingleParticle
-# from qmsolve.visualization.single_particle_1D import \
-#     VisualizationSingleParticle1D
-#
-# from dephon.phonon_overlap import Potential
-#
-#
-# @pytest.fixture
-# def pot():
-#     return Potential(potential_energies=[0.0, 0.25, 1.0, 2.25, 4.0],
-#                      dQs=[0.0, 0.5, 1.0, 1.5, 2.0])
-#
-#
-# # def test_potential_func(pot):
-# #     func = pot.potential_func()
-# #     particle = SingleParticle()
-# #     particle.x = 1.0
-# #     assert func(particle) == 1.0
-# #     particle.x = 2.0
-# #     assert func(particle) == 4.0
-#
-#
+# -*- coding: utf-8 -*-
+#  Copyright (c) 2022 Kumagai group.
+import numpy as np
+import pytest
+from nonrad import get_C
+
+
+def test_summed_squared_transition_moment():
+    dQ = 1.26630 # amu^(1/2) Angstrom
+    dE = 0.915 # eV
+    wi = 0.04582 # eV
+    wf = 0.04166 # eV
+    actual = get_C(dQ, dE, wi, wf, T=300, Wif=1.0, volume=1.0, g=1)
+    expected = 4.41-11
+    pytest.approx(actual, abs=1e-2)
+
+
 # def test_extent(pot):
 #     assert pot.extent == 2.0
 # #

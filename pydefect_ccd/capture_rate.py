@@ -27,29 +27,25 @@ class CaptureRate(MSONable, ToJsonFileMixIn):
                 * np.array(self.W_if) ** 2
                 * np.array(self.summed_squared_transition_moment))
 
-    @property
-    def Wif(self):
-        return self.W_if
-
-    def __str__(self):
-        header = [["Wif:", f"{self.W_if:.1e}"],
-                  ["site degeneracy:", f"{self.site_degeneracy}"]]
-
-        result = [tabulate(header, tablefmt="plain")]
-
-        table = []
-        columns = ["T [K]", "Phonon overlap []", "C [cm3/s]", "v [cm2/s]", "c / v [cm2]"]
-        for T, transition_moment, rate, v in zip(self.Ts,
-                                                 self.summed_squared_transition_moment,
-                                                 self.capture_rate,
-                                                 self.velocities):
-            table.append([T, transition_moment, rate, v, rate / v])
-
-        result.append(
-            tabulate(table, headers=columns, tablefmt="plain",
-                     floatfmt=[".1f", ".1e", ".1e", ".1e", ".1e"]))
-
-        return "\n".join(result)
+    # def __str__(self):
+    #     header = [["Wif:", f"{self.W_if:.1e}"],
+    #               ["site degeneracy:", f"{self.site_degeneracy}"]]
+    #
+    #     result = [tabulate(header, tablefmt="plain")]
+    #
+    #     table = []
+    #     columns = ["T [K]", "Phonon overlap []", "C [cm3/s]", "v [cm2/s]", "c / v [cm2]"]
+    #     for T, transition_moment, rate, v in zip(self.Ts,
+    #                                              self.summed_squared_transition_moment,
+    #                                              self.capture_rate,
+    #                                              self.velocities):
+    #         table.append([T, transition_moment, rate, v, rate / v])
+    #
+    #     result.append(
+    #         tabulate(table, headers=columns, tablefmt="plain",
+    #                  floatfmt=[".1f", ".1e", ".1e", ".1e", ".1e"]))
+    #
+    #     return "\n".join(result)
 
 
 def calc_summed_squared_transition_moment(
@@ -66,8 +62,8 @@ def calc_summed_squared_transition_moment(
     # at Wif=1, volume=1Å^3, g=1
     result = get_C(dQ=abs(dQ),
                    dE=dE,
-                   wi=ground_curve.fitted_curve.omega,
-                   wf=excited_curve.fitted_curve.omega,
+                   wi=ground_curve.fitted_curve.omega_in_eV,
+                   wf=excited_curve.fitted_curve.omega_in_eV,
                    T=np.array(Ts),
                    Wif=1, volume=1, g=1)
     return list(result)

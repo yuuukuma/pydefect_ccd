@@ -116,6 +116,11 @@ near the equilibrium geometry.
 pydefect_ccd make_e_p_matrix_element 
 ```
 
+12.
+```bash
+pydefect_ccd make_capture_rate
+```
+
 Citing pydefect_ccd
 ---------------
 When pydefect_ccd has been used in your research, 

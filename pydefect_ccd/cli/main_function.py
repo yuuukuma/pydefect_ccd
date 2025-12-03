@@ -274,6 +274,9 @@ def make_potential_curve(args: Namespace):
 
 
 def make_ccd(args: Namespace):
+    args.ground_potential_curve.add_quadratic_curve(fixed_Q0=False)
+    args.excited_potential_curve.add_quadratic_curve(fixed_Q0=False)
+
     ccd = MakeCcd(args.ground_potential_curve,
                   args.excited_potential_curve,
                   args.ccd_init.vbm,
@@ -389,7 +392,7 @@ def make_e_p_matrix_element(args: Namespace):
     e_p_coupling.to_json_file()
 
     try:
-        # grad = e_p_matrix_elem(plt.gca())
+        e_p_matrix_elem.plot(plt.gca())
         plt.xlabel("dQ (amu$^{1/2}$Å)")
         plt.savefig(f"e_p_matrix_element_{e_p_matrix_elem.index_info}.pdf")
         plt.show()
@@ -400,23 +403,22 @@ def make_e_p_matrix_element(args: Namespace):
 def make_capture_rate(args: Namespace):
     ccd_init: CcdInit = args.ccd_init
 
-    f_ccd, i_ccd = args.ccd.initial_and_final_curves_from_captured_carrier(args.captured_carrier)
-    print(i_ccd)
-    print(f_ccd)
-
-    i_min_info = ccd_init.relaxed_point_from_charge(i_ccd.charge)
-    f_min_info = ccd_init.relaxed_point_from_charge(f_ccd.charge)
+    i_min_info = ccd_init.relaxed_point_from_charge(args.ccd.excited_curve.charge)
+    f_min_info = ccd_init.relaxed_point_from_charge(args.ccd.ground_curve.charge)
     i_deg = i_min_info.degeneracy_by_symmetry_reduction
     f_deg = f_min_info.degeneracy_by_symmetry_reduction
 
     summed_squared_transition_moment \
-        = calc_summed_squared_transition_moment(i_ccd, f_ccd, args.temperatures)
-    em = ccd_init.effective_mass(args.captured_carrier)
+        = calc_summed_squared_transition_moment(args.ccd.excited_curve,
+                                                args.ccd.ground_curve,
+                                                args.temperatures)
+    carrier = args.ccd.captured_carrier
+    em = ccd_init.effective_mass(carrier)
     velocities = thermal_velocity(np.array(args.temperatures), em)
     # spin_factor = 0.5 if i_min_info.is_spin_polarized else 1.0
 
     cap_rate = CaptureRate(args.temperatures,
-                           args.e_p_coupling.W_if.
+                           args.e_p_coupling.W_if,
                            summed_squared_transition_moment,
                            velocities=velocities,
                            site_degeneracy=f_deg / i_deg)

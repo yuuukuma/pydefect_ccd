@@ -14,7 +14,6 @@ from pydefect_ccd.cli.main_function import make_ccd_init, make_ccd, \
     make_ccd_dirs, plot_eigenvalues, make_wswq_dirs, \
     make_e_p_matrix_element, make_capture_rate, plot_capture_rate, \
     make_ccd_corrections, plot_ccd, make_single_points, make_potential_curve
-from pydefect_ccd.enum import Carrier
 from pydefect_ccd.version import __version__
 
 warnings.simplefilter('ignore', UnknownPotcarWarning)
@@ -203,9 +202,10 @@ states.""",
         "--defect_band_index", type=int)
     parser_make_e_p_matrix_element.add_argument(
         "--spin", type=Spin.__getitem__, required=True)
-    # parser_make_e_p_matrix_element.add_argument(
-    #     "--energy_diff", type=float,
-    #     help="This is needed when the localized state is not automatically determined.")
+    parser_make_e_p_matrix_element.add_argument(
+        "-T", "--temperatures", type=float, nargs="+",
+        help="Temperatures for calculating capture rates in K.",
+        default=[t*100 for t in range(2, 9)])
     parser_make_e_p_matrix_element.add_argument(
         "--dirs", type=Path, nargs="+", required=True)
 
@@ -214,15 +214,13 @@ states.""",
     # -- make_capture_rate -----------------------------------
     parser_make_capture_rate = subparsers.add_parser(
         name="make_capture_rate",
-        description="Make directories for calculating WSWQ files.",
+        description="Make ",
         parents=[ccd_init, ccd],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=['mcr'])
 
     parser_make_capture_rate.add_argument(
-        "--captured_carrier", type=Carrier)
-    parser_make_capture_rate.add_argument(
-        "--e_p_matrix_elem", type=loadfn, required=True)
+        "--e_p_coupling", type=loadfn, required=True)
     parser_make_capture_rate.add_argument(
         "-t", "--temperatures", type=float, nargs="+",
         default=[t for t in range(40, 820, 20)])

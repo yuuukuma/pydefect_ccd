@@ -16,6 +16,8 @@ from vise.util.logger import get_logger
 from vise.util.matplotlib import float_to_int_formatter
 from vise.util.mix_in import ToJsonFileMixIn
 
+from nonrad.constants import AMU2KG, ANGS2M, EV2J, HBAR
+
 from pydefect_ccd.enum import Carrier
 from pydefect_ccd.relaxed_point import NearEdgeState, \
     _joined_local_orbital_info, \
@@ -99,17 +101,25 @@ class Curve(ABC):
 
 @dataclass
 class QuadraticCurve(MSONable, Curve):
-    omega: float
+    omega: float  # in amu Å^2 / eV
     Q0: float
-    disp_ratio_range: Tuple[float, float]
+    dE: float
+    disp_ratio_range: Optional[Tuple[float, float]]
 
-    def __call__(self, x: Union[float, np.array]) -> Union[float, np.array]:
-        return self.omega * x**2 + self.Q0
+    @property
+    def omega_in_eV(self) -> float:
+        return HBAR * self.omega * np.sqrt(EV2J / (ANGS2M**2 * AMU2KG))
+
+    def __call__(self, Q: Union[float, np.array]) -> Union[float, np.array]:
+        return self.omega * (Q - self.Q0)**2 + self.dE
 
     def __str__(self):
-        return (f"QuadraticCurve: omega={self.omega:.5f}, Q0={self.Q0:.5f}, "
-                f"disp_ratio_range=({self.disp_ratio_range[0]:.3f}, "
+        f = (f"QuadraticCurve: omega={self.omega_in_eV:.5f} eV, "
+             f"Q0={self.Q0:.5f} amu^0.5 Å")
+        if self.disp_ratio_range:
+            f += (", " + f"disp_ratio_range=({self.disp_ratio_range[0]:.3f}, "
                 f"{self.disp_ratio_range[1]:.3f})")
+        return f
 
 
 @dataclass
@@ -185,8 +195,11 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
             Q0 = self.single_point_from_disp(0.0).dQ
         else:
             Q0 = None
-        omega, Q0 = calc_omega_and_Q0(dQs, energies, Q0)
-        self.fitted_curve = QuadraticCurve(omega, Q0, disp_ratio_range)
+        min_energy = min(energies)
+        energies0 = [e - min_energy for e in energies]
+        omega, Q0, dE = calc_omega_and_Q0(dQs, energies0, Q0)
+        dE += min_energy
+        self.fitted_curve = QuadraticCurve(omega, Q0, dE, disp_ratio_range)
 
     def add_plot(self,
                  ax,
@@ -233,15 +246,16 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
 
 def calc_omega_and_Q0(Qs: List[float],
                       energies: List[float],
-                      Q0: float) -> Tuple[float, float]:
+                      Q0: Optional[float]) -> Tuple[float, float, float]:
     def f(Q, omega, Q0, dE):
-        return 0.5 * omega**2 * (Q - Q0)**2 + dE
+        # Q is a variable, while the others are fitting parameters.
+        return 0.5 * omega * (Q - Q0)**2 + dE
 
     # set bounds to restrict Q0 to the given Q0 value
     bounds = (-np.inf, np.inf) if Q0 is None else \
-        ([-np.inf, Q0 - 1e-10, -np.inf], [np.inf, Q0, np.inf])
-    popt, _ = curve_fit(f, Qs, energies, bounds=bounds)
-    return popt[0], popt[2]
+        ([-np.inf, Q0 - 1e-10, -np.inf], [np.inf, Q0 + 1e+10, np.inf])
+    (omega, Q0_, dE_), _ = curve_fit(f, Qs, energies, bounds=bounds)
+    return omega, Q0_, dE_
 
 
 def dQ_revert(pot_curve_result: PotentialCurve) -> PotentialCurve:
@@ -254,9 +268,12 @@ def dQ_revert(pot_curve_result: PotentialCurve) -> PotentialCurve:
         new_result.spec = new_spec
         new_single_points.append(new_result)
 
-    return PotentialCurve(pot_curve_result.spec,
-                          new_single_points,
-                          pot_curve_result.shifted_energy)
+    result = PotentialCurve(pot_curve_result.spec,
+                            new_single_points,
+                            pot_curve_result.shifted_energy)
+    if pot_curve_result.fitted_curve:
+        result.add_quadratic_curve(fixed_Q0=False)
+    return result
 
 
     # def __str__(self):
