@@ -20,10 +20,10 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
     Attributes:
         band_edge_index: The band index for band edges starting from 1.
         eigenvalue_diff: The eigenvalue difference from final to initial states
-        abs_inner_prods: List of \bra_{psi_i(0)} | S(0) |\ket_{psi_f(Q)}
+        abs_inner_prods: List of <psi_i(0) | S(0) |psi_f(Q)>
             at the given Q points.
     """
-    name: str
+    charge: int
     base_disp_ratio: float
     band_edge_index: int
     defect_band_index: int
@@ -41,7 +41,7 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
         try:
             self.grad, self.const = np.polyfit(self.dQs, self.abs_inner_prods, 1)
         except:
-            print(f"Cannot fit inner products vs dQ for {self.name}.")
+            print(f"Cannot fit inner products vs dQ.")
             self.grad, self.const = None, None
 
     @property
@@ -78,13 +78,15 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
 
     def __str__(self):
         result = []
-        table = [["band edge index", self.band_edge_index],
-                 ["defect band index", self.defect_band_index],
-                 ["spin", self.spin.name],
-                 ["eigenvalue difference", round(self.eigenvalue_diff, 3)],
-                 ["W_if", self.grad]]
+        table_1 = [["band edge index", self.band_edge_index],
+                   ["defect band index", self.defect_band_index],
+                   ["spin", self.spin.name]]
+        table_2 = [["grad (amu^0.5)", self.grad],
+                   ["eigenvalue difference (eV)", self.eigenvalue_diff],
+                   ["W_if_tilde (eV/amu^0.5) ", self.W_if_tilde]]
 
-        result.append(tabulate(table, tablefmt="plain", floatfmt=".3f"))
+        result.append(tabulate(table_1, tablefmt="plain"))
+        result.append(tabulate(table_2, tablefmt="plain", floatfmt=".3f"))
         inner_prods = [[dQ, aip] for dQ, aip in zip(self.dQs, self.abs_inner_prods)]
 
         result.append(tabulate(inner_prods,
@@ -123,13 +125,22 @@ class EPCoupling(MSONable, ToJsonFileMixIn):
     def __str__(self):
         # todo: update
         result = []
-        mass = round(self.ave_captured_carrier_mass, 2)
-        diele_const = round(self.ave_static_diele_const, 2)
+        if self.ave_captured_carrier_mass is not None:
+            mass = round(self.ave_captured_carrier_mass, 2)
+        else:
+            mass = "N/A"
+
+        if self.ave_static_diele_const is not None:
+            diele_const = round(self.ave_static_diele_const, 2)
+        else:
+            diele_const = "N/A"
+
         table = [["charge", self.charge],
                  ["volume", round(self.volume, 2)],
-                 ["averaged carrier mass", mass],
-                 ["averaged static dielectric constant", diele_const]]
-        result.append(tabulate(table, tablefmt="plain", floatfmt=".3f"))
+                 ["ave. carrier mass", mass],
+                 ["ave. static dielectric constant", diele_const],
+                 ["W_if", round(self.W_if(method="average"), 2)]]
+        result.append(tabulate(table, tablefmt="plain"))
         return "\n".join(result)
 
     @property
@@ -148,8 +159,7 @@ class EPCoupling(MSONable, ToJsonFileMixIn):
     def W_if(self,  method: str = "average") -> float:
         """ E-P coupling constant W_if """
         if method == "average":
-            ep = np.mean(self.W_if_tilde)
+            return float(self.f * self.volume * np.mean(self.W_if_tilde))
         else:
             raise NotImplementedError(f"{method} is not implemented.")
 
-        return self.f * self.volume * float(ep)

@@ -12,7 +12,7 @@ from pydefect_ccd.ele_phon_coupling import EPMatrixElement
 logger = get_logger(__name__)
 
 
-def make_e_p_matrix_element(name: str,
+def make_e_p_matrix_element(charge: int,
                             base_single_point: SinglePoint,
                             band_edge_index: int,
                             defect_band_index: int,
@@ -32,7 +32,7 @@ def make_e_p_matrix_element(name: str,
     abs_inner_prods = [float(np.abs(wswq) * np.sign(dQ))
                        for dQ, wswq in zip(dQs, wswqs)]
 
-    return EPMatrixElement(name=name,
+    return EPMatrixElement(charge=charge,
                            base_disp_ratio=base_disp_ratio,
                            band_edge_index=band_edge_index,
                            defect_band_index=defect_band_index,

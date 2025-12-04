@@ -13,7 +13,7 @@ from vise.input_set.prior_info import PriorInfo
 from pydefect_ccd.ccd import SinglePointSpec, PotentialCurveSpec
 from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.cli.main_function import make_ccd_init, make_ccd, plot_ccd, \
-    make_ccd_dirs, make_wswq_dirs, plot_eigenvalues, make_e_p_matrix_element
+    make_ccd_dirs, make_wswq_dirs, plot_eigenvalues, main_make_e_p_matrix_element
 from pydefect_ccd.ele_phon_coupling import EPMatrixElement
 from pydefect_ccd.enum import Carrier
 from pydefect_ccd.relaxed_point import NearEdgeState, RelaxedPoint
@@ -245,7 +245,7 @@ def test_make_e_p_matrix_element(tmpdir, test_files):
                      energy_diff=1.0)
 #    dirs=[dir_/"disp_0.0", dir_/"disp_0.1", dir_/"disp_0.2"])
 
-    make_e_p_matrix_element(args)
+    main_make_e_p_matrix_element(args)
     actual: EPMatrixElement = loadfn("e_p_matrix_element_b767_d766_k1_-1.json")
     print(actual)
 

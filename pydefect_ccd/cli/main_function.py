@@ -353,7 +353,7 @@ def _make_wswq_dir(dir_, ccd_init: CcdInit):
     os.symlink((original_dir/"WAVECAR").absolute(), (wswq_dir/"WAVECAR"))
 
 
-def make_e_p_matrix_element(args: Namespace):
+def main_make_e_p_matrix_element(args: Namespace):
 
     charge = args.potential_curve.charge
     if charge != 0:
@@ -379,7 +379,7 @@ def make_e_p_matrix_element(args: Namespace):
         raise ValueError("At least one of the dirs must have disp_ratio of 0.0")
 
     e_p_matrix_elem = make_e_p_matrix_element(
-        name=args.ccd_init.name,
+        charge=charge,
         base_single_point=base_single_point,
         band_edge_index=args.band_edge_index,
         defect_band_index=args.defect_band_index,
@@ -389,12 +389,6 @@ def make_e_p_matrix_element(args: Namespace):
     print(e_p_matrix_elem)
     e_p_matrix_elem.to_json_file()
 
-    e_p_coupling = EPCoupling(e_p_matrix_elem.grad,
-                              charge=charge,
-                              T=args.temperatures,
-                              volume=args.ccd_init.volume)
-    e_p_coupling.to_json_file()
-
     try:
         e_p_matrix_elem.plot(plt.gca())
         plt.xlabel("dQ (amu$^{1/2}$Å)")
@@ -402,6 +396,12 @@ def make_e_p_matrix_element(args: Namespace):
         plt.show()
     except (TypeError, LinAlgError):
         logger.info("e-ph matrix element cannot be calculated.")
+
+def make_e_p_coupling(args: Namespace):
+    e_p_coupling = EPCoupling([ep.W_if_tilde for ep in args.e_p_matrix_elem],
+                              T=args.temperatures,
+                              volume=args.ccd_init.volume)
+    e_p_coupling.to_json_file()
 
 
 def make_capture_rate(args: Namespace):

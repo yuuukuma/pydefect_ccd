@@ -12,8 +12,9 @@ from pymatgen.io.vasp.inputs import UnknownPotcarWarning
 
 from pydefect_ccd.cli.main_function import make_ccd_init, make_ccd, \
     make_ccd_dirs, plot_eigenvalues, make_wswq_dirs, \
-    make_e_p_matrix_element, make_capture_rate, plot_capture_rate, \
-    make_ccd_corrections, plot_ccd, make_single_points, make_potential_curve
+    main_make_e_p_matrix_element, make_capture_rate, plot_capture_rate, \
+    make_ccd_corrections, plot_ccd, make_single_points, make_potential_curve, \
+    make_e_p_coupling
 from pydefect_ccd.version import __version__
 
 warnings.simplefilter('ignore', UnknownPotcarWarning)
@@ -188,8 +189,7 @@ states.""",
     # -- make_e_p_matrix_element -----------------------------------
     parser_make_e_p_matrix_element = subparsers.add_parser(
         name="make_e_p_matrix_element",
-        description="Make directories for calculating WSWQ files.",
-        parents=[ccd_init],
+        description="Make a file for electron-phonon matrix elements.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=['mepme'])
 
@@ -203,13 +203,27 @@ states.""",
     parser_make_e_p_matrix_element.add_argument(
         "--spin", type=Spin.__getitem__, required=True)
     parser_make_e_p_matrix_element.add_argument(
+        "--dirs", type=Path, nargs="+", required=True)
+
+    parser_make_e_p_matrix_element.set_defaults(func=main_make_e_p_matrix_element)
+
+    # -- make_e_p_coupling -----------------------------------
+    parser_make_e_p_coupling = subparsers.add_parser(
+        name="make_e_p_coupling",
+        description="Make a file for electron-phonon coupling constant.",
+        parents=[ccd_init],
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        aliases=['mepc'])
+
+    parser_make_e_p_coupling.add_argument(
+        "--e_p_matrix_elem", type=loadfn, required=True, nargs="+",
+        help="e_p_matrix_element_XXX.json filenames.")
+    parser_make_e_p_coupling.add_argument(
         "-T", "--temperatures", type=float, nargs="+",
         help="Temperatures for calculating capture rates in K.",
         default=[t*100 for t in range(2, 9)])
-    parser_make_e_p_matrix_element.add_argument(
-        "--dirs", type=Path, nargs="+", required=True)
 
-    parser_make_e_p_matrix_element.set_defaults(func=make_e_p_matrix_element)
+    parser_make_e_p_coupling.set_defaults(func=make_e_p_coupling)
 
     # -- make_capture_rate -----------------------------------
     parser_make_capture_rate = subparsers.add_parser(
