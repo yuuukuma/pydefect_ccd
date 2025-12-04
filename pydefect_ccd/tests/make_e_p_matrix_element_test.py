@@ -7,7 +7,7 @@ from pymatgen.electronic_structure.core import Spin
 
 from pydefect_ccd.ccd import SinglePoint, SinglePointSpec
 from pydefect_ccd.ele_phon_coupling import EPMatrixElement
-from pydefect_ccd.make_e_p_matrix_element import make_ep_matrix_element
+from pydefect_ccd.make_e_p_matrix_element import make_e_p_matrix_element
 from pydefect_ccd.relaxed_point import NearEdgeState
 
 
@@ -38,7 +38,7 @@ def single_point():
 
 
 def test_make_e_p_matrix_element(single_point):
-    actual = make_ep_matrix_element(
+    actual = make_e_p_matrix_element(
         name="test",
         base_single_point=single_point,
         band_edge_index=101,

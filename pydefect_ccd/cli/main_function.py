@@ -29,13 +29,13 @@ from vise.util.file_transfer import FileLink
 from vise.util.logger import get_logger
 
 from pydefect_ccd.capture_rate import \
-    calc_summed_squared_transition_moment, CaptureRate
+    calc_summed_squared_transition_moment, CaptureRate, CaptureRatePlotter
 from pydefect_ccd.ccd import SinglePoint, CcdPlotter, \
     SinglePointSpec, PotentialCurveSpec, PotentialCurve
 from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.ele_phon_coupling import EPMatrixElement, EPCoupling
 from pydefect_ccd.make_ccd import MakeCcd
-from pydefect_ccd.make_e_p_matrix_element import make_ep_matrix_element
+from pydefect_ccd.make_e_p_matrix_element import make_e_p_matrix_element
 from pydefect_ccd.plot_eigenvalues import EigenvalPlotter
 from pydefect_ccd.relaxed_point import NearEdgeState, RelaxedPoint
 from pydefect_ccd.util import spin_to_idx
@@ -354,6 +354,11 @@ def _make_wswq_dir(dir_, ccd_init: CcdInit):
 
 
 def make_e_p_matrix_element(args: Namespace):
+
+    charge = args.potential_curve.charge
+    if charge != 0:
+        raise ValueError("The e-p coupling must be evaluated with neutral defect.")
+
     dQs, wswqs = [], []
 
     base_single_point = None
@@ -373,7 +378,7 @@ def make_e_p_matrix_element(args: Namespace):
     if base_single_point is None:
         raise ValueError("At least one of the dirs must have disp_ratio of 0.0")
 
-    e_p_matrix_elem = make_ep_matrix_element(
+    e_p_matrix_elem = make_e_p_matrix_element(
         name=args.ccd_init.name,
         base_single_point=base_single_point,
         band_edge_index=args.band_edge_index,
@@ -385,10 +390,9 @@ def make_e_p_matrix_element(args: Namespace):
     e_p_matrix_elem.to_json_file()
 
     e_p_coupling = EPCoupling(e_p_matrix_elem.grad,
-                              charge=0,
+                              charge=charge,
                               T=args.temperatures,
-                              volume=args.ccd_init.volume,
-                              )
+                              volume=args.ccd_init.volume)
     e_p_coupling.to_json_file()
 
     try:
@@ -429,7 +433,6 @@ def make_capture_rate(args: Namespace):
 
 def plot_capture_rate(args: Namespace):
     cap: CaptureRate = args.capture_rate
-    plt.scatter(cap.Ts, cap.capture_rate, marker='o')
-    plt.gca().set_yscale("log")
+    plotter = CaptureRatePlotter(cap, plt)
+    plotter.construct_plot()
     plt.savefig("capture_rate.pdf")
-    plt.show()

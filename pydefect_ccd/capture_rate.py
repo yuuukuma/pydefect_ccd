@@ -6,7 +6,7 @@ from typing import List
 import numpy as np
 from monty.json import MSONable
 from nonrad import get_C
-from tabulate import tabulate
+from vise.util.matplotlib import float_to_int_formatter
 from vise.util.mix_in import ToJsonFileMixIn
 
 from pydefect_ccd.ccd import PotentialCurve, QuadraticCurve
@@ -68,4 +68,36 @@ def calc_summed_squared_transition_moment(
                    Wif=1, volume=1, g=1)
     print(dQ, dE, ground_curve.fitted_curve.omega_in_eV, excited_curve.fitted_curve.omega_in_eV)
     return list(result)
+
+
+class CaptureRatePlotter:
+
+    def __init__(self, capture_rate: CaptureRate, plt, title: str = None):
+        self._title = title or ""
+        self._capture_rate = capture_rate
+        self.plt = plt
+
+    def construct_plot(self):
+        self._add_capture_rate()
+        self._set_title()
+        self._set_formatter()
+        self._set_labels()
+        self.plt.tight_layout()
+
+    def _add_capture_rate(self):
+        ax = self.plt.gca()
+        ax.semilogy(self._capture_rate.Ts, self._capture_rate.capture_rate)
+
+    def _set_labels(self):
+        ax = self.plt.gca()
+        ax.set_xlabel("T (K)")
+        ax.set_ylabel("C$_p$ (cm$^3$/s)")
+        ax.legend()
+
+    def _set_title(self):
+        self.plt.gca().set_title(self._title)
+
+    def _set_formatter(self):
+        self.plt.gca().xaxis.set_major_formatter(float_to_int_formatter)
+        self.plt.gca().yaxis.set_major_formatter(float_to_int_formatter)
 
