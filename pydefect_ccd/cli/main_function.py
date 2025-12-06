@@ -274,14 +274,14 @@ def make_potential_curve(args: Namespace):
 
 
 def make_ccd(args: Namespace):
-    args.ground_potential_curve.add_quadratic_curve(fixed_Q0=args.fixed_Q0)
-    args.excited_potential_curve.add_quadratic_curve(fixed_Q0=args.fixed_Q0)
-
     ccd = MakeCcd(args.ground_potential_curve,
                   args.excited_potential_curve,
                   args.ccd_init.vbm,
                   args.ccd_init.cbm,
                   args.ccd_init.name).ccd
+    ccd.ground_curve.add_quadratic_curve(fixed_Q0=args.fixed_Q0)
+    ccd.excited_curve.add_quadratic_curve(fixed_Q0=args.fixed_Q0)
+
     print(ccd)
     ccd.to_json_file()
 
@@ -290,9 +290,7 @@ def plot_ccd(args: Namespace):
     plotter = CcdPlotter(args.ccd,
                          plt,
                          ground_q_range=args.ground_q_range,
-                         excited_q_range=args.excited_q_range,
-                         quadratic_fit=args.quadratic_fit,
-                         spline_fit=args.spline_fit)
+                         excited_q_range=args.excited_q_range)
     plotter.construct_plot()
     plt.savefig(args.fig_name)
     plt.show()

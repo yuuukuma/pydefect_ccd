@@ -102,6 +102,11 @@ class Curve(ABC):
     def __call__(self, x: Union[float, np.array]) -> Union[float, np.array]:
         pass
 
+    def add_plot(self, ax, x_range: List[float], color):
+        xs = np.linspace(x_range[0], x_range[1], 1000)
+        ys = self(xs)
+        ax.plot(xs, ys, color=color)
+
 
 @dataclass
 class QuadraticCurve(MSONable, Curve):
@@ -190,13 +195,14 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
 
     def add_quadratic_curve(self,
                             disp_ratio_range: Tuple[float, float] = None,
-                            fixed_Q0: bool = True):
+                            fixed_Q0: bool = True,
+                            Q0_disp_ratio: float = 0.0):
         dQs, energies = self.dQs_and_energies(disp_ratio_range)
         if len(dQs) < 3:
             raise ValueError("The number of Q points must be >= 3.")
 
         if fixed_Q0:
-            Q0 = self.single_point_from_disp(0.0).dQ
+            Q0 = self.single_point_from_disp(Q0_disp_ratio).dQ
         else:
             Q0 = None
         min_energy = min(energies)
@@ -208,27 +214,14 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
     def add_plot(self,
                  ax,
                  color: str,
-                 q_range: Optional[List[float]] = None,
-                 spline_fit: bool = True):
+                 q_range: Optional[List[float]] = None):
+        label = f"q={self.charge}"
         dQs, energies = self.dQs_and_energies(q_range)
-        ax.scatter(dQs, energies, marker='o', color=color)
-        try:
-            if spline_fit:
-                label = f"q={self.charge}"
-#                carriers = "+".join([str(c) for c in self.carriers])
-#                 if carriers:
-#                     label += "+" + carriers
-                x, y = spline3(dQs, energies, 100, q_range)
-                ax.plot(x, y, label=label, color=color)
-        except TypeError as e:
-            print(f"{self.charge}: {e}")
-            pass
+        ax.scatter(dQs, energies, marker='o', color=color, label=label)
 
         if self.fitted_curve:
-            q_max, q_min = np.max(self.dQs), np.min(self.dQs)
-            q_L = q_max - q_min
-            qs = np.linspace(q_min - 0.1 * q_L, q_max + 0.1 * q_L, 1000)
-            ax.plot(qs, self.fitted_curve(qs))
+            q_range = q_range or [min(dQs), max(dQs)]
+            self.fitted_curve.add_plot(ax, q_range, color=color)
 
     @property
     def table_for_plot(self):
@@ -281,7 +274,7 @@ def dQ_revert(pot_curve_result: PotentialCurve,
                             new_single_points,
                             pot_curve_result.shifted_energy)
     if pot_curve_result.fitted_curve:
-        result.add_quadratic_curve(fixed_Q0=fixed_Q0)
+        result.add_quadratic_curve(fixed_Q0=fixed_Q0, Q0_disp_ratio=1.0)
     return result
 
 
@@ -380,16 +373,10 @@ class CcdPlotter:
                  ccd: Ccd,
                  plt,
                  title: str = None,
-                 set_energy_zero: bool = True,
-                 quadratic_fit: bool = True,
-                 spline_fit: bool = True,
                  ground_q_range: list = None,
                  excited_q_range: list = None):
         self._title = title or ""
         self._ccd = ccd
-        self._set_energy_zero = set_energy_zero
-        self._quadratic_fit = quadratic_fit
-        self._spline_fit = spline_fit
         self._ground_q_range = ground_q_range
         self._excited_q_range = excited_q_range
 
@@ -404,12 +391,8 @@ class CcdPlotter:
 
     def _add_ccd(self):
         ax = self.plt.gca()
-        # if self._q_range:
-        #     ax.set_xlim(self._q_range[0], self._q_range[1])
-
-        if self._quadratic_fit:
-            self._ccd.ground_curve.add_plot(ax, "red", self._ground_q_range, self._spline_fit)
-            self._ccd.excited_curve.add_plot(ax, "blue", self._excited_q_range, self._spline_fit)
+        self._ccd.ground_curve.add_plot(ax, "red", self._ground_q_range)
+        self._ccd.excited_curve.add_plot(ax, "blue", self._excited_q_range)
 
     def _set_labels(self):
         ax = self.plt.gca()

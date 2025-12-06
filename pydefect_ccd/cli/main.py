@@ -189,12 +189,6 @@ def parse_args_main(args):
     parser_plot_ccd.add_argument("--fig-name", type=str, default="ccd.pdf")
     parser_plot_ccd.add_argument("--ground-q-range", type=float, nargs="+")
     parser_plot_ccd.add_argument("--excited-q-range", type=float, nargs="+")
-    parser_plot_ccd.add_argument(
-        "--quadratic-fit", action=argparse.BooleanOptionalAction, default=True
-    )
-    parser_plot_ccd.add_argument(
-        "--spline-fit", action=argparse.BooleanOptionalAction, default=True
-    )
     parser_plot_ccd.set_defaults(func=plot_ccd)
 
     # -- plot-eigenvalues ---------------------------------
