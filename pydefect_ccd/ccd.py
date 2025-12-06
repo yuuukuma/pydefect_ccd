@@ -74,14 +74,14 @@ class SinglePoint(OrbitalInfoMixIn, ToJsonFileMixIn):
 
     @property
     def table_headers(self):
-        return ["corrected energy", "is shallow?", "localized orb"]
+        return ["disp ratio", "corrected energy", "is shallow?", "localized orb"]
 
     def table_values(self,
                      correction_energy: float = 0.0,
                      shifted_energy: float = 0.0):
         localized_orbitals = _joined_local_orbital_info(self.localized_orbitals)
         energy = self.energy + correction_energy + self.ccd_correction_energy + shifted_energy
-        return [energy, self.is_shallow, localized_orbitals]
+        return [self.disp_ratio, energy, self.is_shallow, localized_orbitals]
 
     def __str__(self):
         return tabulate([self.table_values()], tablefmt="plain", floatfmt=".3f",
@@ -246,7 +246,6 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
         table = tabulate([tabulate_data], tablefmt="plain", floatfmt=".3f",
                         headers=headers)
         fc = str(self.fitted_curve) if self.fitted_curve else "fitted curve is N.A."
-        print(self.correction_energy)
         d = [sp.table_values(self.correction_energy, self.shifted_energy)
              for sp in self.single_points]
         table_2 = tabulate(d, tablefmt="plain", floatfmt=".3f",
@@ -262,7 +261,7 @@ def calc_omega_and_Q0(Qs: List[float],
 
     # set bounds to restrict Q0 to the given Q0 value
     bounds = (-np.inf, np.inf) if Q0 is None else \
-        ([-np.inf, Q0 - 1e-10, -np.inf], [np.inf, Q0 + 1e+10, np.inf])
+        ([-np.inf, Q0 - 1e-10, -np.inf], [np.inf, Q0 + 1e-10, np.inf])
     (omega, Q0_, dE_), _ = curve_fit(f, Qs, energies, bounds=bounds)
     return omega, Q0_, dE_
 

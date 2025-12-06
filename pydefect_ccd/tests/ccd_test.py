@@ -105,23 +105,24 @@ def test_spline3():
     assert actual[1][1] == pytest.approx(2.17924820)
 
 
-def _make_energies(omega, Q0, dE, Qs):
-    return 0.5 * omega * (Qs - Q0)**2 + dE
-
-
 def test_calc_omega_and_Q0_variable_Q0():
     omega_true = 2.0
     Q0_true = 0.5
     dE_true = -0.1
     Qs = np.array([-1.0, 0.0, 1.0, 2.0])
-    energies = _make_energies(omega_true, Q0_true, dE_true, Qs)
+    energies = 0.5 * omega_true ** 2 * (Qs - Q0_true) ** 2 + dE_true
 
     omega, Q0, dE = calc_omega_and_Q0(list(Qs), list(energies), None)
-
     assert pytest.approx(omega_true, rel=1e-6) == omega
     assert pytest.approx(Q0_true, rel=1e-6) == Q0
     assert pytest.approx(dE_true, rel=1e-6) == dE
 
+    Qs = [-1.0, 0.0, 1.0]
+    energies = [0.0, 0.0, 1.0]
+    omega, Q0, dE = calc_omega_and_Q0(Qs, energies, Q0=0.0)
+    assert pytest.approx(1.0, abs=1e-6) == omega
+    assert pytest.approx(0.0, abs=1e-6) == Q0
+    assert pytest.approx(0.0, abs=1e-6) == dE
 
 # def test_plot_ccd(ccd):
 #     spec = PotentialCurveSpec(charge=0,

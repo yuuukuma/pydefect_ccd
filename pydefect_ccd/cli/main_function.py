@@ -416,14 +416,14 @@ def make_capture_rate(args: Namespace):
     summed_squared_transition_moment \
         = calc_summed_squared_transition_moment(args.ccd.excited_curve,
                                                 args.ccd.ground_curve,
-                                                args.temperatures)
+                                                args.e_p_coupling.T)
 
     carrier = args.ccd.captured_carrier
     em = ccd_init.effective_mass(carrier)
-    velocities = thermal_velocity(np.array(args.temperatures), em)
+    velocities = thermal_velocity(np.array(args.e_p_coupling.T), em)
     # spin_factor = 0.5 if i_min_info.is_spin_polarized else 1.0
 
-    cap_rate = CaptureRate(args.temperatures,
+    cap_rate = CaptureRate(args.e_p_coupling.T,
                            args.e_p_coupling.W_if,
                            summed_squared_transition_moment,
                            velocities=list(velocities),

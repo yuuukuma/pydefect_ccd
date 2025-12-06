@@ -235,9 +235,6 @@ states.""",
 
     parser_make_capture_rate.add_argument(
         "--e_p_coupling", type=loadfn, required=True)
-    parser_make_capture_rate.add_argument(
-        "-t", "--temperatures", type=float, nargs="+",
-        default=[t for t in range(40, 820, 20)])
 
     parser_make_capture_rate.set_defaults(func=make_capture_rate)
 

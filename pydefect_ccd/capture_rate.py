@@ -29,9 +29,6 @@ class CaptureRate(MSONable, ToJsonFileMixIn):
 
     @property
     def capture_rate(self) -> np.ndarray:
-        print(len(self.Ts),
-              len(self.W_if),
-              len(self.summed_squared_transition_moment))
         return (2 * np.pi * self.site_degeneracy
                 * np.array(self.W_if) ** 2
                 * np.array(self.summed_squared_transition_moment))
