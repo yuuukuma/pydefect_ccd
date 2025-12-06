@@ -114,7 +114,7 @@ class EPCoupling(MSONable, ToJsonFileMixIn):
             This is needed to calculate the Sommerfeld parameter.
 
     """
-    W_if_tilde: List[float]
+    W_if_tilde: float
     charge: int
     T: Union[float, np.ndarray]
     volume: float
@@ -138,9 +138,11 @@ class EPCoupling(MSONable, ToJsonFileMixIn):
         table = [["charge", self.charge],
                  ["volume", round(self.volume, 2)],
                  ["ave. carrier mass", mass],
-                 ["ave. static dielectric constant", diele_const],
-                 ["W_if", round(self.W_if(method="average"), 2)]]
+                 ["ave. static dielectric constant", diele_const]]
         result.append(tabulate(table, tablefmt="plain"))
+        header = ["T (K)", "W_if ()"]
+        table = [[t, w] for t, w in zip(self.T, self.W_if)]
+        result.append(tabulate(table, headers=header, tablefmt="plain"))
         return "\n".join(result)
 
     @property
@@ -156,10 +158,8 @@ class EPCoupling(MSONable, ToJsonFileMixIn):
                                     self.ave_captured_carrier_mass,
                                     self.ave_static_diele_const)
 
-    def W_if(self,  method: str = "average") -> float:
+    @property
+    def W_if(self) -> List[float]:
         """ E-P coupling constant W_if """
-        if method == "average":
-            return float(self.f * self.volume * np.mean(self.W_if_tilde))
-        else:
-            raise NotImplementedError(f"{method} is not implemented.")
+        return [self.f * self.volume * self.W_if_tilde] * len(self.T)
 
