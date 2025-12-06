@@ -3,11 +3,11 @@ pydefect_ccd
 
 pydefect_ccd is a tool to generate input files to calculate configuration 
 coordinate diagrams for point defects in semiconductors and insulators.
-The supported package is only VASP so far.
 
 The detailed theory is written in the following paper:
-
-
+- [A. Alkauskas, Q. Yan, and C. G. Van de Walle, First-principles theory of nonradiative carrier capture via multiphonon emission
+](https://doi.org/10.1103/PhysRevB.90.075202)
+- [Nonrad: Computing nonradiative capture coefficients from first principles](https://10.1016/j.cpc.2021.108056)
 
 Requirements
 ------------
@@ -16,14 +16,19 @@ Requirements
 - pymatgen
 - [pydefect](https://github.com/kumagai-group/pydefect)
 - see requirements.txt for others
-
-[vise](https://github.com/kumagai-group/vise) is also recommended to generate 
+- [vise](https://github.com/kumagai-group/vise) is also strongly recommended to generate 
 VASP input files and analyze VASP output files.
 
 - License
 -----------------------
 This code is licensed under the MIT License.
 
+Current limitations
+----------------------
+- Only VASP is supported.
+- Harmonic approximation is assumed for phonon calculations.
+- Only a single band edge state can be considered.
+- Only a single k-point can be considered.
 
 Workflow
 -----------------------------------------
@@ -113,13 +118,19 @@ near the equilibrium geometry.
 
 11.
 ```bash
-pydefect_ccd make_e_p_matrix_element 
+pydefect_ccd make_e_p_matrix_element --potential_curve potential_curve.json --band_edge_index 599 --defect_band_index 600 --spin down --dirs disp_{-0.2,-0.1,0.0,0.1,0.2}
 ```
 
 12.
 ```bash
+pydefect_ccd make_e_p_coupling --ccd_init ccd_init.json --e_p_matrix_elem q_0/e_p_matrix_element_b599_d600_-1.json
+```
+
+13. 
+```bash
 pydefect_ccd make_capture_rate
 ```
+
 
 Citing pydefect_ccd
 ---------------

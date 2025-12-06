@@ -12,7 +12,7 @@ from pymatgen.io.vasp.inputs import UnknownPotcarWarning
 
 from pydefect_ccd.cli.main_function import make_ccd_init, make_ccd, \
     make_ccd_dirs, plot_eigenvalues, make_wswq_dirs, \
-    main_make_e_p_matrix_element, make_capture_rate, plot_capture_rate, \
+    main_make_e_p_matrix_element, make_capture_rate, \
     make_ccd_corrections, plot_ccd, make_single_points, make_potential_curve, \
     make_e_p_coupling
 from pydefect_ccd.version import __version__
@@ -216,7 +216,7 @@ states.""",
         aliases=['mepc'])
 
     parser_make_e_p_coupling.add_argument(
-        "--e_p_matrix_elem", type=loadfn, required=True, nargs="+",
+        "--e_p_matrix_elem", type=loadfn, required=True,
         help="e_p_matrix_element_XXX.json filenames.")
     parser_make_e_p_coupling.add_argument(
         "-T", "--temperatures", type=float, nargs="+",
@@ -241,17 +241,17 @@ states.""",
 
     parser_make_capture_rate.set_defaults(func=make_capture_rate)
 
-    # -- plot_capture_rate -----------------------------------
-    parser_plot_capture_rate = subparsers.add_parser(
-        name="plot_capture_rate",
-        description="Plot capture rate",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        aliases=['pcr'])
-    parser_plot_capture_rate.add_argument(
-        "--capture_rate", type=loadfn, default="capture_rate.json",
-        help="capture_rate.json filename.")
-
-    parser_plot_capture_rate.set_defaults(func=plot_capture_rate)
+    # # -- plot_capture_rate -----------------------------------
+    # parser_plot_capture_rate = subparsers.add_parser(
+    #     name="plot_capture_rate",
+    #     description="Plot capture rate",
+    #     formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    #     aliases=['pcr'])
+    # parser_plot_capture_rate.add_argument(
+    #     "--capture_rate", type=loadfn, default="capture_rate.json",
+    #     help="capture_rate.json filename.")
+    #
+    # parser_plot_capture_rate.set_defaults(func=plot_capture_rate)
     # ------------------------------------------------------------------------
     return parser.parse_args(args)
 

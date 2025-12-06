@@ -6,6 +6,7 @@ from typing import List
 import numpy as np
 from monty.json import MSONable
 from nonrad import get_C
+from tabulate import tabulate
 from vise.util.matplotlib import float_to_int_formatter
 from vise.util.mix_in import ToJsonFileMixIn
 
@@ -15,44 +16,69 @@ from pydefect_ccd.ccd import PotentialCurve, QuadraticCurve
 @dataclass
 class CaptureRate(MSONable, ToJsonFileMixIn):
     Ts: List[float]
-    W_if: List[float]
+    W_if: List[float]  # as a function of T if the charge is not neutral
     summed_squared_transition_moment: List[float]  # as a function of T
     site_degeneracy: float
-    velocities: List[float] = None # characteristic carrier velocity in [cm / s]
+    velocities: List[float] = None # characteristic carrier velocity in [cm / s], which also depends on T
     # TODO: add spin selection factor
 
     @property
-    def capture_rate(self) -> np.array:
+    def cross_sections(self) -> List[float]:
+        result = list(self.capture_rate / np.array(self.velocities))
+        return result
+
+    @property
+    def capture_rate(self) -> np.ndarray:
+        print(len(self.Ts),
+              len(self.W_if),
+              len(self.summed_squared_transition_moment))
         return (2 * np.pi * self.site_degeneracy
                 * np.array(self.W_if) ** 2
                 * np.array(self.summed_squared_transition_moment))
 
-    # def __str__(self):
-    #     header = [["Wif:", f"{self.W_if:.1e}"],
-    #               ["site degeneracy:", f"{self.site_degeneracy}"]]
-    #
-    #     result = [tabulate(header, tablefmt="plain")]
-    #
-    #     table = []
-    #     columns = ["T [K]", "Phonon overlap []", "C [cm3/s]", "v [cm2/s]", "c / v [cm2]"]
-    #     for T, transition_moment, rate, v in zip(self.Ts,
-    #                                              self.summed_squared_transition_moment,
-    #                                              self.capture_rate,
-    #                                              self.velocities):
-    #         table.append([T, transition_moment, rate, v, rate / v])
-    #
-    #     result.append(
-    #         tabulate(table, headers=columns, tablefmt="plain",
-    #                  floatfmt=[".1f", ".1e", ".1e", ".1e", ".1e"]))
-    #
-    #     return "\n".join(result)
+    def __str__(self):
+        header = [["site degeneracy:", f"{self.site_degeneracy}"]]
+        result = [tabulate(header, tablefmt="plain")]
+
+        print(type(self.Ts),
+              type(self.summed_squared_transition_moment),
+              type(self.W_if),
+              type(self.capture_rate),
+              type(self.velocities),
+              type(self.cross_sections))
+
+        table = []
+        if self.velocities is not None:
+            columns = ["T [K]", "Transition moment [cm2]", "W_if", "C [cm3/s]", "v [cm/s]", "c / v [cm2]"]
+            for T, transition_moment, W_if, C, v, cross_sec \
+                    in zip(self.Ts,
+                           self.summed_squared_transition_moment,
+                           self.W_if,
+                           self.capture_rate,
+                           self.velocities,
+                           self.cross_sections):
+                table.append([T, transition_moment, W_if, C, v, cross_sec])
+            fmt = [".1f", ".1e", ".1e", ".1e", ".1e", ".1e"]
+        else:
+            columns = ["T [K]", "Transition moment [cm2]", "W_if", "C [cm3/s]"]
+            for T, transition_moment, W_if, C, v, cross_sec \
+                    in zip(self.Ts,
+                           self.summed_squared_transition_moment,
+                           self.W_if,
+                           self.capture_rate):
+                table.append([T, transition_moment, W_if, C])
+            fmt = [".1f", ".1e", ".1e", ".1e"]
+
+        result.append(tabulate(table, headers=columns, tablefmt="plain", floatfmt=fmt))
+
+        return "\n".join(result)
 
 
 def calc_summed_squared_transition_moment(
         ground_curve: PotentialCurve,
         excited_curve: PotentialCurve,
         Ts: List[float]):
-    """Within harmonic approximation"""
+    """Within harmonic approximation. Unit is in amu Å^2."""
     dQ = excited_curve.Q_diff
     dE = abs(excited_curve.lowest_energy - ground_curve.lowest_energy)
 
@@ -66,7 +92,6 @@ def calc_summed_squared_transition_moment(
                    wf=excited_curve.fitted_curve.omega_in_eV,
                    T=np.array(Ts),
                    Wif=1, volume=1, g=1)
-    print(dQ, dE, ground_curve.fitted_curve.omega_in_eV, excited_curve.fitted_curve.omega_in_eV)
     return list(result)
 
 

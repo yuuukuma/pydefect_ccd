@@ -25,9 +25,13 @@ def make_e_p_matrix_element(charge: int,
     base_disp_ratio = base_single_point.disp_ratio
 
     if eigenvalue_diff is None:
-        band_edge_state = base_single_point.near_edge_state(spin, band_edge_index)
-        defect_state = base_single_point.near_edge_state(spin, defect_band_index)
-        eigenvalue_diff = abs(band_edge_state.eigenvalue - defect_state.eigenvalue)
+        try:
+            band_edge_state = base_single_point.near_edge_state(spin, band_edge_index)
+            defect_state = base_single_point.near_edge_state(spin, defect_band_index)
+            eigenvalue_diff = abs(band_edge_state.eigenvalue - defect_state.eigenvalue)
+        except ValueError:
+            logger.info("Input eigenvalue_diff manually.")
+            raise
 
     abs_inner_prods = [float(np.abs(wswq) * np.sign(dQ))
                        for dQ, wswq in zip(dQs, wswqs)]

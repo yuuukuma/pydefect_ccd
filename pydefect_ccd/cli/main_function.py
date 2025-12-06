@@ -398,7 +398,8 @@ def main_make_e_p_matrix_element(args: Namespace):
         logger.info("e-ph matrix element cannot be calculated.")
 
 def make_e_p_coupling(args: Namespace):
-    e_p_coupling = EPCoupling([ep.W_if_tilde for ep in args.e_p_matrix_elem],
+    e_p_coupling = EPCoupling(args.e_p_matrix_elem.W_if_tilde,
+                              charge=args.e_p_matrix_elem.charge,
                               T=args.temperatures,
                               volume=args.ccd_init.volume)
     e_p_coupling.to_json_file()
@@ -423,16 +424,11 @@ def make_capture_rate(args: Namespace):
     # spin_factor = 0.5 if i_min_info.is_spin_polarized else 1.0
 
     cap_rate = CaptureRate(args.temperatures,
-                           args.e_p_coupling.W_if(),
+                           args.e_p_coupling.W_if,
                            summed_squared_transition_moment,
-                           velocities=velocities,
+                           velocities=list(velocities),
                            site_degeneracy=f_deg / i_deg)
-    print(cap_rate)
     cap_rate.to_json_file()
-
-
-def plot_capture_rate(args: Namespace):
-    cap: CaptureRate = args.capture_rate
-    plotter = CaptureRatePlotter(cap, plt)
+    plotter = CaptureRatePlotter(cap_rate, plt)
     plotter.construct_plot()
     plt.savefig("capture_rate.pdf")
