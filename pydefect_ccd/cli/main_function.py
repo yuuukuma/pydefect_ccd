@@ -274,8 +274,8 @@ def make_potential_curve(args: Namespace):
 
 
 def make_ccd(args: Namespace):
-    args.ground_potential_curve.add_quadratic_curve(fixed_Q0=False)
-    args.excited_potential_curve.add_quadratic_curve(fixed_Q0=False)
+    args.ground_potential_curve.add_quadratic_curve(fixed_Q0=args.fixed_Q0)
+    args.excited_potential_curve.add_quadratic_curve(fixed_Q0=args.fixed_Q0)
 
     ccd = MakeCcd(args.ground_potential_curve,
                   args.excited_potential_curve,

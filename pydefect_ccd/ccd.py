@@ -118,8 +118,8 @@ class QuadraticCurve(MSONable, Curve):
         return self.omega ** 2 * (Q - self.Q0)**2 + self.dE
 
     def __str__(self):
-        f = (f"QuadraticCurve: omega={self.omega_in_eV:.5f} eV, "
-             f"Q0={self.Q0:.5f} amu^0.5 Å")
+        f = (f"QuadraticCurve: omega={self.omega_in_eV:.3f} eV, "
+             f"Q0={self.Q0:.3f} amu^0.5 Å")
         if self.disp_ratio_range:
             f += (", " + f"disp_ratio_range=({self.disp_ratio_range[0]:.3f}, "
                 f"{self.disp_ratio_range[1]:.3f})")
@@ -266,7 +266,8 @@ def calc_omega_and_Q0(Qs: List[float],
     return omega, Q0_, dE_
 
 
-def dQ_revert(pot_curve_result: PotentialCurve) -> PotentialCurve:
+def dQ_revert(pot_curve_result: PotentialCurve,
+              fixed_Q0: bool = True) -> PotentialCurve:
     new_single_points = []
     for single_point in pot_curve_result.single_points:
         new_dis_ratio = 1.0 - single_point.disp_ratio
@@ -280,7 +281,7 @@ def dQ_revert(pot_curve_result: PotentialCurve) -> PotentialCurve:
                             new_single_points,
                             pot_curve_result.shifted_energy)
     if pot_curve_result.fitted_curve:
-        result.add_quadratic_curve(fixed_Q0=False)
+        result.add_quadratic_curve(fixed_Q0=fixed_Q0)
     return result
 
 
