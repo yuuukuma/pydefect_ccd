@@ -120,7 +120,7 @@ class QuadraticCurve(MSONable, Curve):
         return HBAR * self.omega * np.sqrt(EV2J / (ANGS2M**2 * AMU2KG))
 
     def __call__(self, Q: Union[float, np.array]) -> Union[float, np.array]:
-        return self.omega ** 2 * (Q - self.Q0)**2 + self.dE
+        return 0.5 * self.omega ** 2 * (Q - self.Q0)**2 + self.dE
 
     def __str__(self):
         f = (f"QuadraticCurve: omega={self.omega_in_eV:.3f} eV, "
@@ -205,10 +205,8 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
             Q0 = self.single_point_from_disp(Q0_disp_ratio).dQ
         else:
             Q0 = None
-        min_energy = min(energies)
-        energies0 = [e - min_energy for e in energies]
-        omega, Q0, dE = calc_omega_and_Q0(dQs, energies0, Q0)
-        dE += min_energy
+        print("-", dQs, Q0, energies)
+        omega, Q0, dE = calc_omega_and_Q0(dQs, energies, Q0)
         self.fitted_curve = QuadraticCurve(omega, Q0, dE, disp_ratio_range)
 
     def add_plot(self,
@@ -248,16 +246,16 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
 def calc_omega_and_Q0(Qs: List[float],
                       energies: List[float],
                       Q0: Optional[float]) -> Tuple[float, float, float]:
+    # TODO: describe the functional form in QuadraticCurve
     def f(Q, omega, Q0, dE):
         # Q is a variable, while the others are fitting parameters.
         return 0.5 * omega**2 * (Q - Q0)**2 + dE
 
     # set bounds to restrict Q0 to the given Q0 value
     bounds = (-np.inf, np.inf) if Q0 is None else \
-        ([-np.inf, Q0 - 1e-10, -np.inf], [np.inf, Q0 + 1e-10, np.inf])
+        ([-np.inf, Q0 - 1e-4, -np.inf], [np.inf, Q0 + 1e-4, np.inf])
     (omega, Q0_, dE_), _ = curve_fit(f, Qs, energies, bounds=bounds)
     return omega, Q0_, dE_
-
 
 def dQ_revert(pot_curve_result: PotentialCurve,
               fixed_Q0: bool = True) -> PotentialCurve:
@@ -275,6 +273,7 @@ def dQ_revert(pot_curve_result: PotentialCurve,
                             pot_curve_result.shifted_energy)
     if pot_curve_result.fitted_curve:
         result.add_quadratic_curve(fixed_Q0=fixed_Q0, Q0_disp_ratio=1.0)
+
     return result
 
 
@@ -301,7 +300,6 @@ class Ccd(MSONable, ToJsonFileMixIn):
     name: str
     ground_curve: PotentialCurve
     excited_curve: PotentialCurve
-    # potential_curve_results: List[PotentialCurveResult]
 
     @property
     def dQ(self) -> float:
@@ -309,22 +307,18 @@ class Ccd(MSONable, ToJsonFileMixIn):
 
     @property
     def dE(self) -> float:
-        return (self.excited_curve.lowest_energy
-                - self.ground_curve.lowest_energy)
+        return self.excited_curve.lowest_energy - self.ground_curve.lowest_energy
 
     @property
     def captured_carrier(self) -> Carrier:
-        charge_diff = self.excited_curve.charge - self.ground_curve.charge
-        carrier_charge = - charge_diff
-
+        carrier_charge = self.ground_curve.charge - self.excited_curve.charge
         return Carrier.from_carrier_charge(carrier_charge)
 
     def __str__(self):
-        result = [f"name: {self.name}"]
-        result.append("-"*50)
-        result.append(self.excited_curve.__str__())
-        result.append(self.ground_curve.__str__())
-        return "\n".join(result)
+        return (f"name: {self.name}\n"
+                + "-" * 50 + "\n"
+                + str(self.excited_curve) + "\n"
+                + str(self.ground_curve))
 
 
 def spline3(xs, ys, num_points, xrange=None):

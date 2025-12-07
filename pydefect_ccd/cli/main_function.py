@@ -280,7 +280,7 @@ def make_ccd(args: Namespace):
                   args.ccd_init.cbm,
                   args.ccd_init.name).ccd
     ccd.ground_curve.add_quadratic_curve(fixed_Q0=args.fixed_Q0)
-    ccd.excited_curve.add_quadratic_curve(fixed_Q0=args.fixed_Q0)
+    ccd.excited_curve.add_quadratic_curve(fixed_Q0=args.fixed_Q0, Q0_disp_ratio=1.0)
 
     print(ccd)
     ccd.to_json_file()
