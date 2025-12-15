@@ -114,7 +114,7 @@ class EPCoupling(MSONable, ToJsonFileMixIn):
             This is needed to calculate the Sommerfeld parameter.
 
     """
-    W_if_tilde: float
+    W_if_tilde: Dict[int, float]
     charge: int
     T: Union[float, np.ndarray]
     # volume: float
@@ -144,6 +144,17 @@ class EPCoupling(MSONable, ToJsonFileMixIn):
         result.append(tabulate(table, headers=header, tablefmt="plain"))
         return "\n".join(result)
 
+    def as_dict(self) -> dict:
+        result = super().as_dict()
+        result["W_if_tilde"] = {str(k): v for k, v in self.W_if_tilde.items()}
+        return result
+
+    @classmethod
+    def from_dict(cls, d) -> "EPCoupling":
+        result = super().from_dict(d)
+        result.W_if_tilde = {int(k): v for k, v in result.W_if_tilde.items()}
+        return result
+
     @property
     def f(self):
         return self.uniform_scaling_factor * self.sommerfeld_scaling_factor
@@ -160,5 +171,5 @@ class EPCoupling(MSONable, ToJsonFileMixIn):
     @property
     def W_if(self) -> List[float]:
         """ E-P coupling constant W_if """
-        return [self.f  * self.W_if_tilde] * len(self.T)
+        return [self.f  * x for x in self.W_if_tilde.values()] * len(self.T)
 
