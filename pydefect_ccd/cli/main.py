@@ -54,7 +54,7 @@ def parse_args_main(args):
     # NOTE: default=loadfn(...) reads file at parse-time.
     # Kept for backward-compatibility.
     ccd_init.add_argument(
-        "--ccd-init", type=loadfn, default="ccd_init.json",
+        "--ccd_init", type=loadfn, default="ccd_init.json",
         help="ccd_init.json file."
     )
 
@@ -148,6 +148,12 @@ def parse_args_main(args):
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=["mspr"],
     )
+    parser_make_single_point_results.add_argument(
+        "--parse-ccd-correction",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="If parse ccd_correction.json. Use --no-parse-ccd-correction to disable."
+    )
     parser_make_single_point_results.set_defaults(func=make_single_points)
 
     # -- make-potential-curve-result ----------------------
@@ -224,13 +230,13 @@ def parse_args_main(args):
 
     # -- make-e-p-matrix-element --------------------------
     parser_make_e_p_matrix_element = subparsers.add_parser(
-        name="make-e-p-matrix-element",
+        name="make-e_p_matrix_element",
         description="Make a file for electron-phonon matrix elements.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=["mepme"],
     )
     parser_make_e_p_matrix_element.add_argument(
-        "--potential-curve", type=loadfn, required=True,
+        "--potential_curve", type=loadfn, required=True,
         help="potential_curve.json filename."
     )
     parser_make_e_p_matrix_element.add_argument("--band-edge-index", type=int)
@@ -246,14 +252,14 @@ def parse_args_main(args):
 
     # -- make-e-p-coupling --------------------------------
     parser_make_e_p_coupling = subparsers.add_parser(
-        name="make-e-p-coupling",
+        name="make-e_p_coupling",
         description="Make electron-phonon coupling constant file.",
         parents=[ccd_init],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=["mepc"],
     )
     parser_make_e_p_coupling.add_argument(
-        "--e-p-matrix-elem", type=loadfn, required=True,
+        "--e_p_matrix_elem", type=loadfn, required=True,
         help="e_p_matrix_element_XXX.json filenames."
     )
     parser_make_e_p_coupling.add_argument(
@@ -272,9 +278,15 @@ def parse_args_main(args):
         aliases=["mcr"],
     )
     parser_make_capture_rate.add_argument(
-        "--e-p-coupling", type=loadfn, required=True
+        "--e_p_coupling", type=loadfn, required=True
     )
     parser_make_capture_rate.set_defaults(func=make_capture_rate)
+
+    try:
+        import argcomplete
+        argcomplete.autocomplete(parser)
+    except ImportError:
+        pass
 
     return parser.parse_args(args)
 

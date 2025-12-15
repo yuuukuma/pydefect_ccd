@@ -8,6 +8,7 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 from monty.json import MSONable
 from pydefect.analyzer.band_edge_states import LocalizedOrbital
+from pydefect.corrections.abstract_correction import Correction
 from pymatgen.electronic_structure.core import Spin
 from scipy import interpolate
 from scipy.optimize import curve_fit
@@ -401,3 +402,9 @@ class CcdPlotter:
         self.plt.gca().xaxis.set_major_formatter(float_to_int_formatter)
         self.plt.gca().yaxis.set_major_formatter(float_to_int_formatter)
 
+
+
+class NoCcdCorrection(Correction):
+    @property
+    def correction_energy(self) -> float:
+        return 0.0

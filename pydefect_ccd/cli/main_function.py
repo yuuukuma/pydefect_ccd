@@ -31,7 +31,7 @@ from vise.util.logger import get_logger
 from pydefect_ccd.capture_rate import \
     calc_summed_squared_transition_moment, CaptureRate, CaptureRatePlotter
 from pydefect_ccd.ccd import SinglePoint, CcdPlotter, \
-    SinglePointSpec, PotentialCurveSpec, PotentialCurve
+    SinglePointSpec, PotentialCurveSpec, PotentialCurve, NoCcdCorrection
 from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.ele_phon_coupling import EPMatrixElement, EPCoupling
 from pydefect_ccd.make_ccd import MakeCcd
@@ -240,7 +240,11 @@ def make_ccd_corrections(args):
 def make_single_points(args: Namespace):
     def _inner(dir_: Path):
         calc_results = get_calc_results(dir_, False)
-        ccd_correction = loadfn(dir_ / "ccd_correction.json")
+        if args.parse_ccd_correction:
+            ccd_correction = loadfn(dir_ / "ccd_correction.json")
+        else:
+            ccd_correction = NoCcdCorrection()
+
         band_edge_states: BandEdgeStates = loadfn(dir_ / "band_edge_states.json")
         band_edge_orbital_infos: BandEdgeOrbitalInfos = loadfn(dir_ / "band_edge_orbital_infos.json")
 
@@ -398,8 +402,7 @@ def main_make_e_p_matrix_element(args: Namespace):
 def make_e_p_coupling(args: Namespace):
     e_p_coupling = EPCoupling(args.e_p_matrix_elem.W_if_tilde,
                               charge=args.e_p_matrix_elem.charge,
-                              T=args.temperatures,
-                              volume=args.ccd_init.volume)
+                              T=args.temperatures)
     e_p_coupling.to_json_file()
 
 
@@ -424,6 +427,7 @@ def make_capture_rate(args: Namespace):
     cap_rate = CaptureRate(args.e_p_coupling.T,
                            args.e_p_coupling.W_if,
                            summed_squared_transition_moment,
+                           volume=ccd_init.volume,
                            velocities=list(velocities),
                            site_degeneracy=f_deg / i_deg)
     cap_rate.to_json_file()

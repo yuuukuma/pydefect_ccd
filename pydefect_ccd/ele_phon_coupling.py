@@ -101,7 +101,7 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
 class EPCoupling(MSONable, ToJsonFileMixIn):
     """ E-P coupling constants between defect band and multiple band edges
 
-    f(T) * V * W_if^2
+    f(T) * W_if^2
 
     To define the localized orbitals, we need to determine the charge and
     displacement (base_disp).
@@ -117,7 +117,7 @@ class EPCoupling(MSONable, ToJsonFileMixIn):
     W_if_tilde: float
     charge: int
     T: Union[float, np.ndarray]
-    volume: float
+    # volume: float
     ave_captured_carrier_mass: float = None
     ave_static_diele_const: float = None
     uniform_scaling_factor: float = 1.0
@@ -136,7 +136,6 @@ class EPCoupling(MSONable, ToJsonFileMixIn):
             diele_const = "N/A"
 
         table = [["charge", self.charge],
-                 ["volume", round(self.volume, 2)],
                  ["ave. carrier mass", mass],
                  ["ave. static dielectric constant", diele_const]]
         result.append(tabulate(table, tablefmt="plain"))
@@ -161,5 +160,5 @@ class EPCoupling(MSONable, ToJsonFileMixIn):
     @property
     def W_if(self) -> List[float]:
         """ E-P coupling constant W_if """
-        return [self.f * self.volume * self.W_if_tilde] * len(self.T)
+        return [self.f  * self.W_if_tilde] * len(self.T)
 

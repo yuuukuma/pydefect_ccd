@@ -18,6 +18,7 @@ class CaptureRate(MSONable, ToJsonFileMixIn):
     Ts: List[float]
     W_if: List[float]  # as a function of T if the charge is not neutral
     summed_squared_transition_moment: List[float]  # as a function of T
+    volume: float
     site_degeneracy: float
     velocities: List[float] = None # characteristic carrier velocity in [cm / s], which also depends on T
     # TODO: add spin selection factor
@@ -29,12 +30,13 @@ class CaptureRate(MSONable, ToJsonFileMixIn):
 
     @property
     def capture_rate(self) -> np.ndarray:
-        return (2 * np.pi * self.site_degeneracy
+        return (2 * np.pi * self.volume * self.site_degeneracy
                 * np.array(self.W_if) ** 2
                 * np.array(self.summed_squared_transition_moment))
 
     def __str__(self):
-        header = [["site degeneracy:", f"{self.site_degeneracy}"]]
+        header = [["site degeneracy:", f"{self.site_degeneracy}"],
+                  ["volume [Å^3]:", f"{self.volume}"]]
         result = [tabulate(header, tablefmt="plain")]
 
         print(type(self.Ts),
@@ -46,7 +48,7 @@ class CaptureRate(MSONable, ToJsonFileMixIn):
 
         table = []
         if self.velocities is not None:
-            columns = ["T [K]", "Transition moment [cm2]", "W_if", "C [cm3/s]", "v [cm/s]", "c / v [cm2]"]
+            columns = ["T [K]", "Transition moment [cm^2]", "W_if", "C [cm^3/s]", "v [cm/s]", "c / v [cm^2]"]
             for T, transition_moment, W_if, C, v, cross_sec \
                     in zip(self.Ts,
                            self.summed_squared_transition_moment,
@@ -57,7 +59,7 @@ class CaptureRate(MSONable, ToJsonFileMixIn):
                 table.append([T, transition_moment, W_if, C, v, cross_sec])
             fmt = [".1f", ".1e", ".1e", ".1e", ".1e", ".1e"]
         else:
-            columns = ["T [K]", "Transition moment [cm2]", "W_if", "C [cm3/s]"]
+            columns = ["T [K]", "Transition moment [cm^2]", "W_if", "C [cm^3/s]"]
             for T, transition_moment, W_if, C, v, cross_sec \
                     in zip(self.Ts,
                            self.summed_squared_transition_moment,
@@ -74,7 +76,8 @@ class CaptureRate(MSONable, ToJsonFileMixIn):
 def calc_summed_squared_transition_moment(
         ground_curve: PotentialCurve,
         excited_curve: PotentialCurve,
-        Ts: List[float]):
+        Ts: List[float],
+        overlap_method: str = "HermiteGauss") -> List[float]:
     """Within harmonic approximation. Unit is in amu Å^2."""
     dQ = excited_curve.Q_diff
     dE = abs(excited_curve.lowest_energy - ground_curve.lowest_energy)
@@ -85,9 +88,10 @@ def calc_summed_squared_transition_moment(
     # at Wif=1, volume=1Å^3, g=1
     result = get_C(dQ=abs(dQ),
                    dE=dE,
-                   wi=ground_curve.fitted_curve.omega_in_eV,
-                   wf=excited_curve.fitted_curve.omega_in_eV,
+                   wi=excited_curve.fitted_curve.omega_in_eV,
+                   wf=ground_curve.fitted_curve.omega_in_eV,
                    T=np.array(Ts),
+                   overlap_method=overlap_method,
                    Wif=1, volume=1, g=1)
     return list(result)
 
