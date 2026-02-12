@@ -106,14 +106,17 @@ def parse_args_main(args):
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=["mcdir"],
     )
+    default_disps = [-0.2,
+                     -0.1, -0.08, -0.06, -0.04, -0.02, 0.0, 0.02, 0.04, 0.06, 0.08, 0.1,
+                     0.2, 0.4, 0.6, 0.8, 1.0]
     parser_add_ccd_dirs.add_argument(
         "-fsr", "--first-to-second-div-ratios", type=float, nargs="+",
-        default=[-0.2, -0.1, 0.0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0],
+        default=default_disps,
         help="Dividing ratios from first to second charge state structures."
     )
     parser_add_ccd_dirs.add_argument(
         "-sfr", "--second-to-first-div-ratios", type=float, nargs="+",
-        default=[-0.2, -0.1, 0.0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0],
+        default=default_disps,
         help="Dividing ratios from second to first charge state structures."
     )
     parser_add_ccd_dirs.add_argument(
@@ -159,7 +162,7 @@ def parse_args_main(args):
     # -- make-potential-curve-result ----------------------
     parser_make_potential_curve_result = subparsers.add_parser(
         name="make-potential-curve-result",
-        description="Make potential curve results.",
+        description="Make potential curve result.",
         parents=[pot_curve_spec, dirs],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=["mpcr"],
@@ -217,12 +220,11 @@ def parse_args_main(args):
     # -- make-wswq-dirs -----------------------------------
     parser_make_wswq_dirs = subparsers.add_parser(
         name="make-wswq-dirs",
+        parents=[ccd_init],
         description="Make directories for calculating WSWQ files.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=["mwd"],
     )
-    parser_make_wswq_dirs.add_argument(
-        "--ccd-init", type=loadfn, default="ccd_init.json")
     parser_make_wswq_dirs.add_argument(
         "--dirs", type=Path, nargs="+", required=True
     )
@@ -259,12 +261,12 @@ def parse_args_main(args):
         aliases=["mepc"],
     )
     parser_make_e_p_coupling.add_argument(
-        "--e_p_matrix_elem", type=loadfn, required=True,
+        "--e_p_matrix_elems", type=loadfn, required=True, nargs="+",
         help="e_p_matrix_element_XXX.json filenames."
     )
     parser_make_e_p_coupling.add_argument(
         "-T", "--temperatures", type=float, nargs="+",
-        default=[t * 100 for t in range(2, 9)],
+        default=[t * 20 for t in range(2, 51)],
         help="Temperatures for calculating capture rates in K."
     )
     parser_make_e_p_coupling.set_defaults(func=make_e_p_coupling)

@@ -5,7 +5,7 @@ import pytest
 from pymatgen.electronic_structure.core import Spin
 from vise.tests.helpers.assertion import assert_json_roundtrip
 
-from pydefect_ccd.ele_phon_coupling import EPMatrixElement, EPCoupling
+from pydefect_ccd.ele_phon_coupling import EPMatrixElement, EPCoupling, WifTilde
 
 
 @pytest.fixture
@@ -22,8 +22,7 @@ def e_p_matrix_elem():
 
 @pytest.fixture
 def e_p_coupling(e_p_matrix_elem):
-    return EPCoupling(W_if_tilde={1: 1.0},
-                      charge=0,
+    return EPCoupling(W_if_tilde=[WifTilde(1.0, band_edge_index=1,charge=0)],
                       T=np.array([300.0]),
                       ave_captured_carrier_mass=1.0,
                       ave_static_diele_const=2.0)

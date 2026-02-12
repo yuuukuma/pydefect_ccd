@@ -139,8 +139,8 @@ def make_ccd_init(args: Namespace):
                        vbm=args.unitcell.vbm,
                        cbm=args.unitcell.cbm,
                        supercell_volume=volume,
-                       supercell_vbm=args.p_state.vbm_info.formation_energy,
-                       supercell_cbm=args.p_state.cbm_info.formation_energy,
+                       supercell_vbm=args.p_state.vbm_info.energy,
+                       supercell_cbm=args.p_state.cbm_info.energy,
                        ave_hole_mass=ave_hole_mass,
                        ave_electron_mass=ave_electron_mass,
                        ave_static_diele_const=args.unitcell.ave_ele_diele)
@@ -162,6 +162,7 @@ def make_ccd_dirs(args: Namespace):
     os.chdir(args.calc_dir)
     s1 = args.ccd_init.relaxed_points[0].structure
     s2 = args.ccd_init.relaxed_points[1].structure
+    print(len(args.first_to_second_div_ratios))
     s1_to_s2 = s1.interpolate(s2, nimages=args.first_to_second_div_ratios)
     s2_to_s1 = s2.interpolate(s1, nimages=args.second_to_first_div_ratios)
     rp1 = args.ccd_init.relaxed_points[0]
@@ -363,7 +364,7 @@ def main_make_e_p_matrix_element(args: Namespace):
 
     dQs, wswqs = [], []
 
-    base_single_point = None
+    band_edge_orbital_infos = None
     for d in args.dirs:
         wswq_file = d / "wswq" / "WSWQ"
         WSWQ = _read_WSWQ(wswq_file)  # keys: (spin, kpoint) and (initial, final)
@@ -375,14 +376,14 @@ def main_make_e_p_matrix_element(args: Namespace):
         wswqs.append(WSWQ[spin_kpt_index][band_index])
 
         if single_point.disp_ratio == 0.0:
-            base_single_point = single_point
+            band_edge_orbital_infos = loadfn(d / "band_edge_orbital_infos.json")
 
-    if base_single_point is None:
+    if band_edge_orbital_infos is None:
         raise ValueError("At least one of the dirs must have disp_ratio of 0.0")
 
     e_p_matrix_elem = make_e_p_matrix_element(
         charge=charge,
-        base_single_point=base_single_point,
+        base_band_edge_orbital_infos=band_edge_orbital_infos,
         band_edge_index=args.band_edge_index,
         defect_band_index=args.defect_band_index,
         spin=args.spin,
@@ -400,8 +401,8 @@ def main_make_e_p_matrix_element(args: Namespace):
         logger.info("e-ph matrix element cannot be calculated.")
 
 def make_e_p_coupling(args: Namespace):
-    e_p_coupling = EPCoupling(args.e_p_matrix_elem.W_if_tilde,
-                              charge=args.e_p_matrix_elem.charge,
+    W_if_tildes = [e.to_W_if_tilde for e in args.e_p_matrix_elems]
+    e_p_coupling = EPCoupling(W_if_tildes,
                               T=args.temperatures)
     e_p_coupling.to_json_file()
 

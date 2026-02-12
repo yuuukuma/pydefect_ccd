@@ -37,7 +37,7 @@ Here, I show an example using C-on-N defect in GaN.
 1. Create a `ccd_init.json` file from two directories containing pydefect files. 
 If the excited state has one more (less) charge state, n-type (p-type) is assumed.
 ```bash
-pydefect_ccd make_ccd_init -u ../unitcell.yaml -pbes ../perfect/perfect_band_edge_state.json -fd ../C_N1_-1 -sd ../C_N1_0 -em ../effective_mass.json
+pydefect_ccd make-ccd-init -u ../unitcell.yaml -pbes ../perfect/perfect_band_edge_state.json -fd ../C_N1_-1 -sd ../C_N1_0 -em ../effective_mass.json
 ```
 The defect in `first_dir` needs to show higher formation energy than that in `second_dir`.
 For example, in the above command, the formation energy of C_N1_-1
@@ -46,7 +46,7 @@ You can always check the json files using the `pydefect_print` command in pydefe
 
 2. We next construct the directories for CCD calculations.
 ```bash
-pydefect_ccd make_ccd_dirs --ccd_init ccd_init.json 
+pydefect_ccd make-ccd-dirs --ccd_hnit ccd_init.json 
 ```
 
 3. After finishing the VASP calculations in each directory, 
@@ -66,30 +66,29 @@ The details are written in
 [this paper](https://doi.org/10.1103/PhysRevB.107.L220101).
 Note that this correction is needed even for neutral defects.
 ```bash
-pydefect_ccd make_ccd_corrections -d disp_* -u ../unitcell/unitcell.yaml -ndcr ../../../C_N1_-1/calc_results.json -ndde ../../../C_N1_-1/defect_entry.json -p potential_curve_spec.json
+pydefect_ccd make-ccd-corrections -d disp_* -u ../unitcell/unitcell.yaml -ndcr ../../../C_N1_-1/calc_results.json -ndde ../../../C_N1_-1/defect_entry.json -p potential_curve_spec.json
 ```
 
 5. We then create `single_point_info.json` in each directory, which
 summarize the calculation result for each single point, with the following command.
 ```bash
-pydefect_ccd make_single_point_results -d disp_* 
+pydefect_ccd make-single-point-results -d disp_* 
 ```
 
 6. Next, we create `potential_curve.json` at each q using the following command.
 ```bash
-pydefect_ccd make_potential_curve_result -d disp_* 
+pydefect_ccd make-potential-curve-result -d disp_* 
 ```
 
 7. Finally, we create the `ccd.json` file by merging all the calculated data 
 using the following command.
 ```bash
-pydefect_ccd make_ccd --ccd_init ccd_init.json --ground_potential_curve q_0/potential_curve.json --excited_potential_curve q_-1/potential_curve.json
+pydefect_ccd make-ccd --ccd_init ccd_init.json --ground-potential-curve q_0/potential_curve.json --excited-potential-curve q_-1/potential_curve.json
 ```
-
 
 8. We can plot the configuration coordinate diagram using the following command.
 ```bash
-pydefect_ccd plot_ccd --ccd ccd.json
+pydefect_ccd plot-ccd --ccd ccd.json
 ```
 Now the following figure is obtained.
 ![ccd_default.png](readme_figs/ccd_default.png)
@@ -103,7 +102,7 @@ Then, iterate steps 3 to 8 again.
 
 9. We can also plot the eigenvalues along the configuration coordinate using the following command.
 ```bash
-pydefect_ccd plot_eigenvalues --ccd_init ../ccd_init.json -d disp_*
+pydefect_ccd plot-eigenvalues --ccd_init ../ccd_init.json -d disp_*
 ```
 Now the following figure is obtained.
 ![eigenvalues_q_-1.png](readme_figs/eigenvalues_q_-1.png)
@@ -111,42 +110,47 @@ Now the following figure is obtained.
 
 10. 
 ```bash
-pydefect_ccd make_wswq_dirs --ccd_init ../ccd_init.json --dirs disp_{-0.2,-0.1,0.0,0.1,0.2}
+pydefect_ccd make-wswq-dirs --ccd_init ../ccd_init.json --dirs disp_{-0.2,-0.1,0.0,0.1,0.2}
 ```
 Under the static approximation, we can evaluate the electron-phonon coupling constant
 near the equilibrium geometry.
 
-11.
+11. 
 ```bash
-pydefect_ccd make_e_p_matrix_element --potential_curve potential_curve.json --band_edge_index 599 --defect_band_index 600 --spin down --dirs disp_{-0.2,-0.1,0.0,0.1,0.2}
+pydefect_ccd make-e_p_matrix_element --potential_curve potential_curve.json --band_edge_index 599 --defect_band_index 600 --spin down --dirs disp_{-0.2,-0.1,0.0,0.1,0.2}
 ```
 
 12.
 ```bash
-pydefect_ccd make_e_p_coupling --ccd_init ccd_init.json --e_p_matrix_elem q_0/e_p_matrix_element_b599_d600_-1.json
+pydefect_ccd make-e_p_coupling --ccd_init ccd_init.json --e_p_matrix_elem q_0/e_p_matrix_element_b599_d600_-1.json
 ```
 
 13. 
 ```bash
-pydefect_ccd make_capture_rate
+pydefect_ccd make-capture-rate --e_p_coupling e_p_coupling.json
 ```
-
 
 Citing pydefect_ccd
 ---------------
 When pydefect_ccd has been used in your research, 
-please cite the following paper.
+please temporary cite the following paper, 
+which discusses the corrections on the configuration coordinate diagram calculations.
 
-Yu Kumagai<br>
+[Kumagai, Phys. Rev. B, 107, L220101 (2023).](https://doi.org/10.1103/PhysRevB.107.L220101)
+ 
 
 In addition, please cite the following papers:
 - Theory: 
-[Alkauskas, Yan, Van de Walle, PRB (2014).](https://doi.org/10.1103/PhysRevB.90.075202)
+[Alkauskas, Yan, Van de Walle, Phys. Rev. B, 90, 075202 (2014).](https://doi.org/10.1103/PhysRevB.90.075202)
 
 - Code:
-[Turiansky et al., omput. Phys. Commun. (2021).](https://www.sciencedirect.com/science/article/abs/pii/S0010465521001685)
+[Turiansky et al., Comput. Phys. Commun. (2021).](https://www.sciencedirect.com/science/article/abs/pii/S0010465521001685)
 
-Contact info
+- Pydefect:
+[Kumagai et al., Phys. Rev. Mater., 5, 123803 (2021).](https://doi.org/10.1103/PhysRevMaterials.5.123803)
+
+
+- Contact info
 --------------
 Yu Kumagai<br>
 yukumagai@tohoku.ac.jp<br>

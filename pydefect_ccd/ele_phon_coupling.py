@@ -24,7 +24,6 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
             at the given Q points.
     """
     charge: int
-    base_disp_ratio: float
     band_edge_index: int
     defect_band_index: int
     spin: Union[Spin, str]
@@ -96,6 +95,22 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
 
         return "\n".join(result)
 
+    @property
+    def to_W_if_tilde(self) -> "WifTilde":
+        return WifTilde(W_if_tilde=self.W_if_tilde,
+                        band_edge_index=self.band_edge_index,
+                        charge=self.charge)
+
+
+@dataclass
+class WifTilde(MSONable, ToJsonFileMixIn):
+    W_if_tilde: float
+    band_edge_index: int
+    charge: int
+
+    def W_if(self, scaling: float) -> float:
+        return self.W_if_tilde * scaling
+
 
 @dataclass
 class EPCoupling(MSONable, ToJsonFileMixIn):
@@ -114,62 +129,51 @@ class EPCoupling(MSONable, ToJsonFileMixIn):
             This is needed to calculate the Sommerfeld parameter.
 
     """
-    W_if_tilde: Dict[int, float]
-    charge: int
+    W_if_tilde: List[WifTilde]
     T: Union[float, np.ndarray]
     # volume: float
     ave_captured_carrier_mass: float = None
     ave_static_diele_const: float = None
     uniform_scaling_factor: float = 1.0
 
-    def __str__(self):
-        # todo: update
-        result = []
-        if self.ave_captured_carrier_mass is not None:
-            mass = round(self.ave_captured_carrier_mass, 2)
-        else:
-            mass = "N/A"
+    # def __str__(self):
+    #     # todo: update
+    #     result = []
+    #     if self.ave_captured_carrier_mass is not None:
+    #         mass = round(self.ave_captured_carrier_mass, 2)
+    #     else:
+    #         mass = "N/A"
 
-        if self.ave_static_diele_const is not None:
-            diele_const = round(self.ave_static_diele_const, 2)
-        else:
-            diele_const = "N/A"
+#         if self.ave_static_diele_const is not None:
+#             diele_const = round(self.ave_static_diele_const, 2)
+#         else:
+#             diele_const = "N/A"
 
-        table = [["charge", self.charge],
-                 ["ave. carrier mass", mass],
-                 ["ave. static dielectric constant", diele_const]]
-        result.append(tabulate(table, tablefmt="plain"))
-        header = ["T (K)", "W_if ()"]
-        table = [[t, w] for t, w in zip(self.T, self.W_if)]
-        result.append(tabulate(table, headers=header, tablefmt="plain"))
-        return "\n".join(result)
+#         table = [["charge", self.charge],
+#                  ["ave. carrier mass", mass],
+#                  ["ave. static dielectric constant", diele_const]]
+#         result.append(tabulate(table, tablefmt="plain"))
+#         header = ["T (K)", "W_if ()"]
+#         table = [[t, w] for t, w in zip(self.T, self.W_if)]
+#         result.append(tabulate(table, headers=header, tablefmt="plain"))
+#         return "\n".join(result)
 
-    def as_dict(self) -> dict:
-        result = super().as_dict()
-        result["W_if_tilde"] = {str(k): v for k, v in self.W_if_tilde.items()}
-        return result
 
-    @classmethod
-    def from_dict(cls, d) -> "EPCoupling":
-        result = super().from_dict(d)
-        result.W_if_tilde = {int(k): v for k, v in result.W_if_tilde.items()}
-        return result
+    def f(self, charge):
+        return self.uniform_scaling_factor * self.sommerfeld_scaling_factor(charge)
 
-    @property
-    def f(self):
-        return self.uniform_scaling_factor * self.sommerfeld_scaling_factor
-
-    @property
-    def sommerfeld_scaling_factor(self) -> Union[float, np.ndarray]:
-        if self.charge == 0:
+    def sommerfeld_scaling_factor(self, charge) -> Union[float, np.ndarray]:
+        if charge == 0:
             return 1.0
         return sommerfeld_parameter(self.T,
-                                    self.charge,
+                                    charge,
                                     self.ave_captured_carrier_mass,
                                     self.ave_static_diele_const)
 
     @property
     def W_if(self) -> List[float]:
         """ E-P coupling constant W_if """
-        return [self.f  * x for x in self.W_if_tilde.values()] * len(self.T)
+        x = np.average([W_if_tilde.W_if(self.f(W_if_tilde.charge))
+                        for W_if_tilde in self.W_if_tilde])
+        return  [float(x)] * len(self.T)
 
