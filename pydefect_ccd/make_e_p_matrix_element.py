@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 #  Copyright (c) 2022 Kumagai group.
-from typing import List, Optional
+from typing import List
 
 import numpy as np
 from pydefect.analyzer.band_edge_states import BandEdgeOrbitalInfos
 from pymatgen.electronic_structure.core import Spin
 from vise.util.logger import get_logger
 
-from pydefect_ccd.ccd import SinglePoint
 from pydefect_ccd.ele_phon_coupling import EPMatrixElement
 from pydefect_ccd.util import spin_to_idx
 

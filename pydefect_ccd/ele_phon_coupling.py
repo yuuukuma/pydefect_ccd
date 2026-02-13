@@ -28,8 +28,8 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
     defect_band_index: int
     spin: Union[Spin, str]
     eigenvalue_diff: float
-    # key dQ, val: |\bra_{psi_i(0)} | S(0) |\ket_{psi_f(Q)}|
     dQs: List[float] = field(default_factory=list)
+    # |\bra_{psi_i(0)} | S(0) |\ket_{psi_f(Q)}|
     abs_inner_prods: List[float] = field(default_factory=list)
     # TODO : implement fit_q_range
     fit_q_range: List[float] = None
@@ -104,7 +104,7 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
 
 @dataclass
 class WifTilde(MSONable, ToJsonFileMixIn):
-    W_if_tilde: float
+    W_if_tilde: float  # eV / Angstrom
     band_edge_index: int
     charge: int
 
