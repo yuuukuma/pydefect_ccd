@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #  Copyright (c) 2022 Kumagai group.
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 from monty.json import MSONable
@@ -20,7 +20,7 @@ class CaptureRate(MSONable, ToJsonFileMixIn):
     summed_squared_transition_moment: List[float]  # as a function of T
     volume: float
     site_degeneracy: float
-    velocities: List[float] = None # characteristic carrier velocity in [cm / s], which also depends on T
+    velocities: Optional[List[float]] = None # characteristic carrier velocity in [cm / s], which also depends on T
     # TODO: add spin selection factor
 
     @property

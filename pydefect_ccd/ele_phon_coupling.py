@@ -107,6 +107,7 @@ class WifTilde(MSONable, ToJsonFileMixIn):
     W_if_tilde: float  # eV / Angstrom
     band_edge_index: int
     charge: int
+    uniform_scaling_factor: float = 1.0
 
     def W_if(self, scaling: float) -> float:
         return self.W_if_tilde * scaling
@@ -134,7 +135,6 @@ class EPCoupling(MSONable, ToJsonFileMixIn):
     # volume: float
     ave_captured_carrier_mass: float = None
     ave_static_diele_const: float = None
-    uniform_scaling_factor: float = 1.0
 
     # def __str__(self):
     #     # todo: update
