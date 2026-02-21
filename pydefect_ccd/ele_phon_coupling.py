@@ -28,7 +28,7 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
     defect_band_index: int
     spin: Union[Spin, str]
     eigenvalue_diff: float
-    dQs: List[float] = field(default_factory=list)
+    dQs: List[float] = field(default_factory=list)  # Å x amu^0.5
     # |\bra_{psi_i(0)} | S(0) |\ket_{psi_f(Q)}|
     abs_inner_prods: List[float] = field(default_factory=list)
     # TODO : implement fit_q_range
@@ -104,76 +104,8 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
 
 @dataclass
 class WifTilde(MSONable, ToJsonFileMixIn):
-    W_if_tilde: float  # eV / Angstrom
+    W_if_tilde: float  # eV / Angstrom / amu^0.5
     band_edge_index: int
     charge: int
     uniform_scaling_factor: float = 1.0
-
-    def W_if(self, scaling: float) -> float:
-        return self.W_if_tilde * scaling
-
-
-@dataclass
-class EPCoupling(MSONable, ToJsonFileMixIn):
-    """ E-P coupling constants between defect band and multiple band edges
-
-    f(T) * W_if^2
-
-    To define the localized orbitals, we need to determine the charge and
-    displacement (base_disp).
-
-    Attributes:
-        ave_captured_carrier_mass:
-            This is needed to calculate the Sommerfeld parameter and the
-            thermal velocity.
-        ave_static_diele_const:
-            This is needed to calculate the Sommerfeld parameter.
-
-    """
-    W_if_tilde: List[WifTilde]
-    T: Union[float, np.ndarray]
-    # volume: float
-    ave_captured_carrier_mass: float = None
-    ave_static_diele_const: float = None
-
-    # def __str__(self):
-    #     # todo: update
-    #     result = []
-    #     if self.ave_captured_carrier_mass is not None:
-    #         mass = round(self.ave_captured_carrier_mass, 2)
-    #     else:
-    #         mass = "N/A"
-
-#         if self.ave_static_diele_const is not None:
-#             diele_const = round(self.ave_static_diele_const, 2)
-#         else:
-#             diele_const = "N/A"
-
-#         table = [["charge", self.charge],
-#                  ["ave. carrier mass", mass],
-#                  ["ave. static dielectric constant", diele_const]]
-#         result.append(tabulate(table, tablefmt="plain"))
-#         header = ["T (K)", "W_if ()"]
-#         table = [[t, w] for t, w in zip(self.T, self.W_if)]
-#         result.append(tabulate(table, headers=header, tablefmt="plain"))
-#         return "\n".join(result)
-
-
-    def f(self, charge):
-        return self.uniform_scaling_factor * self.sommerfeld_scaling_factor(charge)
-
-    def sommerfeld_scaling_factor(self, charge) -> Union[float, np.ndarray]:
-        if charge == 0:
-            return 1.0
-        return sommerfeld_parameter(self.T,
-                                    charge,
-                                    self.ave_captured_carrier_mass,
-                                    self.ave_static_diele_const)
-
-    @property
-    def W_if(self) -> List[float]:
-        """ E-P coupling constant W_if """
-        x = np.average([W_if_tilde.W_if(self.f(W_if_tilde.charge))
-                        for W_if_tilde in self.W_if_tilde])
-        return  [float(x)] * len(self.T)
 

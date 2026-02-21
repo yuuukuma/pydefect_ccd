@@ -5,23 +5,21 @@ from typing import List, Optional
 
 import numpy as np
 from monty.json import MSONable
-from nonrad import get_C
+from scipy import constants
 from tabulate import tabulate
 from vise.util.matplotlib import float_to_int_formatter
 from vise.util.mix_in import ToJsonFileMixIn
-
-from pydefect_ccd.ccd import PotentialCurve, QuadraticCurve
 
 
 @dataclass
 class CaptureRate(MSONable, ToJsonFileMixIn):
     Ts: List[float]
-    W_if: List[float]  # as a function of T if the charge is not neutral
+    volume: float  # in Å^3, which is the volume of the supercell.
+    sommerfeld_parameter: List[float] # as a function of T
+    W_if: float
     summed_squared_transition_moment: List[float]  # as a function of T
-    volume: float
     site_degeneracy: float
     velocities: Optional[List[float]] = None # characteristic carrier velocity in [cm / s], which also depends on T
-    # TODO: add spin selection factor
 
     @property
     def cross_sections(self) -> List[float]:
@@ -30,8 +28,10 @@ class CaptureRate(MSONable, ToJsonFileMixIn):
 
     @property
     def capture_rate(self) -> np.ndarray:
-        return (2 * np.pi * self.volume * self.site_degeneracy
-                * np.array(self.W_if) ** 2
+        volume_cm3 = self.volume * 1e-24  # convert from Å^3 to cm^3
+        hbar_eVs = constants.hbar / constants.e
+        return (2 * np.pi / hbar_eVs * volume_cm3 * self.site_degeneracy * self.W_if ** 2
+                * np.array(self.sommerfeld_parameter)
                 * np.array(self.summed_squared_transition_moment))
 
     def __str__(self):
@@ -71,29 +71,6 @@ class CaptureRate(MSONable, ToJsonFileMixIn):
         result.append(tabulate(table, headers=columns, tablefmt="plain", floatfmt=fmt))
 
         return "\n".join(result)
-
-
-def calc_summed_squared_transition_moment(
-        ground_curve: PotentialCurve,
-        excited_curve: PotentialCurve,
-        Ts: List[float],
-        overlap_method: str = "HermiteGauss") -> List[float]:
-    """Within harmonic approximation. Unit is in amu Å^2."""
-    dQ = excited_curve.Q_diff
-    dE = abs(excited_curve.lowest_energy - ground_curve.lowest_energy)
-
-    assert isinstance(ground_curve.fitted_curve, QuadraticCurve)
-    assert isinstance(excited_curve.fitted_curve, QuadraticCurve)
-
-    # at Wif=1, volume=1Å^3, g=1
-    result = get_C(dQ=abs(dQ),
-                   dE=dE,
-                   wi=excited_curve.fitted_curve.omega_in_eV,
-                   wf=ground_curve.fitted_curve.omega_in_eV,
-                   T=np.array(Ts),
-                   overlap_method=overlap_method,
-                   Wif=1, volume=1, g=1)
-    return list(result)
 
 
 class CaptureRatePlotter:

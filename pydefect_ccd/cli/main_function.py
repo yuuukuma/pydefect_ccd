@@ -29,7 +29,8 @@ from vise.util.file_transfer import FileLink
 from vise.util.logger import get_logger
 
 from pydefect_ccd.capture_rate import \
-    calc_summed_squared_transition_moment, CaptureRate, CaptureRatePlotter
+    CaptureRate, CaptureRatePlotter
+from pydefect_ccd.transition_moment import calc_summed_squared_transition_moment
 from pydefect_ccd.ccd import SinglePoint, CcdPlotter, \
     SinglePointSpec, PotentialCurveSpec, PotentialCurve, NoCcdCorrection
 from pydefect_ccd.ccd_init import CcdInit
