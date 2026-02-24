@@ -4,13 +4,16 @@
 import pytest
 from matplotlib import pyplot as plt
 
+from pydefect_ccd.enum import Carrier
 from pydefect_ccd.sommerfeld_scaling import SommerfeldScaling
 
 
 @pytest.fixture
 def sommerfeld_scaling():
-    return SommerfeldScaling(dielectric_constant=8.9, electron_effective_mass=0.5,
-                             hole_effective_mass=0.18)
+    return SommerfeldScaling(epsilon0=8.9,
+                             electron_effective_mass=0.5,
+                             hole_effective_mass=0.18,
+                             Ts=[100, 200, 300, 400, 500])
 
 def test_returns_correct_scaling_for_electrons(sommerfeld_scaling):
     result = sommerfeld_scaling.scaling
@@ -21,12 +24,13 @@ def test_returns_correct_scaling_for_electrons(sommerfeld_scaling):
     plt.show()
 
 
-def test_s():
+def test_s(sommerfeld_scaling):
     ax = plt.gca()
     for mass in  [0.1, 1.0]:
         # for mass in  [0.1, 0.2, 0.5, 1.0, 2.0]:
         for diele, ls in zip([10, 20, 30], ["-", "--", ":"]):
-            ss = SommerfeldScaling(dielectric_constant=diele, electron_effective_mass=0.5,
-                             hole_effective_mass=mass)
-            ss.plot(ax, key=("h", 1), ls=ls)
+            for dc in [-1, 0, 1]:
+                ss = SommerfeldScaling(diele, mass, 1.0, Ts=[100, 200, 300, 400, 500])
+                ss.add_to_ax(ax, carrier_type=Carrier.e, defect_charge=dc, ls=ls)
+        ss.set_label(ax)
     plt.show()

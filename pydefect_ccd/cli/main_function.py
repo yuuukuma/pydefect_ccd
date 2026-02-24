@@ -17,6 +17,7 @@ from pydefect.analyzer.band_edge_states import BandEdgeStates, \
 from pydefect.analyzer.calc_results import CalcResults
 from pydefect.analyzer.defect_energy import DefectEnergyInfo
 from pydefect.analyzer.defect_structure_info import DefectStructureInfo
+from pydefect.analyzer.unitcell import Unitcell
 from pydefect.cli.main_functions import get_calc_results
 from pydefect.cli.main_tools import parse_dirs
 from pydefect.cli.vasp.make_efnv_correction import make_efnv_correction
@@ -30,11 +31,12 @@ from vise.util.logger import get_logger
 
 from pydefect_ccd.capture_rate import \
     CaptureRate, CaptureRatePlotter
+from pydefect_ccd.sommerfeld_scaling import SommerfeldScaling
 from pydefect_ccd.transition_moment import calc_summed_squared_transition_moment
 from pydefect_ccd.ccd import SinglePoint, CcdPlotter, \
     SinglePointSpec, PotentialCurveSpec, PotentialCurve, NoCcdCorrection
 from pydefect_ccd.ccd_init import CcdInit
-from pydefect_ccd.ele_phon_coupling import EPMatrixElement, EPCoupling
+from pydefect_ccd.ele_phon_coupling import EPMatrixElement
 from pydefect_ccd.make_ccd import MakeCcd
 from pydefect_ccd.make_e_p_matrix_element import make_e_p_matrix_element
 from pydefect_ccd.plot_eigenvalues import EigenvalPlotter
@@ -157,6 +159,15 @@ user_incar_settings:
 
     ccd_init.to_json_file(json_file)
     logger.info(ccd_init)
+
+def make_sommerfeld_scaling(args: Namespace):
+    range_ = range(args.defect_charge_range[0], args.defect_charge_range[1] + 1)
+    scaling = SommerfeldScaling(dielectric_constant=args.unitcell.ave_diele,
+                                electron_effective_mass=args.unitcell.ave_ele_mass,
+                                hole_effective_mass=args.unitcell.ave_hole_mass,
+                                Ts=args.Ts,
+                                defect_charge_range=range_)
+    scaling.to_json_file()
 
 
 def make_ccd_dirs(args: Namespace):
@@ -400,12 +411,6 @@ def main_make_e_p_matrix_element(args: Namespace):
         plt.show()
     except (TypeError, LinAlgError):
         logger.info("e-ph matrix element cannot be calculated.")
-
-def make_e_p_coupling(args: Namespace):
-    W_if_tildes = [e.to_W_if_tilde for e in args.e_p_matrix_elems]
-    e_p_coupling = EPCoupling(W_if_tildes,
-                              T=args.temperatures)
-    e_p_coupling.to_json_file()
 
 
 def make_capture_rate(args: Namespace):

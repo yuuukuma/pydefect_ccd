@@ -13,7 +13,7 @@ def calc_summed_squared_transition_moment(
         excited_curve: PotentialCurve,
         Ts: List[float],
         overlap_method: str = "HermiteGauss") -> List[float]:
-    """Within harmonic approximation. Unit is in amu Å^2."""
+    """Within harmonic approximation. Unit is in amu Å^2 / eV."""
     dQ = excited_curve.Q_diff
     dE = abs(excited_curve.lowest_energy - ground_curve.lowest_energy)
 

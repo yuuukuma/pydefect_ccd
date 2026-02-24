@@ -1,39 +1,51 @@
 # -*- coding: utf-8 -*-
 #  Copyright (c) 2026 Kumagai group.
-from typing import List
+from dataclasses import dataclass, field
+from typing import List, Dict, Any, Tuple
+from monty.json import MSONable
 
 import numpy as np
 from nonrad.scaling import sommerfeld_parameter
+from vise.util.mix_in import ToJsonFileMixIn
 
-class SommerfeldScaling:
+from pydefect_ccd.enum import Carrier
 
-    def __init__(self,
-                 dielectric_constant: float,
-                 electron_effective_mass: float,
-                 hole_effective_mass: float,
-                 Ts: List[float] = None,
-                 defect_charge_range : range = range(-2, 3)):
-        self.epsilon0 = dielectric_constant
-        self.e_mass = electron_effective_mass
-        self.h_mass = hole_effective_mass
-        self.Ts = Ts if Ts is not None else list(range(100, 1001, 10))
+Key = Tuple[str, int]  # ("e" or "h", defect_charge)
 
-        self.scaling = {}
-        for a, mass in [("e", self.e_mass), ("h", self.h_mass)]:
-            for defect_charge in defect_charge_range:
-                if defect_charge == 0:
-                    self.scaling[(a, defect_charge)] = np.ones_like(Ts)
-                carrier_charge = 1 if a == "h" else -1
-                Z = defect_charge * carrier_charge
-                self.scaling[(a, defect_charge)] \
-                    = sommerfeld_parameter(np.array(self.Ts), Z, mass, self.epsilon0)
 
-    def plot(self, ax, key, ls="--"):
-        """Plot Sommerfeld scaling curves on given matplotlib Axes."""
-        y = self.scaling[key]
-        ax.plot(self.Ts, y, label=key, linestyle=ls)
+@dataclass
+class SommerfeldScaling(MSONable, ToJsonFileMixIn):
+    epsilon0: float
+    electron_effective_mass: float
+    hole_effective_mass: float
+    Ts: List[float]
+    _scaling: Dict[Key, np.ndarray] = field(default_factory=dict)
+
+    def scaling(self, carrier_type: Carrier, defect_charge: int) -> np.ndarray:
+        if defect_charge == 0:
+            return np.ones_like(self.Ts)
+
+        key = (str(carrier_type), defect_charge)
+        if key not in self._scaling:
+            self.get_scaling(carrier_type, defect_charge)
+        return self._scaling[key]
+
+    def get_scaling(self,
+                    carrier_type: Carrier, defect_charge: int,
+                    method: str = "Integrate"):
+        Z = defect_charge * carrier_type.charge
+        mass = (self.electron_effective_mass
+                if carrier_type is Carrier.e else self.hole_effective_mass)
+        Ts = np.array(self.Ts)
+        self._scaling[(str(carrier_type), defect_charge)] \
+            = sommerfeld_parameter(Ts, Z, mass, self.epsilon0, method=method)
+
+    def add_to_ax(self, ax, carrier_type, defect_charge, ls="--"):
+        y = self.scaling(carrier_type, defect_charge)
+        ax.plot(self.Ts, y, linestyle=ls)
+
+    def set_label(self, ax, ls="--"):
         ax.set_xlabel("Temperature (K)")
         ax.set_ylabel("Sommerfeld scaling")
         ax.legend()
         ax.axvline(x=300, color='red', ls=ls, lw=0.5)
-        return ax

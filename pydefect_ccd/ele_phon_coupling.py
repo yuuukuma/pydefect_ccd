@@ -5,7 +5,6 @@ from typing import Union, Dict, List, Optional
 
 import numpy as np
 from monty.json import MSONable
-from nonrad.scaling import sommerfeld_parameter
 from pymatgen.electronic_structure.core import Spin
 from tabulate import tabulate
 from vise.util.mix_in import ToJsonFileMixIn
