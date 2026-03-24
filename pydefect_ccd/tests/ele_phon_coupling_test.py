@@ -5,7 +5,7 @@ import pytest
 from pymatgen.electronic_structure.core import Spin
 from vise.tests.helpers.assertion import assert_json_roundtrip
 
-from pydefect_ccd.ele_phon_coupling import EPMatrixElement, EPCoupling, WifTilde
+from pydefect_ccd.e_p_matrix_element import EPMatrixElement, EPCoupling, WifTilde
 
 
 @pytest.fixture

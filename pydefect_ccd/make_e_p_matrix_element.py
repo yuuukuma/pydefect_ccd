@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 #  Copyright (c) 2022 Kumagai group.
-from typing import List
+from typing import List, Optional
 
 import numpy as np
-from numba.core.types import Optional
 from pydefect.analyzer.band_edge_states import BandEdgeOrbitalInfos
 from pymatgen.electronic_structure.core import Spin
 from vise.util.logger import get_logger
 
-from pydefect_ccd.ele_phon_coupling import EPMatrixElement
+from pydefect_ccd.e_p_matrix_element import EPMatrixElement
 from pydefect_ccd.util import spin_to_idx
 
 logger = get_logger(__name__)

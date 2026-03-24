@@ -81,7 +81,7 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
                    ["spin", self.spin.name]]
         table_2 = [["grad (amu^0.5)", self.grad],
                    ["eigenvalue difference (eV)", self.eigenvalue_diff],
-                   ["W_if_tilde (eV/amu^0.5) ", self.W_if_tilde]]
+                   ["W_if_tilde (eV/(Å amu^0.5))", self.W_if_tilde]]
 
         result.append(tabulate(table_1, tablefmt="plain"))
         result.append(tabulate(table_2, tablefmt="plain", floatfmt=".3f"))

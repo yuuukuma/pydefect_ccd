@@ -317,8 +317,9 @@ class Ccd(MSONable, ToJsonFileMixIn):
 
     def __str__(self):
         return (f"name: {self.name}\n"
-                + "-" * 50 + "\n"
+                + "excited" + "-" * 50 + "\n"
                 + str(self.excited_curve) + "\n"
+                + "ground" + "-" * 50 + "\n"
                 + str(self.ground_curve))
 
 

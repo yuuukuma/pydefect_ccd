@@ -36,6 +36,7 @@ class SommerfeldScaling(MSONable, ToJsonFileMixIn):
         Z = defect_charge * carrier_type.charge
         mass = (self.electron_effective_mass
                 if carrier_type is Carrier.e else self.hole_effective_mass)
+        print("mass", mass)
         Ts = np.array(self.Ts)
         self._scaling[(str(carrier_type), defect_charge)] \
             = sommerfeld_parameter(Ts, Z, mass, self.epsilon0, method=method)

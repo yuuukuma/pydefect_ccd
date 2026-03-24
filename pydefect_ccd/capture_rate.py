@@ -16,57 +16,41 @@ class CaptureRate(MSONable, ToJsonFileMixIn):
     Ts: List[float]
     volume: float  # in Å^3, which is the volume of the supercell.
     sommerfeld_parameter: List[float] # as a function of T
-    W_if: float
-    summed_squared_transition_moment: List[float]  # as a function of T
+    W_if_tilde: float  # in eV / (amu^0.5 Å)
+    total_squared_transition_moment: List[float]  # as a function of T
     site_degeneracy: float
-    velocities: Optional[List[float]] = None # characteristic carrier velocity in [cm / s], which also depends on T
+    # velocities: Optional[List[float]] = None # characteristic carrier velocity in [cm / s], which also depends on T
 
-    @property
-    def cross_sections(self) -> List[float]:
-        result = list(self.capture_rate / np.array(self.velocities))
-        return result
+    # @property
+    # def cross_sections(self) -> List[float]:
+    #     result = list(self.capture_rate / np.array(self.velocities))
+    #     return result
 
     @property
     def capture_rate(self) -> np.ndarray:
         volume_cm3 = self.volume * 1e-24  # convert from Å^3 to cm^3
-        hbar_eVs = constants.hbar / constants.e
-        return (2 * np.pi / hbar_eVs * volume_cm3 * self.site_degeneracy * self.W_if ** 2
+        hbar_eVs = constants.hbar / constants.e  # eV s
+        print(2 * np.pi / hbar_eVs * volume_cm3 * self.site_degeneracy
+              * self.W_if_tilde ** 2)
+        return (2 * np.pi / hbar_eVs * volume_cm3 * self.site_degeneracy
+                * self.W_if_tilde ** 2
                 * np.array(self.sommerfeld_parameter)
-                * np.array(self.summed_squared_transition_moment))
+                * np.array(self.total_squared_transition_moment))
 
     def __str__(self):
         header = [["site degeneracy:", f"{self.site_degeneracy}"],
-                  ["volume [Å^3]:", f"{self.volume}"]]
+                  ["volume (Å^3):", f"{self.volume}"],
+                  ["W_if_tilde (eV / (amu$^{0.5}$ Å)):", f"{self.W_if_tilde:.2e}"]]
         result = [tabulate(header, tablefmt="plain")]
 
-        print(type(self.Ts),
-              type(self.summed_squared_transition_moment),
-              type(self.W_if),
-              type(self.capture_rate),
-              type(self.velocities),
-              type(self.cross_sections))
-
-        table = []
-        if self.velocities is not None:
-            columns = ["T [K]", "Transition moment [cm^2]", "W_if", "C [cm^3/s]", "v [cm/s]", "c / v [cm^2]"]
-            for T, transition_moment, W_if, C, v, cross_sec \
-                    in zip(self.Ts,
-                           self.summed_squared_transition_moment,
-                           self.W_if,
-                           self.capture_rate,
-                           self.velocities,
-                           self.cross_sections):
-                table.append([T, transition_moment, W_if, C, v, cross_sec])
-            fmt = [".1f", ".1e", ".1e", ".1e", ".1e", ".1e"]
-        else:
-            columns = ["T [K]", "Transition moment [cm^2]", "W_if", "C [cm^3/s]"]
-            for T, transition_moment, W_if, C, v, cross_sec \
-                    in zip(self.Ts,
-                           self.summed_squared_transition_moment,
-                           self.W_if,
-                           self.capture_rate):
-                table.append([T, transition_moment, W_if, C])
-            fmt = [".1f", ".1e", ".1e", ".1e"]
+        columns = ["T (K)", "Sommerfeld (-)", "Total moment (amu Å^2 / eV)", "C (cm^3/s)"]
+        table = [[T, sommerfeld, total_moment, C] for
+                 T, sommerfeld, total_moment, C,
+                 in zip(self.Ts,
+                        self.sommerfeld_parameter,
+                        self.total_squared_transition_moment,
+                        self.capture_rate)]
+        fmt = [".1f", ".1e", ".1e", ".1e"]
 
         result.append(tabulate(table, headers=columns, tablefmt="plain", floatfmt=fmt))
 

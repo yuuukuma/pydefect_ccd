@@ -17,7 +17,6 @@ from pydefect.analyzer.band_edge_states import BandEdgeStates, \
 from pydefect.analyzer.calc_results import CalcResults
 from pydefect.analyzer.defect_energy import DefectEnergyInfo
 from pydefect.analyzer.defect_structure_info import DefectStructureInfo
-from pydefect.analyzer.unitcell import Unitcell
 from pydefect.cli.main_functions import get_calc_results
 from pydefect.cli.main_tools import parse_dirs
 from pydefect.cli.vasp.make_efnv_correction import make_efnv_correction
@@ -32,11 +31,11 @@ from vise.util.logger import get_logger
 from pydefect_ccd.capture_rate import \
     CaptureRate, CaptureRatePlotter
 from pydefect_ccd.sommerfeld_scaling import SommerfeldScaling
-from pydefect_ccd.transition_moment import calc_summed_squared_transition_moment
+from pydefect_ccd.transition_moment import CalcTotalSquaredTransitionMoment, \
+    PlottedTotalSquaredTransitionMoment
 from pydefect_ccd.ccd import SinglePoint, CcdPlotter, \
     SinglePointSpec, PotentialCurveSpec, PotentialCurve, NoCcdCorrection
 from pydefect_ccd.ccd_init import CcdInit
-from pydefect_ccd.ele_phon_coupling import EPMatrixElement
 from pydefect_ccd.make_ccd import MakeCcd
 from pydefect_ccd.make_e_p_matrix_element import make_e_p_matrix_element
 from pydefect_ccd.plot_eigenvalues import EigenvalPlotter
@@ -44,6 +43,14 @@ from pydefect_ccd.relaxed_point import NearEdgeState, RelaxedPoint
 from pydefect_ccd.util import spin_to_idx
 
 logger = get_logger(__name__)
+
+
+def make_sommerfeld_scaling(args: Namespace):
+    scaling = SommerfeldScaling(epsilon0=args.unitcell.ave_diele,
+                                electron_effective_mass=args.electron_effective_mass,
+                                hole_effective_mass=args.hole_effective_mass,
+                                Ts=args.temperatures)
+    scaling.to_json_file()
 
 
 def _make_near_edge_states(band_edge_orbital_infos: BandEdgeOrbitalInfos,
@@ -159,16 +166,6 @@ user_incar_settings:
 
     ccd_init.to_json_file(json_file)
     logger.info(ccd_init)
-
-def make_sommerfeld_scaling(args: Namespace):
-    range_ = range(args.defect_charge_range[0], args.defect_charge_range[1] + 1)
-    scaling = SommerfeldScaling(dielectric_constant=args.unitcell.ave_diele,
-                                electron_effective_mass=args.unitcell.ave_ele_mass,
-                                hole_effective_mass=args.unitcell.ave_hole_mass,
-                                Ts=args.Ts,
-                                defect_charge_range=range_)
-    scaling.to_json_file()
-
 
 def make_ccd_dirs(args: Namespace):
     os.chdir(args.calc_dir)
@@ -413,30 +410,35 @@ def main_make_e_p_matrix_element(args: Namespace):
         logger.info("e-ph matrix element cannot be calculated.")
 
 
+def make_total_squared_transition_moment(args: Namespace):
+    calc = CalcTotalSquaredTransitionMoment(args.ccd.ground_curve,
+                                            args.ccd.excited_curve,
+                                            args.sommerfeld.Ts)
+    total_moment = calc.harmonic()
+    total_moment.to_json_file()
+    plotter = PlottedTotalSquaredTransitionMoment(total_moment)
+    plotter.plot(plt.gca())
+    plt.savefig("total_squared_transition_moment.pdf")
+
+
 def make_capture_rate(args: Namespace):
     ccd_init: CcdInit = args.ccd_init
+    assert args.total_moment.Ts == args.sommerfeld.Ts
 
-    i_min_info = ccd_init.relaxed_point_from_charge(args.ccd.excited_curve.charge)
-    f_min_info = ccd_init.relaxed_point_from_charge(args.ccd.ground_curve.charge)
-    i_deg = i_min_info.degeneracy_by_symmetry_reduction
-    f_deg = f_min_info.degeneracy_by_symmetry_reduction
-
-    summed_squared_transition_moment \
-        = calc_summed_squared_transition_moment(args.ccd.excited_curve,
-                                                args.ccd.ground_curve,
-                                                args.e_p_coupling.T)
+    # if args.degeneracy is None:
+    #     f_min_info = ccd_init.relaxed_point_from_charge(args.ccd.ground_curve.charge)
+    #     args.degeneracy = f_min_info.degeneracy_by_symmetry_reduction
 
     carrier = args.ccd.captured_carrier
-    em = ccd_init.effective_mass(carrier)
-    velocities = thermal_velocity(np.array(args.e_p_coupling.T), em)
     # spin_factor = 0.5 if i_min_info.is_spin_polarized else 1.0
 
-    cap_rate = CaptureRate(args.e_p_coupling.T,
-                           args.e_p_coupling.W_if,
-                           summed_squared_transition_moment,
-                           volume=ccd_init.volume,
-                           velocities=list(velocities),
-                           site_degeneracy=f_deg / i_deg)
+
+    cap_rate = CaptureRate(args.total_moment.Ts,
+                           ccd_init.volume,
+                           args.sommerfeld.scaling(carrier, args.ccd.excited_curve.charge),
+                           args.e_p_matrix_element.W_if_tilde,
+                           args.total_moment.total_moments,
+                           site_degeneracy=args.degeneracy)
     cap_rate.to_json_file()
     plotter = CaptureRatePlotter(cap_rate, plt)
     plotter.construct_plot()

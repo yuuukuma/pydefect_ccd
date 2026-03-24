@@ -15,7 +15,7 @@ from pydefect_ccd.cli.main_function import (
     make_ccd_init, make_ccd, make_ccd_dirs, plot_eigenvalues,
     make_wswq_dirs, main_make_e_p_matrix_element, make_capture_rate,
     make_ccd_corrections, plot_ccd, make_single_points,
-    make_potential_curve, make_e_p_coupling
+    make_potential_curve, make_sommerfeld_scaling, make_total_squared_transition_moment
 )
 from pydefect_ccd.version import __version__
 
@@ -71,6 +71,24 @@ def parse_args_main(args):
         default="potential_curve_spec.json",
         help="potential_curve_spec.json file."
     )
+
+    # -- make-sommerfeld-scaling -----------------------------------
+    parser_make_sommerfeld_scaling  = subparsers.add_parser(
+        name="make-sommerfeld-scaling",
+        description="Calculate sommerfeld scaling parameters and make its file.",
+        parents=[unitcell_parser],
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        aliases=["mss"],
+    )
+    parser_make_sommerfeld_scaling.add_argument(
+       "--electron-effective-mass", "-eem", type=float, required=True)
+    parser_make_sommerfeld_scaling.add_argument(
+        "--hole-effective-mass", "-hem", type=float, required=True)
+    parser_make_sommerfeld_scaling.add_argument(
+        "-Ts", "--temperatures", type=float, nargs="+",
+        default=[T for T in range(100, 510, 10)],
+        help="Temperatures for sommerfeld scaling in K.")
+    parser_make_sommerfeld_scaling.set_defaults(func=make_sommerfeld_scaling)
 
     # -- make-ccd-init -----------------------------------
     parser_make_ccd_init = subparsers.add_parser(
@@ -192,13 +210,25 @@ def parse_args_main(args):
         name="plot-ccd",
         description="Plot configuration coordinate diagram from ccd.json.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        aliases=["pccd"],   # ←体系化。短さ優先なら ["pc"] に戻してOK
+        aliases=["pccd"],
     )
     parser_plot_ccd.add_argument("--ccd", type=loadfn, default="ccd.json")
     parser_plot_ccd.add_argument("--fig-name", type=str, default="ccd.pdf")
     parser_plot_ccd.add_argument("--ground-q-range", type=float, nargs="+")
     parser_plot_ccd.add_argument("--excited-q-range", type=float, nargs="+")
     parser_plot_ccd.set_defaults(func=plot_ccd)
+
+    # -- make-total_squared_transition_moment --------------------------------
+    parser_make_total_moment = subparsers.add_parser(
+        name="make-total-squared-transition-moment",
+        description="Make total_squared_transition_moment.json.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        aliases=["mm"],
+    )
+    parser_make_total_moment.add_argument("--ccd", type=loadfn, default="ccd.json")
+    parser_make_total_moment.add_argument("--sommerfeld", "-s", type=loadfn, default="sommerfeld.json")
+
+    parser_make_total_moment.set_defaults(func=make_total_squared_transition_moment)
 
     # -- plot-eigenvalues ---------------------------------
     parser_plot_eigenvalues = subparsers.add_parser(
@@ -230,7 +260,7 @@ def parse_args_main(args):
     )
     parser_make_wswq_dirs.set_defaults(func=make_wswq_dirs)
 
-    # -- make-e-p-matrix-element --------------------------
+    # -- make-e_p_matrix_element --------------------------
     parser_make_e_p_matrix_element = subparsers.add_parser(
         name="make-e_p_matrix_element",
         description="Make a file for electron-phonon matrix elements.",
@@ -252,25 +282,6 @@ def parse_args_main(args):
     )
     parser_make_e_p_matrix_element.set_defaults(func=main_make_e_p_matrix_element)
 
-    # -- make-e-p-coupling --------------------------------
-    parser_make_e_p_coupling = subparsers.add_parser(
-        name="make-e_p_coupling",
-        description="Make electron-phonon coupling constant file.",
-        parents=[ccd_init],
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        aliases=["mepc"],
-    )
-    parser_make_e_p_coupling.add_argument(
-        "--e_p_matrix_elems", type=loadfn, required=True, nargs="+",
-        help="e_p_matrix_element_XXX.json filenames."
-    )
-    parser_make_e_p_coupling.add_argument(
-        "-T", "--temperatures", type=float, nargs="+",
-        default=[t * 20 for t in range(2, 51)],
-        help="Temperatures for calculating capture rates in K."
-    )
-    parser_make_e_p_coupling.set_defaults(func=make_e_p_coupling)
-
     # -- make-capture-rate --------------------------------
     parser_make_capture_rate = subparsers.add_parser(
         name="make-capture-rate",
@@ -280,7 +291,21 @@ def parse_args_main(args):
         aliases=["mcr"],
     )
     parser_make_capture_rate.add_argument(
-        "--e_p_coupling", type=loadfn, required=True
+        "--sommerfeld", "-s", type=loadfn, required=True,
+        help="sommerfeld.json file.")
+
+    parser_make_capture_rate.add_argument(
+        "--e_p_matrix_element", "-epme", type=loadfn, required=True,
+        help="e_p_matrix_element.json file.")
+
+    parser_make_capture_rate.add_argument(
+        "--total_moment", "-tm", type=loadfn, required=True,
+        help="total_squared_transition_moment.json file.")
+
+    parser_make_capture_rate.add_argument(
+        "--degeneracy", "-d", type=int, default=1,
+        # help="If this is not given, the degeneracy is determined from the final site "
+        #      "symmetry. "
     )
     parser_make_capture_rate.set_defaults(func=make_capture_rate)
 
