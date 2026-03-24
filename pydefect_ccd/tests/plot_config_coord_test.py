@@ -5,7 +5,7 @@ import pytest
 
 from pydefect_ccd.ccd import (Ccd, SinglePoint, CcdPlotter,
                               PotentialCurve)
-from pydefect_ccd.enum import Carrier
+from pydefect_ccd.local_enum import Carrier
 
 
 @pytest.fixture

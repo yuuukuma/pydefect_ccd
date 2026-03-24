@@ -19,7 +19,7 @@ from vise.util.mix_in import ToJsonFileMixIn
 
 from nonrad.constants import AMU2KG, ANGS2M, EV2J, HBAR
 
-from pydefect_ccd.enum import Carrier
+from pydefect_ccd.local_enum import Carrier
 from pydefect_ccd.relaxed_point import NearEdgeState, \
     _joined_local_orbital_info, \
     OrbitalInfoMixIn

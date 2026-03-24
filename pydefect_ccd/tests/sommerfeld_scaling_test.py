@@ -4,7 +4,7 @@
 import pytest
 from matplotlib import pyplot as plt
 
-from pydefect_ccd.enum import Carrier
+from pydefect_ccd.local_enum import Carrier
 from pydefect_ccd.sommerfeld_scaling import SommerfeldScaling
 
 

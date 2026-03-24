@@ -8,7 +8,7 @@ from tabulate import tabulate
 from vise.util.logger import get_logger
 from vise.util.mix_in import ToJsonFileMixIn
 
-from pydefect_ccd.enum import Carrier
+from pydefect_ccd.local_enum import Carrier
 from pydefect_ccd.relaxed_point import _joined_local_orbital_info, RelaxedPoint
 from pydefect_ccd.util import get_dR, get_dQ
 

@@ -9,7 +9,7 @@ from vise.tests.helpers.assertion import assert_dataclass_almost_equal
 
 from pydefect_ccd.ccd import Ccd, SinglePoint, PotentialCurve, spline3, \
     SinglePointSpec, PotentialCurveSpec, dQ_revert, calc_omega_and_Q0
-from pydefect_ccd.enum import Carrier
+from pydefect_ccd.local_enum import Carrier
 
 
 @pytest.fixture

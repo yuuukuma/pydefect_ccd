@@ -8,7 +8,7 @@ import numpy as np
 from nonrad.scaling import sommerfeld_parameter
 from vise.util.mix_in import ToJsonFileMixIn
 
-from pydefect_ccd.enum import Carrier
+from pydefect_ccd.local_enum import Carrier
 
 Key = Tuple[str, int]  # ("e" or "h", defect_charge)
 

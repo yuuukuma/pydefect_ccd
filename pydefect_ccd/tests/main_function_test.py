@@ -15,7 +15,7 @@ from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.cli.main_function import make_ccd_init, make_ccd, plot_ccd, \
     make_ccd_dirs, make_wswq_dirs, plot_eigenvalues, main_make_e_p_matrix_element
 from pydefect_ccd.e_p_matrix_element import EPMatrixElement
-from pydefect_ccd.enum import Carrier
+from pydefect_ccd.local_enum import Carrier
 from pydefect_ccd.relaxed_point import NearEdgeState, RelaxedPoint
 
 
