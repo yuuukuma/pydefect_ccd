@@ -46,8 +46,13 @@ You can always check the json files using the `pydefect_print` command in pydefe
 
 2. We next construct the directories for CCD calculations.
 ```bash
-pydefect_ccd make-ccd-dirs --ccd_hnit ccd_init.json 
+pydefect_ccd make-ccd-dirs --ccd_init ccd_init.json 
 ```
+To fully construct the VASP input files, we may also use vise as follows.
+```bash
+vise vs -d disp_* -t defect
+```
+
 
 3. After finishing the VASP calculations in each directory, 
 run the following commands to generate the pydefect `calc_results.json`, 
@@ -57,9 +62,13 @@ in each directory.
 pydefect_vasp cr -d disp*
 pydefect_vasp beoi -d disp_* -pbes ../../../perfect/perfect_band_edge_state.json --no_participation_ratio
 pydefect bes -d disp_* -pbes ../../../perfect/perfect_band_edge_state.json
-````
+```
 It is important to add the `--no_participation_ratio` option to avoid errors
 because the defect_structure_info.json file is not created in these directories.
+In addition, the following line needs to be added to the pydefct.yaml file in the ccd calculation directory.
+```bash
+similar_orb_criterion: 1.0
+```
 
 4. We can also evaluate the corrections for the CCD calculations.
 The details are written in 
@@ -96,8 +105,14 @@ Now the following figure is obtained.
 After checking the configuration coordinate diagram,
 we can add more single point calculations, for  example, as follows.
 ```bash
-pydefect_ccd cd --ccd_init ccd_init.json -fsr 1.2 1.4 -sfr -0.4
+pydefect_ccd mcdir --ccd_init ccd_init.json -fsr 1.2 1.4 -sfr -0.4
 ```
+Here, --first-to-second-div-ratios (-fsr) and --second-to-first-div-ratios (-sfr) are 
+the internal and external division structural points 
+expressed in fractional form.
+For example, -fsr 1.2 means that the point for the first charge 
+is located 20% outside the second point along the line connecting the two equilibrium geometries.
+
 Then, iterate steps 3 to 8 again.
 
 9. We can also plot the eigenvalues along the configuration coordinate using the following command.
