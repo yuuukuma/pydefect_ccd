@@ -124,17 +124,15 @@ def parse_args_main(args):
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=["mcdir"],
     )
-    default_disps = [-0.2,
-                     -0.1, -0.08, -0.06, -0.04, -0.02, 0.0, 0.02, 0.04, 0.06, 0.08, 0.1,
-                     0.2, 0.4, 0.6, 0.8, 1.0]
+
     parser_add_ccd_dirs.add_argument(
         "-fsr", "--first-to-second-div-ratios", type=float, nargs="+",
-        default=default_disps,
+        default=[],
         help="Dividing ratios from first to second charge state structures."
     )
     parser_add_ccd_dirs.add_argument(
         "-sfr", "--second-to-first-div-ratios", type=float, nargs="+",
-        default=default_disps,
+        default=[],
         help="Dividing ratios from second to first charge state structures."
     )
     parser_add_ccd_dirs.add_argument(

@@ -167,6 +167,7 @@ user_incar_settings:
     ccd_init.to_json_file(json_file)
     logger.info(ccd_init)
 
+default_disps = [-0.2, -0.1, -0.08, -0.06, -0.04, -0.02, 0.0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0]
 def make_ccd_dirs(args: Namespace):
     os.chdir(args.calc_dir)
     s1 = args.ccd_init.relaxed_points[0].structure

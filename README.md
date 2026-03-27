@@ -46,8 +46,15 @@ You can always check the json files using the `pydefect_print` command in pydefe
 
 2. We next construct the directories for CCD calculations.
 ```bash
-pydefect_ccd make-ccd-dirs --ccd_init ccd_init.json 
+pydefect_ccd make-ccd-dirs --ccd_init ccd_init.json -fsr -0.1 -0.05 -0.02 0.0 0.02 0.05 0.1 0.2 -sfr -0.1 -0.05 -0.02 0.0 0.02 0.05 0.1 0.2
+
 ```
+Here, --first-to-second-div-ratios (-fsr) and --second-to-first-div-ratios (-sfr) are
+the internal and external division structural points
+expressed in fractional form.
+For example, -fsr 1.2 means that the point for the first charge
+is located 20% outside the second point along the line connecting the two equilibrium geometries.
+
 To fully construct the VASP input files, we may also use vise as follows.
 ```bash
 vise vs -d disp_* -t defect
@@ -107,12 +114,6 @@ we can add more single point calculations, for  example, as follows.
 ```bash
 pydefect_ccd mcdir --ccd_init ccd_init.json -fsr 1.2 1.4 -sfr -0.4
 ```
-Here, --first-to-second-div-ratios (-fsr) and --second-to-first-div-ratios (-sfr) are 
-the internal and external division structural points 
-expressed in fractional form.
-For example, -fsr 1.2 means that the point for the first charge 
-is located 20% outside the second point along the line connecting the two equilibrium geometries.
-
 Then, iterate steps 3 to 8 again.
 
 9. We can also plot the eigenvalues along the configuration coordinate using the following command.
