@@ -72,6 +72,10 @@ def parse_args_main(args):
         help="potential_curve_spec.json file."
     )
 
+    sommerfeld_scaling = argparse.ArgumentParser(add_help=False)
+    sommerfeld_scaling.add_argument("--sommerfeld", "-s", type=loadfn, required=True,
+                                    help="sommerfeld_scaling.json file.")
+
     # -- make-sommerfeld-scaling -----------------------------------
     parser_make_sommerfeld_scaling  = subparsers.add_parser(
         name="make-sommerfeld-scaling",
@@ -219,13 +223,12 @@ def parse_args_main(args):
     # -- make-total_squared_transition_moment --------------------------------
     parser_make_total_moment = subparsers.add_parser(
         name="make-total-squared-transition-moment",
+        parents=[sommerfeld_scaling],
         description="Make total_squared_transition_moment.json.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=["mm"],
     )
     parser_make_total_moment.add_argument("--ccd", type=loadfn, default="ccd.json")
-    parser_make_total_moment.add_argument("--sommerfeld", "-s", type=loadfn, default="sommerfeld.json")
-
     parser_make_total_moment.set_defaults(func=make_total_squared_transition_moment)
 
     # -- plot-eigenvalues ---------------------------------
@@ -284,14 +287,10 @@ def parse_args_main(args):
     parser_make_capture_rate = subparsers.add_parser(
         name="make-capture-rate",
         description="Make capture_rate.json.",
-        parents=[ccd_init, ccd],
+        parents=[ccd_init, ccd, sommerfeld_scaling],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=["mcr"],
     )
-    parser_make_capture_rate.add_argument(
-        "--sommerfeld", "-s", type=loadfn, required=True,
-        help="sommerfeld.json file.")
-
     parser_make_capture_rate.add_argument(
         "--e_p_matrix_element", "-epme", type=loadfn, required=True,
         help="e_p_matrix_element.json file.")

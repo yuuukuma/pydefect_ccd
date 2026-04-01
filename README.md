@@ -116,7 +116,12 @@ pydefect_ccd mcdir --ccd_init ccd_init.json -fsr 1.2 1.4 -sfr -0.4
 ```
 Then, iterate steps 3 to 8 again.
 
-9. We can also plot the eigenvalues along the configuration coordinate using the following command.
+9. We can also evaluate the total squared transition moment between two potential curves using the following command.
+```bash
+pydefect_ccd make-total-squared-transition-moment --ccd ccd.json -s ../sommerfeld_scaling.json
+```
+
+10. We can also plot the eigenvalues along the configuration coordinate using the following command.
 ```bash
 pydefect_ccd plot-eigenvalues --ccd_init ../ccd_init.json -d disp_*
 ```
@@ -124,26 +129,22 @@ Now the following figure is obtained.
 ![eigenvalues_q_-1.png](readme_figs/eigenvalues_q_-1.png)
 ![eigenvalues_q_0.png](readme_figs/eigenvalues_q_0.png)
 
-10. 
+11. 
 ```bash
 pydefect_ccd make-wswq-dirs --ccd_init ../ccd_init.json --dirs disp_{-0.2,-0.1,0.0,0.1,0.2}
 ```
 Under the static approximation, we can evaluate the electron-phonon coupling constant
 near the equilibrium geometry.
 
-11. 
+12. We calculate the electron-phonon matrix element using the following command.
 ```bash
 pydefect_ccd make-e_p_matrix_element --potential_curve potential_curve.json --band_edge_index 599 --defect_band_index 600 --spin down --dirs disp_{-0.2,-0.1,0.0,0.1,0.2}
 ```
 
-12.
-```bash
-pydefect_ccd make-e_p_coupling --ccd_init ccd_init.json --e_p_matrix_elem q_0/e_p_matrix_element_b599_d600_-1.json
-```
 
-13. 
+13. The capture rate can be calculated using the following command.
 ```bash
-pydefect_ccd make-capture-rate --e_p_coupling e_p_coupling.json
+pydefect_ccd make-capture-rate --ccd_init ccd_init.json --ccd ccd.json -epme q_0/e_p_matrix_element_b599_d600_-1.json --total_moment total_squared_transition_moment.json -s ../sommerfeld_scaling.json
 ```
 
 Citing pydefect_ccd
