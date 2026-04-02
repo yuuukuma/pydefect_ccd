@@ -7,6 +7,7 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 from monty.json import MSONable
+from nonrad.constants import AMU2KG, ANGS2M, EV2J, HBAR
 from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from pydefect.corrections.abstract_correction import Correction
 from pymatgen.electronic_structure.core import Spin
@@ -16,8 +17,6 @@ from tabulate import tabulate
 from vise.util.logger import get_logger
 from vise.util.matplotlib import float_to_int_formatter
 from vise.util.mix_in import ToJsonFileMixIn
-
-from nonrad.constants import AMU2KG, ANGS2M, EV2J, HBAR
 
 from pydefect_ccd.local_enum import Carrier
 from pydefect_ccd.relaxed_point import NearEdgeState, \
@@ -130,6 +129,32 @@ class QuadraticCurve(MSONable, Curve):
             f += (", " + f"disp_ratio_range=({self.disp_ratio_range[0]:.3f}, "
                 f"{self.disp_ratio_range[1]:.3f})")
         return f
+
+    def coefficients(self) -> Tuple[float, float, float]:
+        """Return coefficients (a, b, c) of aQ^2 + bQ + c."""
+        a = 0.5 * self.omega ** 2
+        b = - self.omega ** 2 * self.Q0
+        c = 0.5 * self.omega ** 2 * self.Q0 ** 2 + self.dE
+        return a, b, c
+
+    def intersections(self, other: "QuadraticCurve") -> List[Tuple[float, float]]:
+        """Return intersection points as [(Q, energy), ...]."""
+        a1, b1, c1 = self.coefficients()
+        a2, b2, c2 = other.coefficients()
+
+        a = a1 - a2
+        b = b1 - b2
+        c = c1 - c2
+
+        roots = np.roots([a, b, c])
+        result = []
+
+        for root in roots:
+            if np.isclose(root.imag, 0.0):
+                q = float(root.real)
+                result.append((q, float(self(q))))
+        result.sort(key=lambda x: x[0])
+        return result
 
 
 @dataclass
@@ -315,12 +340,36 @@ class Ccd(MSONable, ToJsonFileMixIn):
         carrier_charge = self.ground_curve.charge - self.excited_curve.charge
         return Carrier.from_carrier_charge(carrier_charge)
 
+    def intersections(self) -> List[Tuple[float, float]]:
+        ground = self.ground_curve.fitted_curve
+        excited = self.excited_curve.fitted_curve
+
+        if ground is None or excited is None:
+            raise ValueError("Both ground and excited fitted_curve must exist.")
+        if not isinstance(ground, QuadraticCurve) or not isinstance(excited, QuadraticCurve):
+            raise TypeError("Both fitted_curve objects must be QuadraticCurve now.")
+
+        return ground.intersections(excited)
+
+    @property
+    def crossing_points(self) -> List[Tuple[float, float]]:
+        return self.intersections()
+
     def __str__(self):
-        return (f"name: {self.name}\n"
-                + "excited" + "-" * 50 + "\n"
-                + str(self.excited_curve) + "\n"
-                + "ground" + "-" * 50 + "\n"
-                + str(self.ground_curve))
+        result = [f"name: {self.name}",
+                  "excited" + "-" * 50, str(self.excited_curve),
+                  "ground" + "-" * 50, str(self.ground_curve),
+                  "intersections" + "-" * 45]
+
+        try:
+            for q, energy in self.intersections():
+
+                result.append(f"Q={q:.3f}, Energy={energy:.3f}")
+        except (ValueError, TypeError):
+            result.append("No intersections")
+            pass
+
+        return "\n".join(result)
 
 
 def spline3(xs, ys, num_points, xrange=None):
