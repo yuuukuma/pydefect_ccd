@@ -13,7 +13,7 @@ def test_json_roundtrip(ccd_init, tmpdir):
 
 def test_dQ(ccd_init):
     expected = sqrt((0.1*10)**2*6 * Element.H.atomic_mass)
-    assert ccd_init.dQ == pytest.approx(expected)
+    assert ccd_init.Q == pytest.approx(expected)
 
 
 def test_dR(ccd_init):

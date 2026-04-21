@@ -55,8 +55,6 @@ class OrbitalInfoMixIn(MSONable):
     """Mix-in class that stores information for a fixed structural point.
 
     Indices for orbitals and bands are organized as [spin][band].
-    Attributes:
-        energy: Bare energy obtained from DFT calculations.
     """
     magnetization: float
     localized_orbitals: Optional[List[List[LocalizedOrbital]]] = field(default=None)

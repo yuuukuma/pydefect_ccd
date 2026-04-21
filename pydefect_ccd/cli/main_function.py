@@ -33,8 +33,10 @@ from pydefect_ccd.capture_rate import \
 from pydefect_ccd.sommerfeld_scaling import SommerfeldScaling
 from pydefect_ccd.transition_moment import CalcTotalSquaredTransitionMoment, \
     PlottedTotalSquaredTransitionMoment
-from pydefect_ccd.ccd import SinglePoint, CcdPlotter, \
-    SinglePointSpec, PotentialCurveSpec, PotentialCurve, NoCcdCorrection
+from pydefect_ccd.ccd import CcdPlotter, \
+    NoCcdCorrection
+from pydefect_ccd.potential_curve import SinglePointSpec, SinglePoint, \
+    PotentialCurveSpec, PotentialCurve
 from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.make_ccd import MakeCcd
 from pydefect_ccd.make_e_p_matrix_element import make_e_p_matrix_element
@@ -178,7 +180,7 @@ def make_ccd_dirs(args: Namespace):
     rp1 = args.ccd_init.relaxed_points[0]
     rp2 = args.ccd_init.relaxed_points[1]
 
-    Q_diff = args.ccd_init.dQ
+    Q_diff = args.ccd_init.Q
 
     for ratios, structures, rp_i, rp_f \
             in zip([args.first_to_second_div_ratios,
@@ -195,7 +197,7 @@ def make_ccd_dirs(args: Namespace):
                 rp_i.charge, rp_i.correction_energy, rp_f.charge, Q_diff)
             spec.to_json_file(spec_file)
 
-        dQs = [args.ccd_init.dQ * r for r in ratios]
+        dQs = [args.ccd_init.Q * r for r in ratios]
         for ratio, structure, dQ in zip(ratios, structures, dQs):
             _make_ccd_dir(rp_i.charge, ratio, structure, dQ)
             if ratio == 0.0:
@@ -212,7 +214,7 @@ def _make_ccd_dir(charge: int, ratio: float, structure: Structure, dQ: float):
         structure.to(filename=str(dir_ / "POSCAR"))
         (dir_ / "prior_info.yaml").write_text(
             yaml.dump({"charge": charge}), None)
-        single_point_spec = SinglePointSpec(dQ=dQ, disp_ratio=ratio)
+        single_point_spec = SinglePointSpec(Q=dQ, disp_ratio=ratio)
         single_point_spec.to_json_file(dir_ / "single_point_spec.json")
 
     except FileExistsError:
@@ -382,7 +384,7 @@ def main_make_e_p_matrix_element(args: Namespace):
         band_index = tuple(sorted((args.band_edge_index, args.defect_band_index)))
 
         single_point: SinglePoint = loadfn(d / "single_point.json")
-        dQs.append(single_point.dQ)
+        dQs.append(single_point.Q)
         wswqs.append(WSWQ[spin_kpt_index][band_index])
 
         if single_point.disp_ratio == 0.0:

@@ -6,7 +6,8 @@ from pathlib import Path
 from pydefect.analyzer.band_edge_states import PerfectBandEdgeState
 from vise.analyzer.effective_mass import EffectiveMass
 
-from pydefect_ccd.ccd import Ccd, PotentialCurve
+from pydefect_ccd.ccd import Ccd
+from pydefect_ccd.potential_curve import PotentialCurve
 from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.cli.main import parse_args_main
 from pydefect_ccd.cli.main_function import make_ccd, plot_eigenvalues

@@ -4,7 +4,8 @@ from copy import deepcopy
 
 from vise.util.logger import get_logger
 
-from pydefect_ccd.ccd import PotentialCurve, Ccd, dQ_revert
+from pydefect_ccd.ccd import Ccd, dQ_revert
+from pydefect_ccd.potential_curve import PotentialCurve
 from pydefect_ccd.local_enum import Carrier
 
 logger = get_logger(__name__)

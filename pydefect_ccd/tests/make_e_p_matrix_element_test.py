@@ -5,7 +5,7 @@ import pytest
 from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from pymatgen.electronic_structure.core import Spin
 
-from pydefect_ccd.ccd import SinglePoint, SinglePointSpec
+from pydefect_ccd.potential_curve import SinglePointSpec, SinglePoint
 from pydefect_ccd.e_p_matrix_element import EPMatrixElement
 from pydefect_ccd.make_e_p_matrix_element import make_e_p_matrix_element
 from pydefect_ccd.relaxed_point import NearEdgeState
@@ -28,7 +28,7 @@ def single_point():
                         eigenvalue=1.0,
                         occupation=1.0)
 
-    return SinglePoint(SinglePointSpec(dQ=1.0, disp_ratio=0.0),
+    return SinglePoint(SinglePointSpec(Q=1.0, disp_ratio=0.0),
                        energy=10.0,
                        magnetization=-1.0,
                        localized_orbitals=[[l_orb_lower, l_orb_upper], []],

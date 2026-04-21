@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 #  Copyright (c) 2022 Kumagai group.
 
-from pydefect_ccd.ccd import Ccd, PotentialCurveSpec, SinglePointSpec, \
-    SinglePoint, PotentialCurve
+from pydefect_ccd.ccd import Ccd
+from pydefect_ccd.potential_curve import SinglePointSpec, SinglePoint, \
+    PotentialCurveSpec, PotentialCurve
 from pydefect_ccd.make_ccd import MakeCcd
 
 band_edges = dict(vbm=1.0, cbm=3.0, supercell_vbm=1.1, supercell_cbm=2.9)
@@ -17,21 +18,21 @@ def test_make_ccd(excited_structure, ground_structure):
                                       counter_charge=0, Q_diff=5.0)
 
     ground_single_points = [
-        SinglePoint(SinglePointSpec(dQ=0.0, disp_ratio=0.0),
+        SinglePoint(SinglePointSpec(Q=0.0, disp_ratio=0.0),
                     energy=0.0,
                     magnetization=0.0,
                     ccd_correction_energy=0.0),
-        SinglePoint(SinglePointSpec(dQ=2.5, disp_ratio=0.5),
+        SinglePoint(SinglePointSpec(Q=2.5, disp_ratio=0.5),
                     energy=10.0,
                     magnetization=0.0,
                     ccd_correction_energy=10.0)
     ]
     excited_single_points = [
-        SinglePoint(SinglePointSpec(dQ=0.0, disp_ratio=0.0),
+        SinglePoint(SinglePointSpec(Q=0.0, disp_ratio=0.0),
                     energy=3.0,
                     magnetization=1.0,
                     ccd_correction_energy=0.0),
-        SinglePoint(SinglePointSpec(dQ=2.5, disp_ratio=0.5),
+        SinglePoint(SinglePointSpec(Q=2.5, disp_ratio=0.5),
                     energy=13.0,
                     magnetization=1.0,
                     ccd_correction_energy=10.0)
@@ -46,11 +47,11 @@ def test_make_ccd(excited_structure, ground_structure):
     expected_ground_curve = PotentialCurve(
         ground_spec,
         [
-            SinglePoint(SinglePointSpec(dQ=0.0, disp_ratio=0.0),
+            SinglePoint(SinglePointSpec(Q=0.0, disp_ratio=0.0),
                         energy=0.0,
                         magnetization=0.0,
                         ccd_correction_energy=0.0),
-            SinglePoint(SinglePointSpec(dQ=2.5, disp_ratio=0.5),
+            SinglePoint(SinglePointSpec(Q=2.5, disp_ratio=0.5),
                         energy=10.0,
                         magnetization=0.0,
                         ccd_correction_energy=10.0)
@@ -60,11 +61,11 @@ def test_make_ccd(excited_structure, ground_structure):
     expected_excited_curve = PotentialCurve(
         excited_spec,
         [
-            SinglePoint(SinglePointSpec(dQ=5.0, disp_ratio=1.0),
+            SinglePoint(SinglePointSpec(Q=5.0, disp_ratio=1.0),
                         energy=3.0,
                         magnetization=1.0,
                         ccd_correction_energy=0.0),
-            SinglePoint(SinglePointSpec(dQ=2.5, disp_ratio=0.5),
+            SinglePoint(SinglePointSpec(Q=2.5, disp_ratio=0.5),
                         energy=13.0,
                         magnetization=1.0,
                         ccd_correction_energy=10.0)

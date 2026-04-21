@@ -10,7 +10,7 @@ from pymatgen.electronic_structure.core import Spin
 from vise.input_set.incar import ViseIncar
 from vise.input_set.prior_info import PriorInfo
 
-from pydefect_ccd.ccd import SinglePointSpec, PotentialCurveSpec
+from pydefect_ccd.potential_curve import SinglePointSpec, PotentialCurveSpec
 from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.cli.main_function import make_ccd_init, make_ccd, plot_ccd, \
     make_ccd_dirs, make_wswq_dirs, plot_eigenvalues, main_make_e_p_matrix_element
@@ -105,11 +105,11 @@ def test_make_ccd_dirs(tmpdir, ground_structure, excited_structure,
     # dQ / 2 =1.2295974951178128
     actual = loadfn("q_1/disp_0.5/single_point_spec.json")
     dQ = 2.4591949902356256
-    expected = SinglePointSpec(dQ=dQ/2, disp_ratio=0.5)
+    expected = SinglePointSpec(Q=dQ / 2, disp_ratio=0.5)
     assert actual == expected
 
     actual = loadfn("q_0/disp_0.0/single_point_spec.json")
-    expected = SinglePointSpec(dQ=0.0, disp_ratio=0.0)
+    expected = SinglePointSpec(Q=0.0, disp_ratio=0.0)
     assert actual == expected
 
     actual = Structure.from_file("q_1/disp_1.0/POSCAR")

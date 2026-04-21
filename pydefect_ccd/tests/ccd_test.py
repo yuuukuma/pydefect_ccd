@@ -7,8 +7,11 @@ import pytest
 from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from vise.tests.helpers.assertion import assert_dataclass_almost_equal
 
-from pydefect_ccd.ccd import Ccd, SinglePoint, PotentialCurve, spline3, \
-    SinglePointSpec, PotentialCurveSpec, dQ_revert, calc_omega_and_Q0
+from pydefect_ccd.ccd import Ccd, spline3, \
+    dQ_revert, calc_omega_and_Q0
+from pydefect_ccd.potential_curve import SinglePointSpec, SinglePoint, \
+    PotentialCurveSpec, PotentialCurve
+from pydefect_ccd.fitting_curve import QuadraticFittingCurve, intersections
 from pydefect_ccd.local_enum import Carrier
 
 
@@ -19,11 +22,10 @@ def single_point():
                                 occupation=1.0,
                                 orbitals={"O": [0.0, 1.0, 0.0]})
 
-    return SinglePoint(SinglePointSpec(dQ=1.0, disp_ratio=0.1),
-                       energy=10.0,
+    return SinglePoint(energy=10.0,
+                       spec=SinglePointSpec(Q=1.0, disp_ratio=0.1),
                        magnetization=1.0,
                        localized_orbitals=[[orb_info]],
-                       valence_bands=None,
                        ccd_correction_energy=1.0,
                        is_shallow=True)
 
@@ -32,10 +34,11 @@ def test_single_point_info_corrected_energy(single_point):
     assert single_point.ccd_corrected_energy == 10.0 + 1.0
 
 
-def test_image_structure_str(single_point):
+def test_single_point_str(single_point):
     actual = single_point.__str__()
-    expected = """  corr. energy  is shallow?    localized orb
-        11.000  True           up-2(1.0)"""
+    print(actual)
+    expected = """  disp ratio    corrected energy  is shallow?    localized orb
+       0.100              11.000  True           up-2(1.0)"""
     assert actual == expected
 
 
@@ -47,7 +50,7 @@ def potential_curve(single_point):
                               Q_diff=10.0)
 
     return PotentialCurve(spec=spec,
-                          single_points=[single_point],
+                          original_single_points=[single_point],
                           shifted_energy=3.0)
 
 
@@ -65,10 +68,10 @@ def test_potential_curve_dQs_and_energies_w_range(potential_curve):
     assert np.array(actual) == pytest.approx(np.array(expected))
 
 
-def test_dQ_reverted_single_ccd(potential_curve):
+def test_dQ_reverted(potential_curve):
     actual = dQ_revert(potential_curve)
     expected = deepcopy(potential_curve)
-    expected.single_points[0].spec = SinglePointSpec(dQ=9.0, disp_ratio=0.9)
+    expected.original_single_points[0].spec = SinglePointSpec(Q=9.0, disp_ratio=0.9)
     assert_dataclass_almost_equal(actual, expected)
 
 
@@ -79,7 +82,7 @@ def potential_curve_final():
                               counter_charge=0,
                               Q_diff=10.0)
     return PotentialCurve(spec=spec,
-                          single_points=[],
+                          original_single_points=[],
                           shifted_energy=0.0)
 
 
@@ -123,6 +126,33 @@ def test_calc_omega_and_Q0_variable_Q0():
     assert pytest.approx(1.0, abs=1e-6) == omega
     assert pytest.approx(0.0, abs=1e-6) == Q0
     assert pytest.approx(0.0, abs=1e-6) == dE
+
+
+def test_poly_intersections():
+    # intersections of y=x and y=x^2 on [0, 1.5] are at x=0 and x=1
+    c1 = lambda x: np.asarray(x)
+    c2 = lambda x: np.asarray(x) ** 2
+
+    roots = intersections(c1, c2, [0.0, 1.5], ngrids=301)
+    qs = [r for r, _ in roots]
+
+    assert len(roots) == 2
+    assert pytest.approx(0.0, abs=1e-6) == qs[0]
+    assert pytest.approx(1.0, abs=1e-6) == qs[1]
+
+    # energies returned should match c1(q) (i.e., q)
+    assert pytest.approx(0.0, abs=1e-6) == roots[0][1]
+    assert pytest.approx(1.0, abs=1e-6) == roots[1][1]
+
+
+def test_intersections_no_cross():
+    # Two identical-shape quadratics shifted in energy (no crossing in the range)
+    c1 = QuadraticFittingCurve(omega=1.0, Q0=0.0, dE=0.0, disp_ratio_range=None)
+    c2 = QuadraticFittingCurve(omega=1.0, Q0=0.0, dE=5.0, disp_ratio_range=None)
+
+    res = intersections(c1, c2, Q_range=[-1.0, 1.0], ngrids=1001)
+    assert res == []
+
 
 # def test_plot_ccd(ccd):
 #     spec = PotentialCurveSpec(charge=0,

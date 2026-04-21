@@ -11,10 +11,8 @@ from scipy.constants import constants, physical_constants
 from tabulate import tabulate
 from vise.util.mix_in import ToJsonFileMixIn
 
-from pydefect_ccd.ccd import Ccd, QuadraticCurve
-
-
-
+from pydefect_ccd.ccd import Ccd
+from pydefect_ccd.fitting_curve import QuadraticFittingCurve
 
 # @dataclass
 # class PhononEigenstates(MSONable, ToJsonFileMixIn):
