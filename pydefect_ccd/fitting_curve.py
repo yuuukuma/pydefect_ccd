@@ -7,6 +7,7 @@ from typing import Tuple, Union, List
 
 import numpy as np
 from monty.json import MSONable
+from nonrad.constants import HBAR, EV2J, ANGS2M, AMU2KG
 from scipy.optimize import curve_fit, brentq
 from vise.util.enum import ExtendedEnum
 
@@ -52,7 +53,11 @@ class FittingCurve(ABC):
                             single_points.corrected_energies)
         # vals, _ = curve_fit(f, self.Qs, self.corrected_energies, bounds=bounds)
         dE = vals[0]
-        return cls(Q0=0.0, dE=dE, a=vals[1])  # todo refactor
+        param_names = list(inspect.signature(cls.fitting_func).parameters.keys())[2:]
+        kwargs = {'Q0': 0.0, 'dE': dE}
+        for i, name in enumerate(param_names):
+            kwargs[name] = vals[i + 1]
+        return cls(**kwargs)
 
 
     @classmethod
@@ -65,12 +70,12 @@ class FittingCurve(ABC):
         ys = self(xs)
         ax.plot(xs, ys, color=color)
 
-    # @property
-    # def omega_in_eV(self) -> float:
-    #     if not hasattr(self, "omega"):
-    #         raise AttributeError(f"{self.__class__} does not have 'omega' attribute.")
+    @property
+    def omega_in_eV(self) -> float:
+        if not hasattr(self, "omega"):
+            raise AttributeError(f"{self.__class__} does not have 'omega' attribute.")
 
-#         return HBAR * self.omega * np.sqrt(EV2J / (ANGS2M**2 * AMU2KG))
+        return HBAR * self.omega * np.sqrt(EV2J / (ANGS2M**2 * AMU2KG))
 
 
 @dataclass
@@ -98,9 +103,8 @@ class QuadraticFittingCurve(MSONable, FittingCurve):
         return 0.5 * self.a
 
     def __str__(self):
-         return (f"Quadratic Curve: omega={self.omega_in_eV:.3f} eV, "
-                 f"Q0={self.Q0:.3f} amu^0.5 Å, Emin={self.dE:.3f} eV, ")
-
+         return (f"Quadratic Curve: omega={self.omega_in_eV:.3f} (eV), "
+                 f"Q0={self.Q0:.3f} (amu**0.5*Å), Emin={self.dE:.3f} (eV)")
 
 
 @dataclass
@@ -110,33 +114,28 @@ class QuarticFittingCurve(MSONable, FittingCurve):
     b: float
     c: float
 
-    @staticmethod
-    def fitting_func(Q: Union[float, np.array], dE: float, a, b, c) -> Union[float, np.array]:
-        return a*Q**4 + b*Q**3 + c*Q**2 + dE
-
-    @classmethod
-    def from_single_points(cls, single_points: SinglePoints, f):
-        a, b, c, dE = single_points.fitting(cls.fitting_func)
-        return cls(a, b, c, Q0=0., dE=dE)
-
-    @property
-    def omega(self) -> float:
-        return 0.5 * self.c
-
     def __call__(self, Q: Union[float, np.array]) -> Union[float, np.array]:
         return (self.a * (Q - self.Q0) ** 4 + self.b * (Q - self.Q0) ** 3
                 + self.c * (Q - self.Q0) ** 2 + self.dE)
-
-    def __str__(self):
-        return (f"QuarticCurve: {self.a}*(Q-Q0)^4 + {self.b}*(Q-Q0)^3 + "
-                f"{self.c}*(Q-Q0)^2 + {self.dE} eV, "
-                f"Q0={self.Q0:.3f} amu^0.5 Å")
 
     def shift(self, shift_Q, shift_energy, revert=False) -> "QuarticFittingCurve":
         new_Q0 = self.Q0 + shift_Q
         new_dE = self.dE + shift_energy
         new_b = -self.b if revert else self.b
         return QuarticFittingCurve(a=self.a, b=new_b, c=self.c, Q0=new_Q0, dE=new_dE)
+
+    @staticmethod
+    def fitting_func(Q: Union[float, np.array], dE: float, a, b, c) -> Union[float, np.array]:
+        return a*Q**4 + b*Q**3 + c*Q**2 + dE
+
+    @property
+    def omega(self) -> float:
+        return 0.5 * self.c
+
+    def __str__(self):
+        return (f"QuarticCurve: {self.a}*(Q-Q0)^4 + {self.b}*(Q-Q0)^3 + "
+                f"{self.c}*(Q-Q0)^2 + {self.dE} (eV), "
+                f"Q0={self.Q0:.3f} (amu**0.5*Å)")
 
 
 class FittingCurveType(ExtendedEnum):

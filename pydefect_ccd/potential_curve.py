@@ -118,7 +118,8 @@ class SinglePoints(MSONable):
 
     def verify_num_Q(self, f):
         sig = inspect.signature(f)
-        if n_params := len(sig.parameters) > len(self):
+        n_params = len(sig.parameters) - 1
+        if n_params > len(self):
             raise ValueError(f"The number of Q points must be >= {n_params}.")
 
 
