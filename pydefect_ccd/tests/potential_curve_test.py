@@ -20,4 +20,4 @@ def test_from_single_points():
     q = sp.fitting(QuadraticFittingCurve.fitting_func)
     assert q.a == pytest.approx(3.0)
     assert q.Q0 == pytest.approx(0.0)
-    assert q.dE == pytest.approx(0.25)
+    assert q.E0 == pytest.approx(0.25)

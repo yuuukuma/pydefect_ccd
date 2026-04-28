@@ -49,8 +49,9 @@ class Ccd(MSONable, ToJsonFileMixIn):
 
     def intersections(self, min_Q_mul=-2, max_Q_mul=3,
                       num_grids=2001) -> List[Tuple[float, float]]:
-        ground = self.ground_curve.fitting_curve
-        excited = self.excited_curve.fitting_curve
+        ground = self.ground_curve.shifted_fitting_curve
+        excited = self.excited_curve.fitting_curve.shi
+
 
         if excited is None:
             raise ValueError("Set excited fitting curve.")

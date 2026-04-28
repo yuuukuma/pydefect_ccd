@@ -147,8 +147,8 @@ def test_poly_intersections():
 
 def test_intersections_no_cross():
     # Two identical-shape quadratics shifted in energy (no crossing in the range)
-    c1 = QuadraticFittingCurve(omega=1.0, Q0=0.0, dE=0.0, disp_ratio_range=None)
-    c2 = QuadraticFittingCurve(omega=1.0, Q0=0.0, dE=5.0, disp_ratio_range=None)
+    c1 = QuadraticFittingCurve(omega=1.0, Q0=0.0, E0=0.0, disp_ratio_range=None)
+    c2 = QuadraticFittingCurve(omega=1.0, Q0=0.0, E0=5.0, disp_ratio_range=None)
 
     res = intersections(c1, c2, Q_range=[-1.0, 1.0], ngrids=1001)
     assert res == []

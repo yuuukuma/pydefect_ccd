@@ -3,7 +3,8 @@
 import inspect
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import List, Tuple, Optional
+from functools import cached_property
+from typing import List, Tuple, Optional, Type
 
 import numpy as np
 from monty.json import MSONable
@@ -13,6 +14,7 @@ from scipy.optimize import curve_fit
 from tabulate import tabulate
 from vise.util.mix_in import ToJsonFileMixIn
 
+from pydefect_ccd.fitting_curve import FittingCurve
 # from pydefect_ccd.fitting_curve import FittingCurve
 from pydefect_ccd.relaxed_point import OrbitalInfoMixIn, NearEdgeState, \
     _joined_local_orbital_info
@@ -24,6 +26,11 @@ class SinglePointSpec(MSONable, ToJsonFileMixIn):
     """Specification of a single point calculation in ."""
     Q: float
     disp_ratio: float
+
+    def flip_spec(self, Q_diff: float) -> "SinglePointSpec":
+        flipped_Q = Q_diff - self.Q
+        flipped_disp_ratio = 1.0 - self.disp_ratio
+        return SinglePointSpec(Q=flipped_Q, disp_ratio=flipped_disp_ratio)
 
 
 @dataclass
@@ -109,6 +116,7 @@ class SinglePoints(MSONable):
     def lowest_energy_single_point(self) -> SinglePoint:
         return min(self.single_points, key=lambda sp: sp.ccd_corrected_energy)
 
+    # TODO: remove this
     def verify_Q0_has_the_lowest_energy(self):
         if not np.isclose(self.lowest_energy_single_point.Q, 0.0):
             dQ = self.lowest_energy_single_point.Q
@@ -128,22 +136,40 @@ class PotentialCurveSpec(MSONable, ToJsonFileMixIn):
     charge: int
     correction_energy: float  # at relaxed structure, e.g., eFNV correction
     counter_charge: int  # charge state to which the structure shifts
-    Q_diff: float
+    Q_diff: float  # Q difference between two charge states
+
+
+@dataclass
+class SinglePointsShiftSpec(MSONable, ToJsonFileMixIn):
+    shift_energy: float
+    flip: bool
 
 
 @dataclass
 class PotentialCurve(MSONable, ToJsonFileMixIn):
     spec: PotentialCurveSpec
-    original_single_points: SinglePoints
-    shifted_energy: float = 0.0
-    shifted_Q: float = 0.0
-    revert: bool = False
+    original_single_points: SinglePoints # Bare energies.
+    shifter: Optional[SinglePointsShiftSpec] = None
+
+    @cached_property
+    def single_points(self) -> SinglePoints:
+        if self.shifter:
+            result = []
+            for sp in self.original_single_points:
+                new_sp = deepcopy(sp)
+                new_sp.energy += self.shifter.shift_energy
+                if self.shifter.flip:
+                    new_sp.spec = sp.spec.flip_spec(self.spec.Q_diff)
+                result.append(new_sp)
+            return SinglePoints(result)
+
+        return self.original_single_points
 
     @property
     def charge(self) -> int: return self.spec.charge
 
-    @property
-    def correction_energy(self) -> float: return self.spec.correction_energy
+    # @property
+    # def correction_energy(self) -> float: return self.spec.correction_energy
 
     @property
     def counter_charge(self) -> int: return self.spec.counter_charge
@@ -151,19 +177,37 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
     @property
     def Q_diff(self) -> float: return self.spec.Q_diff
 
-    def __post_init__(self):
-        self.original_single_points = list(sorted(self.original_single_points, key=lambda x: x.Q))
+    # TODO: consider why thye need to be sorted.
+    # def __post_init__(self):
+    #     self.original_single_points \
+    #         = list(sorted(self.original_single_points, key=lambda x: x.Q))
 
     @property
     def lowest_energy_single_point(self) -> SinglePoint:
-        return self.original_single_points.lowest_energy_single_point
+        return self.single_points.lowest_energy_single_point
 
     @property
     def lowest_energy(self) -> float:
         return self.lowest_energy_single_point.ccd_corrected_energy + \
-                self.spec.correction_energy + self.shifted_energy
+                self.spec.correction_energy
 
-#     def dQs_and_energies(self, disp_ratio_range: Tuple[float, float] = None):
+    def fitting_curve(self, curve: Type[FittingCurve]) -> Optional[FittingCurve]:
+        # TODO: Consider if Q0, E0 are fixed or not.
+
+        vals, _ = curve_fit(curve.fitting_func,
+                            self.single_points.Qs,
+                            self.single_points.corrected_energies)
+        # vals, _ = curve_fit(f, self.Qs, self.corrected_energies, bounds=bounds)
+
+        kwargs = {'Q0': 0.0, 'E0': vals[0]}
+        param_names = list(inspect.signature(curve.fitting_func).parameters.keys())[2:]
+        for i, name in enumerate(param_names):
+            kwargs[name] = vals[i + 1]
+        return curve(**kwargs)
+
+        return curve.from_single_points(self.single_points)
+
+    #     def dQs_and_energies(self, disp_ratio_range: Tuple[float, float] = None):
 #         """
 #
 #         Energy for the ccd is the sum of bare DFT energy at a fixed structure,
