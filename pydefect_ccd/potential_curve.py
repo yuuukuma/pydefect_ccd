@@ -90,7 +90,6 @@ class SinglePoint(OrbitalInfoMixIn, ToJsonFileMixIn):
 @dataclass
 class ShifterSpec(MSONable, ToJsonFileMixIn):
     shift_energy: float
-
     flip: bool
 
 
@@ -145,6 +144,10 @@ class SinglePoints(MSONable):
     def lowest_energy_single_point(self) -> SinglePoint:
         return min(self.single_points, key=lambda sp: sp.ccd_corrected_energy)
 
+    @property
+    def lowest_energy(self) -> float:
+        return self.lowest_energy_single_point.ccd_corrected_energy
+
     # TODO: remove this
     def verify_Q0_has_the_lowest_energy(self):
         if not np.isclose(self.lowest_energy_single_point.Q, 0.0):
@@ -192,6 +195,15 @@ class PotentialCurveSpec(MSONable, ToJsonFileMixIn):
     Q_diff: float  # Q difference between two charge states
 
 
+def make_shifter(spec: PotentialCurveSpec,
+                 single_points: SinglePoints,
+                 offset: float = 0.0,
+                 flip: bool = False) -> ShifterSpec:
+    lowest_energy = single_points.lowest_energy + spec.correction_energy
+    shift_energy = - lowest_energy + offset
+    return ShifterSpec(shift_energy, flip)
+
+
 @dataclass
 class PotentialCurve(MSONable, ToJsonFileMixIn):
     spec: PotentialCurveSpec
@@ -232,6 +244,19 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
     def lowest_energy(self) -> float:
         return self.lowest_energy_single_point.ccd_corrected_energy + \
                 self.spec.correction_energy
+
+    def set_fitting_curve(self, curve: Type[FittingCurve]) -> None:
+        # TODO: Consider if Q0, E0 need to be fixed or not.
+        vals, _ = curve_fit(curve.fitting_func,
+                            self.single_points.Qs,
+                            self.single_points.corrected_energies)
+        # vals, _ = curve_fit(f, self.Qs, self.corrected_energies, bounds=bounds)
+
+        kwargs = {'Q0': 0.0, 'E0': vals[0]}
+        param_names = list(inspect.signature(curve.fitting_func).parameters.keys())[2:]
+        for i, name in enumerate(param_names):
+            kwargs[name] = vals[i + 1]
+        self.fitting_curve = curve(**kwargs)
 
     @property
     def table_for_plot(self):

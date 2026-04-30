@@ -3,7 +3,7 @@
 import os
 from argparse import Namespace
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Type
 
 import numpy as np
 import yaml
@@ -30,13 +30,15 @@ from vise.util.logger import get_logger
 
 from pydefect_ccd.capture_rate import \
     CaptureRate, CaptureRatePlotter
+from pydefect_ccd.fitting_curve import FittingCurve
 from pydefect_ccd.sommerfeld_scaling import SommerfeldScaling
 from pydefect_ccd.transition_moment import CalcTotalSquaredTransitionMoment, \
     PlottedTotalSquaredTransitionMoment
 from pydefect_ccd.ccd import CcdPlotter, \
     NoCcdCorrection
 from pydefect_ccd.potential_curve import SinglePointSpec, SinglePoint, \
-    PotentialCurveSpec, PotentialCurve
+    PotentialCurveSpec, PotentialCurve, SinglePoints, make_fitting_curve, ShifterSpec, \
+    make_shifter
 from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.make_ccd import MakeCcd
 from pydefect_ccd.make_e_p_matrix_element import make_e_p_matrix_element
@@ -280,13 +282,24 @@ def make_single_points(args: Namespace):
 
     parse_dirs(args.dirs, _inner, verbose=True)
 
+def _fit_curve(single_points, fitting_curve: Optional[Type[FittingCurve]]):
+    if fitting_curve:
+        return make_fitting_curve(fitting_curve, single_points)
+    return None
+
 
 def make_potential_curve(args: Namespace):
     def _inner(dir_: Path) -> SinglePoint:
         return loadfn(dir_ / "single_point.json")
 
-    single_points = parse_dirs(args.dirs, _inner, verbose=True)
-    potential_curve = PotentialCurve(args.potential_curve_spec, single_points)
+    single_points = SinglePoints(parse_dirs(args.dirs, _inner, verbose=True))
+    fitting_curve = _fit_curve(single_points, args.fitting_curve)
+    shifter = make_shifter(args.potential_curve_spec, single_points)
+    potential_curve = PotentialCurve(args.potential_curve_spec,
+                                     single_points,
+                                     shifter,
+                                     fitting_curve)
+    print(potential_curve)
     potential_curve.to_json_file("potential_curve.json")
 
 
