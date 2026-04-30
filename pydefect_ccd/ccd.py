@@ -3,10 +3,8 @@
 from dataclasses import dataclass
 from typing import List, Tuple
 
-import numpy as np
 from monty.json import MSONable
 from pydefect.corrections.abstract_correction import Correction
-from scipy import interpolate
 from vise.util.logger import get_logger
 from vise.util.matplotlib import float_to_int_formatter
 from vise.util.mix_in import ToJsonFileMixIn
@@ -18,16 +16,6 @@ from pydefect_ccd.potential_curve import PotentialCurve
 logger = get_logger(__name__)
 
 
-#         if self.carriers:
-#             carriers = " ".join([str(carrier) for carrier in self.carriers])
-#             result.append(f"carriers: {carriers}")
-
-#         table_data = [x.table_for_plot for x in self.single_points]
-#         result.append(tabulate(table_data, tablefmt="plain", floatfmt=".3f",
-#                                headers=_imag_headers + ["omega"]))
-#         return "\n".join(result)
-
-
 @dataclass
 class Ccd(MSONable, ToJsonFileMixIn):
     name: str
@@ -35,7 +23,7 @@ class Ccd(MSONable, ToJsonFileMixIn):
     excited_curve: PotentialCurve
 
     @property
-    def dQ(self) -> float:
+    def Q_diff(self) -> float:
         return self.excited_curve.Q_diff
 
     @property
@@ -49,16 +37,14 @@ class Ccd(MSONable, ToJsonFileMixIn):
 
     def intersections(self, min_Q_mul=-2, max_Q_mul=3,
                       num_grids=2001) -> List[Tuple[float, float]]:
-        ground = self.ground_curve.shifted_fitting_curve
-        excited = self.excited_curve.fitting_curve.shi
-
-
+        ground = self.ground_curve.fitting_curve
+        excited = self.excited_curve.fitting_curve
         if excited is None:
             raise ValueError("Set excited fitting curve.")
         if ground is None:
             raise ValueError("Set ground fitting curve.")
 
-        min_Q, max_Q = self.dQ * min_Q_mul, self.dQ * max_Q_mul
+        min_Q, max_Q = self.Q_diff * min_Q_mul, self.Q_diff * max_Q_mul
         return intersections(ground, excited, [min_Q, max_Q], num_grids)
 
     @property
@@ -80,47 +66,6 @@ class Ccd(MSONable, ToJsonFileMixIn):
             pass
 
         return "\n".join(result)
-
-
-def spline3(xs, ys, num_points, xrange=None):
-    """Find the B-spline representation with 3 degree of the spline.
-
-    Args:
-        xs (array_like):
-        ys (array_like):
-        num_points (int): Number of interpolated points including end points.
-
-    Returns:
-        Tuple of (x_spline, y_spline) as numpy arrays.
-    """
-    xs, ys = np.asarray(xs), np.asarray(ys)
-
-    if num_points < 2:
-        raise ValueError("num_points must be >= 2")
-
-    # desired degree is 3 (cubic)
-    max_k = max(1, min(3, len(xs) - 1))
-    if len(xs) < 2:
-        raise ValueError("At least two points are required.")
-
-    # prepare spline; use s=0 to force interpolation
-    tck = interpolate.splprep([xs, ys], k=max_k, s=0)[0]
-
-    if xrange is not None:
-        x_dist = float(np.max(xs) - np.min(xs))
-        if x_dist == 0.0:
-            raise ValueError("xs must not be all equal")
-        _min = (xrange[0] - np.min(xs)) / x_dist
-        _max = (xrange[1] - np.min(xs)) / x_dist
-        # clamp to [0, 1]
-        _min = max(0.0, min(1.0, _min))
-        _max = max(0.0, min(1.0, _max))
-    else:
-        _min, _max = 0.0, 1.0
-
-    u = np.linspace(_min, _max, num=num_points, endpoint=True)
-    spline = interpolate.splev(u, tck)
-    return np.asarray(spline[0]), np.asarray(spline[1])
 
 
 class CcdPlotter:

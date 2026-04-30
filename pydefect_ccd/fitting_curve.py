@@ -8,10 +8,8 @@ from typing import Tuple, Union, List
 import numpy as np
 from monty.json import MSONable
 from nonrad.constants import HBAR, EV2J, ANGS2M, AMU2KG
-from scipy.optimize import curve_fit, brentq
+from scipy.optimize import brentq
 from vise.util.enum import ExtendedEnum
-
-from pydefect_ccd.potential_curve import SinglePoints
 
 
 @dataclass

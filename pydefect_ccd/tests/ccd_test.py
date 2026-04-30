@@ -7,12 +7,11 @@ import pytest
 from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from vise.tests.helpers.assertion import assert_dataclass_almost_equal
 
-from pydefect_ccd.ccd import Ccd, spline3, \
-    dQ_revert, calc_omega_and_Q0
-from pydefect_ccd.potential_curve import SinglePointSpec, SinglePoint, \
-    PotentialCurveSpec, PotentialCurve
+from pydefect_ccd.ccd import Ccd
 from pydefect_ccd.fitting_curve import QuadraticFittingCurve, intersections
 from pydefect_ccd.local_enum import Carrier
+from pydefect_ccd.potential_curve import SinglePointSpec, SinglePoint, \
+    PotentialCurveSpec, PotentialCurve
 
 
 @pytest.fixture
@@ -55,7 +54,7 @@ def potential_curve(single_point):
 
 
 def test_potential_curve_dQs_and_energies(potential_curve):
-    actual = potential_curve.dQs_and_energies()
+    actual = potential_curve.Qs_and_energies()
     dQs = [1.0]
     energies = [10.0+1.0+1.0+3.0]
     expected = (dQs, energies)
@@ -63,7 +62,7 @@ def test_potential_curve_dQs_and_energies(potential_curve):
 
 
 def test_potential_curve_dQs_and_energies_w_range(potential_curve):
-    actual = potential_curve.dQs_and_energies((-1.0, 0.0))
+    actual = potential_curve.Qs_and_energies((-1.0, 0.0))
     expected = ([], [])
     assert np.array(actual) == pytest.approx(np.array(expected))
 
@@ -99,13 +98,6 @@ def test_ccd_captured_carrier(ccd):
 
 def test_ccd_str(ccd):
     print(ccd)
-
-
-def test_spline3():
-    x = [0.0, 1.0, 2.0, 3.0]
-    y = [0.0, 1.0, 8.0, 28.0]
-    actual = spline3(x, y, num_points=11)
-    assert actual[1][1] == pytest.approx(2.17924820)
 
 
 def test_calc_omega_and_Q0_variable_Q0():

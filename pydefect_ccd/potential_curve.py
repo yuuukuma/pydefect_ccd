@@ -4,7 +4,7 @@ import inspect
 from copy import deepcopy
 from dataclasses import dataclass
 from functools import cached_property
-from typing import List, Tuple, Optional, Type
+from typing import List, Optional, Type, Tuple
 
 import numpy as np
 from monty.json import MSONable
@@ -27,7 +27,7 @@ class SinglePointSpec(MSONable, ToJsonFileMixIn):
     Q: float
     disp_ratio: float
 
-    def flip_spec(self, Q_diff: float) -> "SinglePointSpec":
+    def flip(self, Q_diff: float) -> "SinglePointSpec":
         flipped_Q = Q_diff - self.Q
         flipped_disp_ratio = 1.0 - self.disp_ratio
         return SinglePointSpec(Q=flipped_Q, disp_ratio=flipped_disp_ratio)
@@ -88,6 +88,13 @@ class SinglePoint(OrbitalInfoMixIn, ToJsonFileMixIn):
 
 
 @dataclass
+class ShifterSpec(MSONable, ToJsonFileMixIn):
+    shift_energy: float
+
+    flip: bool
+
+
+@dataclass
 class SinglePoints(MSONable):
     single_points: List[SinglePoint]
     # fitting_curve: FittingCurve
@@ -105,6 +112,28 @@ class SinglePoints(MSONable):
     @property
     def corrected_energies(self) -> List[float]:
         return [sp.ccd_corrected_energy for sp in self]
+
+    @property
+    def Qs_and_energies(self):
+        """
+        Energy for the ccd is the sum of bare DFT energy at a fixed structure,
+        FNV correction energy, shifted energy, and CCD correction energy.
+
+        Returns:
+
+        """
+        return list(zip(self.Qs, self.corrected_energies))
+        # Qs, energies = [], []
+        # for sp in self:
+        #     # if disp_ratio_range and not (disp_ratio_range[0]
+        #     #                              <= single_point.disp_ratio
+        #     #                              <= disp_ratio_range[1]):
+        #     #     continue
+        #     Qs.append(sp.Q)
+        #     energy = (sp.energy + sp.ccd_correction_energy
+        #               + self.spec.correction_energy + self.shifted_energy)
+        #     energies.append(energy)
+        # return Qs, energies
 
     def single_point_from_disp(self, disp_ratio: float):
         for sp in self:
@@ -130,6 +159,30 @@ class SinglePoints(MSONable):
         if n_params > len(self):
             raise ValueError(f"The number of Q points must be >= {n_params}.")
 
+    def flip(self, shifter: ShifterSpec, Q_diff: float, total_energy_correction: float) -> "SinglePoints":
+        result = []
+        for sp in self:
+            new_sp = deepcopy(sp)
+            new_sp.energy += shifter.shift_energy + total_energy_correction
+            if shifter.flip:
+                new_sp.spec = sp.spec.flip(Q_diff)
+            result.append(new_sp)
+        return SinglePoints(result)
+
+
+def make_fitting_curve(curve: Type[FittingCurve], single_points: SinglePoints) -> FittingCurve:
+    # TODO: Consider if Q0, E0 need to be fixed or not.
+    vals, _ = curve_fit(curve.fitting_func,
+                        single_points.Qs,
+                        single_points.corrected_energies)
+    # vals, _ = curve_fit(f, self.Qs, self.corrected_energies, bounds=bounds)
+
+    kwargs = {'Q0': 0.0, 'E0': vals[0]}
+    param_names = list(inspect.signature(curve.fitting_func).parameters.keys())[2:]
+    for i, name in enumerate(param_names):
+        kwargs[name] = vals[i + 1]
+    return curve(**kwargs)
+
 
 @dataclass
 class PotentialCurveSpec(MSONable, ToJsonFileMixIn):
@@ -140,44 +193,33 @@ class PotentialCurveSpec(MSONable, ToJsonFileMixIn):
 
 
 @dataclass
-class SinglePointsShiftSpec(MSONable, ToJsonFileMixIn):
-    shift_energy: float
-    flip: bool
-
-
-@dataclass
 class PotentialCurve(MSONable, ToJsonFileMixIn):
     spec: PotentialCurveSpec
     original_single_points: SinglePoints # Bare energies.
-    shifter: Optional[SinglePointsShiftSpec] = None
+    shifter: ShifterSpec
+    fitting_curve: Optional[FittingCurve] = None
 
     @cached_property
     def single_points(self) -> SinglePoints:
         if self.shifter:
-            result = []
-            for sp in self.original_single_points:
-                new_sp = deepcopy(sp)
-                new_sp.energy += self.shifter.shift_energy
-                if self.shifter.flip:
-                    new_sp.spec = sp.spec.flip_spec(self.spec.Q_diff)
-                result.append(new_sp)
-            return SinglePoints(result)
-
+            return self.original_single_points.flip(self.shifter,
+                                                    self.Q_diff,
+                                                    self.spec.correction_energy)
         return self.original_single_points
 
     @property
     def charge(self) -> int: return self.spec.charge
 
-    # @property
-    # def correction_energy(self) -> float: return self.spec.correction_energy
-
     @property
     def counter_charge(self) -> int: return self.spec.counter_charge
 
     @property
-    def Q_diff(self) -> float: return self.spec.Q_diff
+    def Qs_and_energies(self) -> List[Tuple[float, float]]:
+        return self.single_points.Qs_and_energies
 
-    # TODO: consider why thye need to be sorted.
+    @property
+    def Q_diff(self) -> float: return self.spec.Q_diff
+    # TODO: consider why they need to be sorted.
     # def __post_init__(self):
     #     self.original_single_points \
     #         = list(sorted(self.original_single_points, key=lambda x: x.Q))
@@ -191,98 +233,32 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
         return self.lowest_energy_single_point.ccd_corrected_energy + \
                 self.spec.correction_energy
 
-    def fitting_curve(self, curve: Type[FittingCurve]) -> Optional[FittingCurve]:
-        # TODO: Consider if Q0, E0 are fixed or not.
-
-        vals, _ = curve_fit(curve.fitting_func,
-                            self.single_points.Qs,
-                            self.single_points.corrected_energies)
-        # vals, _ = curve_fit(f, self.Qs, self.corrected_energies, bounds=bounds)
-
-        kwargs = {'Q0': 0.0, 'E0': vals[0]}
-        param_names = list(inspect.signature(curve.fitting_func).parameters.keys())[2:]
-        for i, name in enumerate(param_names):
-            kwargs[name] = vals[i + 1]
-        return curve(**kwargs)
-
-        return curve.from_single_points(self.single_points)
-
-    #     def dQs_and_energies(self, disp_ratio_range: Tuple[float, float] = None):
-#         """
-#
-#         Energy for the ccd is the sum of bare DFT energy at a fixed structure,
-#         FNV correction energy, shifted energy, and CCD correction energy.
-#
-#         Returns:
-#
-#         """
-#         dQs, energies = [], []
-#         for single_point in self.original_single_points:
-#             if disp_ratio_range and not (disp_ratio_range[0]
-#                                          <= single_point.disp_ratio
-#                                          <= disp_ratio_range[1]):
-#                 continue
-#             dQs.append(single_point.dQ)
-#             energy = (single_point.energy + single_point.ccd_correction_energy
-#                       + self.spec.correction_energy + self.shifted_energy)
-#             energies.append(energy)
-#         return dQs, energies
-#
-#     def dQ_revert(self, fixed_Q0: bool = True) -> "PotentialCurve":
-#         new_single_points = []
-#         for single_point in self.original_single_points:
-#             new_dis_ratio = 1.0 - single_point.disp_ratio
-#             new_dQ = new_dis_ratio * self.spec.Q_diff
-#             new_spec = SinglePointSpec(Q=new_dQ, disp_ratio=new_dis_ratio)
-#             new_result = deepcopy(single_point)
-#             new_result.spec = new_spec
-#             new_single_points.append(new_result)
-#
-#         result = PotentialCurve(self.spec,
-#                                 new_single_points,
-#                                 self.shifted_energy)
-#         # curve_name = self.fitting_curve.__class__.__name__
-#         # new_disp_ratio_range = [1 - self.fitting_curve.disp_ratio_range[1],
-#         #                         1 - self.fitting_curve.disp_ratio_range[0]]
-#
-# #         result.add_curve(fitting_type=FittingCurveType.from_string(curve_name),
-# #                          disp_ratio_range=new_disp_ratio_range,
-#
-#         return result
-
-    def add_plot(self,
-                 ax,
-                 color: str,
-                 q_range: Optional[List[float]] = None):
-        label = f"q={self.charge}"
-        dQs, energies = self.dQs_and_energies(q_range)
-        ax.scatter(dQs, energies, marker='o', color=color, label=label)
-
-        if self.fitting_curve:
-            q_range = q_range or [min(dQs), max(dQs)]
-            self.fitting_curve.add_plot(ax, q_range, color=color)
-
     @property
     def table_for_plot(self):
         tables = {"charge": self.charge,
                   "lowest energy": self.lowest_energy,
-                  "corr. energy": self.correction_energy,
                   "counter charge": self.counter_charge,
-                  "Q diff": self.Q_diff,
-                  "shifted energy": self.shifted_energy}
+                  "Q diff": self.Q_diff}
         return list(tables.keys()), tables.values()
 
     def __str__(self):
-        # TODO: improve
         headers, tabulate_data = self.table_for_plot
-        table = tabulate([tabulate_data], tablefmt="plain", floatfmt=".3f",
-                        headers=headers)
-        fc = str(self.fitting_curve) if self.fitting_curve else "fitted curve is N.A."
-        d = [sp.table_values(self.correction_energy, self.shifted_energy)
-             for sp in self.original_single_points]
-        table_2 = tabulate(d, tablefmt="plain", floatfmt=".3f",
-                           headers=self.original_single_points[0].table_headers)
-        return table + "\n" + fc + "\n" + table_2
+        fitting_curve_str = str(self.fitting_curve) if self.fitting_curve \
+            else "fitted curve is N.A."
+        tables = [tabulate([tabulate_data],
+                           tablefmt="plain", floatfmt=".3f", headers=headers),
+                  fitting_curve_str]
 
+        if self.single_points:
+            single_point_table = tabulate(
+                [sp.table_values() for sp in self.single_points],
+                tablefmt="plain",
+                floatfmt=".3f",
+                headers=headers)
+        else:
+            single_point_table = "single points are N.A."
+        tables.append(single_point_table)
+
+        return "\n".join(tables)
 
 
