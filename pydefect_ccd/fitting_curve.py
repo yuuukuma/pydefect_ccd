@@ -13,7 +13,7 @@ from vise.util.enum import ExtendedEnum
 
 
 @dataclass
-class FittingCurve(ABC):
+class FittingFunc(ABC):
     """Abstract base class for fitting curves used in CCD analysis.
 
     Note that the class needs to be registered in FittingCurveType to be used.
@@ -29,7 +29,7 @@ class FittingCurve(ABC):
         pass
 
     @abstractmethod
-    def shift(self, shift_Q, shift_energy, revert=False) -> "FittingCurve":
+    def shift(self, shift_Q, shift_energy, revert=False) -> "FittingFunc":
         pass
 
     @staticmethod
@@ -58,7 +58,7 @@ class FittingCurve(ABC):
 
 
 @dataclass
-class QuadraticFittingCurve(MSONable, FittingCurve):
+class QuadraticFittingFunc(MSONable, FittingFunc):
     """
     a(Q-Q0)^2 + dE = 0.5 * omega^2 * (Q-Q0)^2 + dE
     """
@@ -68,10 +68,10 @@ class QuadraticFittingCurve(MSONable, FittingCurve):
     def __call__(self, Q: Union[float, np.ndarray]) -> Union[float, np.array]:
         return self.a * (Q - self.Q0)**2 + self.E0
 
-    def shift(self, shift_Q, shift_energy, revert=False) -> "QuadraticFittingCurve":
+    def shift(self, shift_Q, shift_energy, revert=False) -> "QuadraticFittingFunc":
         new_Q0 = self.Q0 + shift_Q
         new_dE = self.E0 + shift_energy
-        return QuadraticFittingCurve(new_Q0, new_dE, a=self.a)
+        return QuadraticFittingFunc(new_Q0, new_dE, a=self.a)
 
     # TODO: Understand why Q0 is not considered here.
     @staticmethod
@@ -88,7 +88,7 @@ class QuadraticFittingCurve(MSONable, FittingCurve):
 
 
 @dataclass
-class QuarticFittingCurve(MSONable, FittingCurve):
+class QuarticFittingFunc(MSONable, FittingFunc):
     """ a(Q-Q0)^4 + b(Q-Q0)^3 + c(Q-Q0)^2 + d(Q-Q0) + dE """
     a: float  # in ??
     b: float
@@ -98,11 +98,11 @@ class QuarticFittingCurve(MSONable, FittingCurve):
         return (self.a * (Q - self.Q0) ** 4 + self.b * (Q - self.Q0) ** 3
                 + self.c * (Q - self.Q0) ** 2 + self.E0)
 
-    def shift(self, shift_Q, shift_energy, revert=False) -> "QuarticFittingCurve":
+    def shift(self, shift_Q, shift_energy, revert=False) -> "QuarticFittingFunc":
         new_Q0 = self.Q0 + shift_Q
         new_dE = self.E0 + shift_energy
         new_b = -self.b if revert else self.b
-        return QuarticFittingCurve(a=self.a, b=new_b, c=self.c, Q0=new_Q0, E0=new_dE)
+        return QuarticFittingFunc(a=self.a, b=new_b, c=self.c, Q0=new_Q0, E0=new_dE)
 
     @staticmethod
     def fitting_func(Q: Union[float, np.array], dE: float, a, b, c) -> Union[float, np.array]:
@@ -119,16 +119,16 @@ class QuarticFittingCurve(MSONable, FittingCurve):
 
 
 class FittingCurveType(ExtendedEnum):
-    quadratic = ("quadratic", QuadraticFittingCurve)
-    quartic = ("quartic", QuarticFittingCurve)
+    quadratic = ("quadratic", QuadraticFittingFunc)
+    quartic = ("quartic", QuarticFittingFunc)
 
     # def __init__(self, _name, cls):
     #     self.name = _name
     #     self.cls = cls
 
 
-def intersections(curve1: FittingCurve,
-                  curve2: FittingCurve,
+def intersections(curve1: FittingFunc,
+                  curve2: FittingFunc,
                   Q_range: List[float],
                   ngrids=2001) -> List[Tuple[float, float]]:
     """Return intersection points as [(Q, energy), ...] calculated numerically."""

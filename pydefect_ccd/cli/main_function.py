@@ -30,7 +30,7 @@ from vise.util.logger import get_logger
 
 from pydefect_ccd.capture_rate import \
     CaptureRate, CaptureRatePlotter
-from pydefect_ccd.fitting_curve import FittingCurve
+from pydefect_ccd.fitting_curve import FittingFunc
 from pydefect_ccd.sommerfeld_scaling import SommerfeldScaling
 from pydefect_ccd.transition_moment import CalcTotalSquaredTransitionMoment, \
     PlottedTotalSquaredTransitionMoment
@@ -282,7 +282,7 @@ def make_single_points(args: Namespace):
 
     parse_dirs(args.dirs, _inner, verbose=True)
 
-def _fit_curve(single_points, fitting_curve: Optional[Type[FittingCurve]]):
+def _fit_curve(single_points, fitting_curve: Optional[Type[FittingFunc]]):
     if fitting_curve:
         return make_fitting_curve(fitting_curve, single_points)
     return None
@@ -304,14 +304,15 @@ def make_potential_curve(args: Namespace):
 
 
 def make_ccd(args: Namespace):
-    ccd = MakeCcd(args.ground_potential_curve,
-                  args.excited_potential_curve,
-                  args.ccd_init.vbm,
-                  args.ccd_init.cbm,
-                  args.ccd_init.name).ccd
-    ccd.ground_curve.add_quadratic_curve(fixed_Q0=args.fixed_Q0)
-    ccd.excited_curve.add_quadratic_curve(fixed_Q0=args.fixed_Q0, Q0_disp_ratio=1.0)
-
+    ccd = MakeCcd(ground_single_points=args.ground_single_points,
+                  ground_pot_curve_spec=args.ground_potential_curve_spec,
+                  ground_fitting_func=args.ground_fitting_func,
+                  excited_single_points=args.excited_single_points,
+                  excited_pot_curve_spec=args.excited_potential_curve_spec,
+                  excited_fitting_func=args.excited_fitting_func,
+                  vbm=args.ccd_init.vbm,
+                  cbm=args.ccd_init.cbm,
+                  name=args.ccd_init.name).ccd
     print(ccd)
     ccd.to_json_file()
 

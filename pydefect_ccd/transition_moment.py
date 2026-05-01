@@ -16,7 +16,7 @@ from vise.util.matplotlib import float_to_int_formatter
 from vise.util.mix_in import ToJsonFileMixIn
 
 from pydefect_ccd.potential_curve import PotentialCurve
-from pydefect_ccd.fitting_curve import QuadraticFittingCurve
+from pydefect_ccd.fitting_curve import QuadraticFittingFunc
 
 
 @dataclass
@@ -84,8 +84,8 @@ class CalcTotalSquaredTransitionMoment:
         dQ = self.excited_curve.Q_diff
         dE = abs(self.excited_curve.lowest_energy - self.ground_curve.lowest_energy)
 
-        assert isinstance(self.ground_curve.fitting_curve, QuadraticFittingCurve)
-        assert isinstance(self.excited_curve.fitting_curve, QuadraticFittingCurve)
+        assert isinstance(self.ground_curve.fitting_curve, QuadraticFittingFunc)
+        assert isinstance(self.excited_curve.fitting_curve, QuadraticFittingFunc)
 
         # at Wif=1, volume=1cm^3 * HBAR / 2 / np.pi, g=1: Then, unit is in amu x Å^2 / eV.
         # dQ [amu^0.5 x Å], dE [eV], wi [eV], wf [eV], T [K]

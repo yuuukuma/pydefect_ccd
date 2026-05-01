@@ -12,7 +12,7 @@ from tabulate import tabulate
 from vise.util.mix_in import ToJsonFileMixIn
 
 from pydefect_ccd.ccd import Ccd
-from pydefect_ccd.fitting_curve import QuadraticFittingCurve
+from pydefect_ccd.fitting_curve import QuadraticFittingFunc
 
 # @dataclass
 # class PhononEigenstates(MSONable, ToJsonFileMixIn):

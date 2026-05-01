@@ -14,7 +14,7 @@ from scipy.optimize import curve_fit
 from tabulate import tabulate
 from vise.util.mix_in import ToJsonFileMixIn
 
-from pydefect_ccd.fitting_curve import FittingCurve
+from pydefect_ccd.fitting_curve import FittingFunc
 # from pydefect_ccd.fitting_curve import FittingCurve
 from pydefect_ccd.relaxed_point import OrbitalInfoMixIn, NearEdgeState, \
     _joined_local_orbital_info
@@ -173,7 +173,7 @@ class SinglePoints(MSONable):
         return SinglePoints(result)
 
 
-def make_fitting_curve(curve: Type[FittingCurve], single_points: SinglePoints) -> FittingCurve:
+def make_fitting_curve(curve: Type[FittingFunc], single_points: SinglePoints) -> FittingFunc:
     # TODO: Consider if Q0, E0 need to be fixed or not.
     vals, _ = curve_fit(curve.fitting_func,
                         single_points.Qs,
@@ -209,7 +209,7 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
     spec: PotentialCurveSpec
     original_single_points: SinglePoints # Bare energies.
     shifter: ShifterSpec
-    fitting_curve: Optional[FittingCurve] = None
+    fitting_curve: Optional[FittingFunc] = None
 
     @cached_property
     def single_points(self) -> SinglePoints:
@@ -245,7 +245,7 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
         return self.lowest_energy_single_point.ccd_corrected_energy + \
                 self.spec.correction_energy
 
-    def set_fitting_curve(self, curve: Type[FittingCurve]) -> None:
+    def set_fitting_curve(self, curve: Type[FittingFunc]) -> None:
         # TODO: Consider if Q0, E0 need to be fixed or not.
         vals, _ = curve_fit(curve.fitting_func,
                             self.single_points.Qs,

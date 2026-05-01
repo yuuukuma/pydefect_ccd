@@ -6,7 +6,7 @@ from numpy.ma.testutils import assert_almost_equal
 from vise.util.logger import get_logger
 
 from pydefect_ccd.ccd import Ccd
-from pydefect_ccd.fitting_curve import FittingCurve
+from pydefect_ccd.fitting_curve import FittingFunc
 from pydefect_ccd.local_enum import Carrier
 from pydefect_ccd.potential_curve import PotentialCurve, SinglePoints, \
     PotentialCurveSpec, make_shifter
@@ -34,10 +34,10 @@ class MakeCcd:
     def __init__(self,
                  ground_single_points: SinglePoints,
                  ground_pot_curve_spec: PotentialCurveSpec,
-                 ground_fitting_curve: Type[FittingCurve],
+                 ground_fitting_func: Type[FittingFunc],
                  excited_single_points: SinglePoints,
                  excited_pot_curve_spec: PotentialCurveSpec,
-                 excited_fitting_curve: Type[FittingCurve],
+                 excited_fitting_func: Type[FittingFunc],
                  vbm: float,
                  cbm: float,
                  name: str):
@@ -53,7 +53,7 @@ class MakeCcd:
         self._ground_curve = PotentialCurve(ground_pot_curve_spec,
                                             ground_single_points,
                                             ground_shifter)
-        self._ground_curve.set_fitting_curve(ground_fitting_curve)
+        self._ground_curve.set_fitting_curve(ground_fitting_func)
 
         excited_offset = self._shifted_energy(excited_pot_curve_spec.charge)
         excited_shifter = make_shifter(excited_pot_curve_spec,
@@ -63,7 +63,7 @@ class MakeCcd:
         self._excited_curve = PotentialCurve(excited_pot_curve_spec,
                                              excited_single_points,
                                              excited_shifter)
-        self._excited_curve.set_fitting_curve(excited_fitting_curve)
+        self._excited_curve.set_fitting_curve(excited_fitting_func)
 
     @property
     def _charge_diff(self):

@@ -197,14 +197,18 @@ def parse_args_main(args):
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=["mc"],
     )
-    parser_make_ccd.add_argument("--ground-potential-curve", type=loadfn)
-    parser_make_ccd.add_argument("--excited-potential-curve", type=loadfn)
-    parser_make_ccd.add_argument(
-        "--fixed-Q0",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-        help="Fix Q0 (default: enabled). Use --no-fixed-Q0 to disable."
-    )
+    parser_make_ccd.add_argument("--ground-single-points", type=loadfn)
+    parser_make_ccd.add_argument("--ground-potent-curve-spec", type=loadfn)
+    parser_make_ccd.add_argument("--ground-ground-fitting-func", type=loadfn)
+    parser_make_ccd.add_argument("--excited-single-points", type=loadfn)
+    parser_make_ccd.add_argument("--excited-potent-curve-spec", type=loadfn)
+    parser_make_ccd.add_argument("--excited-ground-fitting-func", type=loadfn)
+    # parser_make_ccd.add_argument(
+    #     "--fixed-Q0",
+    #     action=argparse.BooleanOptionalAction,
+    #     default=True,
+    #     help="Fix Q0 (default: enabled). Use --no-fixed-Q0 to disable."
+    # )
     parser_make_ccd.set_defaults(func=make_ccd)
 
     # -- plot-ccd -----------------------------------------

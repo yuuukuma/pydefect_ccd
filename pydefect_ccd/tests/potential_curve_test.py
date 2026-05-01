@@ -4,7 +4,7 @@
 import numpy as np
 import pytest
 
-from pydefect_ccd.fitting_curve import QuadraticFittingCurve
+from pydefect_ccd.fitting_curve import QuadraticFittingFunc
 from pydefect_ccd.potential_curve import SinglePoints
 
 
@@ -17,7 +17,7 @@ def test_from_single_points():
     sp = SinglePoints([FakeSinglePoint(Q=-1.0, energy=3.0 * 1.0 + 0.25),
                        FakeSinglePoint(Q=0.0, energy=0.25),
                        FakeSinglePoint(Q=1.0, energy=3.0 * 1.0 + 0.25)])
-    q = sp.fitting(QuadraticFittingCurve.fitting_func)
+    q = sp.fitting(QuadraticFittingFunc.fitting_func)
     assert q.a == pytest.approx(3.0)
     assert q.Q0 == pytest.approx(0.0)
     assert q.E0 == pytest.approx(0.25)
