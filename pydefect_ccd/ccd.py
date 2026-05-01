@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#  Copyright (c) 2022 Kumagai group.
+#  Copyright (c) 2026 Kumagai group.
 from dataclasses import dataclass
 from typing import List, Tuple
 
@@ -9,7 +9,7 @@ from vise.util.logger import get_logger
 from vise.util.matplotlib import float_to_int_formatter
 from vise.util.mix_in import ToJsonFileMixIn
 
-from pydefect_ccd.fitting_curve import intersections
+from pydefect_ccd.fitting_func import intersections
 from pydefect_ccd.local_enum import Carrier
 from pydefect_ccd.potential_curve import PotentialCurve
 

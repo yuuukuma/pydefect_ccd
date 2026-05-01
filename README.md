@@ -11,7 +11,7 @@ The detailed theory is written in the following paper:
 
 Requirements
 ------------
-- Python 3.12 or higher
+- Python 3.13 or higher
 - nonrad 
 - pymatgen
 - [pydefect](https://github.com/kumagai-group/pydefect)

@@ -34,7 +34,7 @@ class FittingFunc(ABC):
 
     @staticmethod
     @abstractmethod
-    def fitting_func(Q: Union[float, np.array], dE: float, *params) -> Union[float, np.array]:
+    def fitting_func(Q: Union[float, np.array], E: float, *params) -> Union[float, np.array]:
         """Model function for fitting."""
         pass
 
@@ -75,8 +75,8 @@ class QuadraticFittingFunc(MSONable, FittingFunc):
 
     # TODO: Understand why Q0 is not considered here.
     @staticmethod
-    def fitting_func(Q: Union[float, np.array], dE: float, a) -> Union[float, np.array]:
-        return a*Q**2 + dE
+    def fitting_func(Q: Union[float, np.array], E: float, a) -> Union[float, np.array]:
+        return a*Q**2 + E
 
     @property
     def omega(self) -> float:
@@ -105,8 +105,8 @@ class QuarticFittingFunc(MSONable, FittingFunc):
         return QuarticFittingFunc(a=self.a, b=new_b, c=self.c, Q0=new_Q0, E0=new_dE)
 
     @staticmethod
-    def fitting_func(Q: Union[float, np.array], dE: float, a, b, c) -> Union[float, np.array]:
-        return a*Q**4 + b*Q**3 + c*Q**2 + dE
+    def fitting_func(Q: Union[float, np.array], E: float, a, b, c) -> Union[float, np.array]:
+        return a*Q**4 + b*Q**3 + c*Q**2 + E
 
     @property
     def omega(self) -> float:

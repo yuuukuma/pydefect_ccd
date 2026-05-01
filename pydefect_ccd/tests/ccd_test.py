@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#  Copyright (c) 2022 Kumagai group.
+#  Copyright (c) 2026 Kumagai group.
 from copy import deepcopy
 
 import numpy as np
@@ -8,10 +8,10 @@ from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from vise.tests.helpers.assertion import assert_dataclass_almost_equal
 
 from pydefect_ccd.ccd import Ccd
-from pydefect_ccd.fitting_curve import QuadraticFittingFunc, intersections
+from pydefect_ccd.fitting_func import QuadraticFittingFunc, intersections
 from pydefect_ccd.local_enum import Carrier
 from pydefect_ccd.potential_curve import SinglePointSpec, SinglePoint, \
-    PotentialCurveSpec, PotentialCurve
+    PotentialCurveSpec, PotentialCurve, Shifter, SinglePoints
 
 
 @pytest.fixture
@@ -26,6 +26,7 @@ def single_point():
                        magnetization=1.0,
                        localized_orbitals=[[orb_info]],
                        ccd_correction_energy=1.0,
+                       used_for_fitting=True,
                        is_shallow=True)
 
 
@@ -53,36 +54,23 @@ def potential_curve(single_point):
                           shifted_energy=3.0)
 
 
-def test_potential_curve_dQs_and_energies(potential_curve):
-    actual = potential_curve.Qs_and_energies()
+def test_potential_curve_Qs_and_energies(potential_curve):
+    actual = potential_curve.Qs_and_energies
     dQs = [1.0]
     energies = [10.0+1.0+1.0+3.0]
     expected = (dQs, energies)
     assert np.array(actual) == pytest.approx(np.array(expected))
 
 
-def test_potential_curve_dQs_and_energies_w_range(potential_curve):
-    actual = potential_curve.Qs_and_energies((-1.0, 0.0))
-    expected = ([], [])
-    assert np.array(actual) == pytest.approx(np.array(expected))
-
-
-def test_dQ_reverted(potential_curve):
-    actual = dQ_revert(potential_curve)
-    expected = deepcopy(potential_curve)
-    expected.original_single_points[0].spec = SinglePointSpec(Q=9.0, disp_ratio=0.9)
-    assert_dataclass_almost_equal(actual, expected)
-
-
 @pytest.fixture
-def potential_curve_final():
+def potential_curve_final(single_point):
     spec = PotentialCurveSpec(charge=1,
                               correction_energy=1.0,
                               counter_charge=0,
                               Q_diff=10.0)
     return PotentialCurve(spec=spec,
-                          original_single_points=[],
-                          shifted_energy=0.0)
+                          original_single_points=SinglePoints([single_point]),
+                          shifter=Shifter(1.0, True))
 
 
 @pytest.fixture

@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-#  Copyright (c) 2022 Kumagai group.
+#  Copyright (c) 2026 Kumagai group.
 from typing import Type
 
 from numpy.ma.testutils import assert_almost_equal
 from vise.util.logger import get_logger
 
 from pydefect_ccd.ccd import Ccd
-from pydefect_ccd.fitting_curve import FittingFunc
+from pydefect_ccd.fitting_func import FittingFunc
 from pydefect_ccd.local_enum import Carrier
 from pydefect_ccd.potential_curve import PotentialCurve, SinglePoints, \
     PotentialCurveSpec, make_shifter

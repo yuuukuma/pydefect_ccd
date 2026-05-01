@@ -16,7 +16,7 @@ from vise.util.matplotlib import float_to_int_formatter
 from vise.util.mix_in import ToJsonFileMixIn
 
 from pydefect_ccd.potential_curve import PotentialCurve
-from pydefect_ccd.fitting_curve import QuadraticFittingFunc
+from pydefect_ccd.fitting_func import QuadraticFittingFunc
 
 
 @dataclass

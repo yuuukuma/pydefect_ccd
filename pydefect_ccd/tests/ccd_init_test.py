@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#  Copyright (c) 2022 Kumagai group.
+#  Copyright (c) 2026 Kumagai group.
 from math import sqrt
 
 import pytest
@@ -18,7 +18,7 @@ def test_dQ(ccd_init):
 
 def test_dR(ccd_init):
     expected = sqrt((0.1*10)**2*6)
-    assert ccd_init.dR == pytest.approx(expected)
+    assert ccd_init.R == pytest.approx(expected)
 
 
 def test_modal_mass(ccd_init):

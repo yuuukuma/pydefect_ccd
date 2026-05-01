@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#  Copyright (c) 2022 Kumagai group.
+#  Copyright (c) 2026 Kumagai group.
 from dataclasses import dataclass
 from typing import Union, List, Literal
 
@@ -12,7 +12,7 @@ from tabulate import tabulate
 from vise.util.mix_in import ToJsonFileMixIn
 
 from pydefect_ccd.ccd import Ccd
-from pydefect_ccd.fitting_curve import QuadraticFittingFunc
+from pydefect_ccd.fitting_func import QuadraticFittingFunc
 
 # @dataclass
 # class PhononEigenstates(MSONable, ToJsonFileMixIn):

@@ -14,7 +14,7 @@ from scipy.optimize import curve_fit
 from tabulate import tabulate
 from vise.util.mix_in import ToJsonFileMixIn
 
-from pydefect_ccd.fitting_curve import FittingFunc
+from pydefect_ccd.fitting_func import FittingFunc
 # from pydefect_ccd.fitting_curve import FittingCurve
 from pydefect_ccd.relaxed_point import OrbitalInfoMixIn, NearEdgeState, \
     _joined_local_orbital_info
@@ -88,7 +88,7 @@ class SinglePoint(OrbitalInfoMixIn, ToJsonFileMixIn):
 
 
 @dataclass
-class ShifterSpec(MSONable, ToJsonFileMixIn):
+class Shifter(MSONable, ToJsonFileMixIn):
     shift_energy: float
     flip: bool
 
@@ -162,7 +162,7 @@ class SinglePoints(MSONable):
         if n_params > len(self):
             raise ValueError(f"The number of Q points must be >= {n_params}.")
 
-    def flip(self, shifter: ShifterSpec, Q_diff: float, total_energy_correction: float) -> "SinglePoints":
+    def flip(self, shifter: Shifter, Q_diff: float, total_energy_correction: float) -> "SinglePoints":
         result = []
         for sp in self:
             new_sp = deepcopy(sp)
@@ -172,8 +172,10 @@ class SinglePoints(MSONable):
             result.append(new_sp)
         return SinglePoints(result)
 
+    # def __str__(self):
+    #     sort Single points
 
-def make_fitting_curve(curve: Type[FittingFunc], single_points: SinglePoints) -> FittingFunc:
+def make_fitting_func(curve: Type[FittingFunc], single_points: SinglePoints) -> FittingFunc:
     # TODO: Consider if Q0, E0 need to be fixed or not.
     vals, _ = curve_fit(curve.fitting_func,
                         single_points.Qs,
@@ -198,17 +200,24 @@ class PotentialCurveSpec(MSONable, ToJsonFileMixIn):
 def make_shifter(spec: PotentialCurveSpec,
                  single_points: SinglePoints,
                  offset: float = 0.0,
-                 flip: bool = False) -> ShifterSpec:
+                 flip: bool = False) -> Shifter:
     lowest_energy = single_points.lowest_energy + spec.correction_energy
     shift_energy = - lowest_energy + offset
-    return ShifterSpec(shift_energy, flip)
+    return Shifter(shift_energy, flip)
 
 
 @dataclass
 class PotentialCurve(MSONable, ToJsonFileMixIn):
+    """
+
+    In case one want to restrict the fitting points,
+    recreate this class instance with the restricted SinglePoints.
+
+    """
+
     spec: PotentialCurveSpec
     original_single_points: SinglePoints # Bare energies.
-    shifter: ShifterSpec
+    shifter: Shifter
     fitting_curve: Optional[FittingFunc] = None
 
     @cached_property

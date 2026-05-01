@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#  Copyright (c) 2023 Kumagai group.
+#  Copyright (c) 2026 Kumagai group.
 
 from pydefect_ccd.util import reduce_wswq
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#  Copyright (c) 2022 Kumagai group.
+#  Copyright (c) 2026 Kumagai group.
 import os
 from argparse import Namespace
 from pathlib import Path
@@ -30,14 +30,14 @@ from vise.util.logger import get_logger
 
 from pydefect_ccd.capture_rate import \
     CaptureRate, CaptureRatePlotter
-from pydefect_ccd.fitting_curve import FittingFunc
+from pydefect_ccd.fitting_func import FittingFunc
 from pydefect_ccd.sommerfeld_scaling import SommerfeldScaling
 from pydefect_ccd.transition_moment import CalcTotalSquaredTransitionMoment, \
     PlottedTotalSquaredTransitionMoment
 from pydefect_ccd.ccd import CcdPlotter, \
     NoCcdCorrection
 from pydefect_ccd.potential_curve import SinglePointSpec, SinglePoint, \
-    PotentialCurveSpec, PotentialCurve, SinglePoints, make_fitting_curve, ShifterSpec, \
+    PotentialCurveSpec, PotentialCurve, SinglePoints, make_fitting_func, Shifter, \
     make_shifter
 from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.make_ccd import MakeCcd
@@ -284,7 +284,7 @@ def make_single_points(args: Namespace):
 
 def _fit_curve(single_points, fitting_curve: Optional[Type[FittingFunc]]):
     if fitting_curve:
-        return make_fitting_curve(fitting_curve, single_points)
+        return make_fitting_func(fitting_curve, single_points)
     return None
 
 

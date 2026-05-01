@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#  Copyright (c) 2022 Kumagai group.
+#  Copyright (c) 2026 Kumagai group.
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -73,13 +73,13 @@ class CcdInit(MSONable, ToJsonFileMixIn):
         return self.relaxed_points[0].structure.volume
 
     @property
-    def dQ(self):
+    def Q(self):
         """ Unit: amu^{1/2} Å. """
         return abs(get_dQ(self.relaxed_points[0].structure,
                           self.relaxed_points[1].structure))
 
     @property
-    def dR(self):
+    def R(self):
         """ Unit: Å."""
         return abs(get_dR(self.relaxed_points[0].structure,
                           self.relaxed_points[1].structure))
@@ -87,15 +87,15 @@ class CcdInit(MSONable, ToJsonFileMixIn):
     @property
     def modal_mass(self):
         """ Unit: amu^{1/2}."""
-        return (self.dQ / self.dR) ** 2
+        return (self.Q / self.R) ** 2
 
     def __str__(self):
         result = [f"name: {self.name}"]
         table = [["vbm", self.vbm, "supercell vbm", self.supercell_vbm],
                  ["cbm", self.cbm, "supercell cbm", self.supercell_cbm],
                  ["volume (Å^3)", self.supercell_volume],
-                 ["dQ (amu^0.5 Å)", self.dQ],
-                 ["dR (Å)", self.dR],
+                 ["Q (amu^0.5 Å)", self.Q],
+                 ["R (Å)", self.R],
                  ["M (amu)", self.modal_mass],
                  ["electron mass (m0)", self.ave_electron_mass],
                  ["hole mass (m0)", self.ave_hole_mass],

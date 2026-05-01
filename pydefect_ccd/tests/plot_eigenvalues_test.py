@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#  Copyright (c) 2022 Kumagai group.
+#  Copyright (c) 2026 Kumagai group.
 from copy import deepcopy
 
 from pydefect.analyzer.band_edge_states import BandEdgeOrbitalInfos, OrbitalInfo
