@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #  Copyright (c) 2026 Kumagai group.
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Tuple
 from monty.json import MSONable
 
 import numpy as np
@@ -15,7 +15,20 @@ Key = Tuple[str, int]  # ("e" or "h", defect_charge)
 
 @dataclass
 class SommerfeldScaling(MSONable, ToJsonFileMixIn):
-    """Cache Sommerfeld scaling factors for carriers and defect charges."""
+    """Sommerfeld factors on a temperature grid.
+
+    The scaling depends on the dielectric constant, carrier effective mass,
+    carrier type, and defect charge.  Values are computed lazily for each
+    ``(carrier, charge)`` pair and stored in ``_scaling``.  Neutral defects
+    return unity scaling without calling ``nonrad``.
+
+    Attributes:
+        epsilon0: Static dielectric constant, i.e. 1 + \epsilon_ele + \epsilon_ion.
+        electron_effective_mass: Electron effective mass in units of m0.
+        hole_effective_mass: Hole effective mass in units of m0.
+        Ts: Temperatures in K.
+        _scaling: Cached arrays keyed by ``("e" or "h", defect_charge)``.
+    """
     epsilon0: float
     electron_effective_mass: float
     hole_effective_mass: float
@@ -23,34 +36,35 @@ class SommerfeldScaling(MSONable, ToJsonFileMixIn):
     _scaling: Dict[Key, np.ndarray] = field(default_factory=dict)
 
     def scaling(self, carrier_type: Carrier, defect_charge: int) -> np.ndarray:
-        """Return cached or newly computed scaling factors."""
+        """Return scaling factors for a carrier and defect charge."""
         if defect_charge == 0:
-            return np.ones_like(self.Ts)
+            return np.ones_like(self.Ts, dtype=float)
 
         key = (str(carrier_type), defect_charge)
         if key not in self._scaling:
-            self.get_scaling(carrier_type, defect_charge)
+            self._scaling[key] = self._compute_scaling(carrier_type,
+                                                       defect_charge)
         return self._scaling[key]
 
-    def get_scaling(self,
-                    carrier_type: Carrier, defect_charge: int,
-                    method: str = "Integrate"):
-        """Compute and cache scaling factors for one carrier-charge pair."""
+    def _compute_scaling(self,
+                         carrier_type: Carrier,
+                         defect_charge: int,
+                         method: str = "Integrate") -> np.ndarray:
+        """Compute a non-neutral scaling array."""
         Z = defect_charge * carrier_type.charge
         mass = (self.electron_effective_mass
                 if carrier_type is Carrier.e else self.hole_effective_mass)
-        print("mass", mass)
         Ts = np.array(self.Ts)
-        self._scaling[(str(carrier_type), defect_charge)] \
-            = sommerfeld_parameter(Ts, Z, mass, self.epsilon0, method=method)
+        return sommerfeld_parameter(Ts, Z, mass, self.epsilon0, method=method)
 
     def add_to_ax(self, ax, carrier_type, defect_charge, ls="--"):
-        """Plot the scaling factors on an axes."""
+        """Add one carrier-charge scaling curve to an axes."""
         y = self.scaling(carrier_type, defect_charge)
         ax.plot(self.Ts, y, linestyle=ls)
 
-    def set_label(self, ax, ls="--"):
-        """Set labels and a 300 K reference line for a scaling plot."""
+    @staticmethod
+    def set_label(ax, ls="--"):
+        """Set plot labels and mark 300 K with a vertical line."""
         ax.set_xlabel("Temperature (K)")
         ax.set_ylabel("Sommerfeld scaling")
         ax.legend()
