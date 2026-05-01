@@ -50,7 +50,7 @@ logger = get_logger(__name__)
 
 
 def make_sommerfeld_scaling(args: Namespace):
-    scaling = SommerfeldScaling(epsilon0=args.unitcell.ave_diele,
+    scaling = SommerfeldScaling(epsilon0=args.epsilon0,
                                 electron_effective_mass=args.electron_effective_mass,
                                 hole_effective_mass=args.hole_effective_mass,
                                 Ts=args.temperatures)
@@ -137,27 +137,16 @@ def make_ccd_init(args: Namespace):
         logger.info(f"{json_file} exists. Remove it first to recreate it.")
         return
 
-    if abs(min_point_1.charge - min_point_2.charge) != 1:
-        logger.warning("The charge difference is not 1. "
-                       "Please ensure you understand the implications.")
-
-    volume = min_point_1.structure.volume
-    if args.effective_mass:
-        concentration = args.effective_mass.concentrations[0]
-        ave_hole_mass = args.effective_mass.average_mass("p", concentration)
-        ave_electron_mass = args.effective_mass.average_mass("n", concentration)
-    else:
-        ave_hole_mass, ave_electron_mass = None, None
+    charge_diff = min_point_1.charge - min_point_2.charge
+    if abs(charge_diff) != 1:
+        logger.warning(f"The charge difference is {charge_diff} and not 1. Please "
+                       f"ensure you understand the implications.")
 
     ccd_init = CcdInit(relaxed_points=[min_point_1, min_point_2],
                        vbm=args.unitcell.vbm,
                        cbm=args.unitcell.cbm,
-                       supercell_volume=volume,
                        supercell_vbm=args.p_state.vbm_info.energy,
-                       supercell_cbm=args.p_state.cbm_info.energy,
-                       ave_hole_mass=ave_hole_mass,
-                       ave_electron_mass=ave_electron_mass,
-                       ave_static_diele_const=args.unitcell.ave_ele_diele)
+                       supercell_cbm=args.p_state.cbm_info.energy)
 
     if not path.exists():
         path.mkdir(parents=True)
@@ -171,12 +160,11 @@ user_incar_settings:
     ccd_init.to_json_file(json_file)
     logger.info(ccd_init)
 
-default_disps = [-0.2, -0.1, -0.08, -0.06, -0.04, -0.02, 0.0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0]
+
 def make_ccd_dirs(args: Namespace):
     os.chdir(args.calc_dir)
     s1 = args.ccd_init.relaxed_points[0].structure
     s2 = args.ccd_init.relaxed_points[1].structure
-    print(len(args.first_to_second_div_ratios))
     s1_to_s2 = s1.interpolate(s2, nimages=args.first_to_second_div_ratios)
     s2_to_s1 = s2.interpolate(s1, nimages=args.second_to_first_div_ratios)
     rp1 = args.ccd_init.relaxed_points[0]

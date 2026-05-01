@@ -30,30 +30,16 @@ class CcdInit(MSONable, ToJsonFileMixIn):
         cbm: Conduction band minimum from the unit-cell calculation.
         supercell_vbm: VBM from the perfect-supercell calculation.
         supercell_cbm: CBM from the perfect-supercell calculation.
-        supercell_volume: Perfect-supercell volume used by downstream rates.
-        ave_static_diele_const: Average static dielectric constant.
-        ave_electron_mass: Average electron effective mass.
-        ave_hole_mass: Average hole effective mass.
     """
     relaxed_points: List[RelaxedPoint]
     vbm: float
     cbm: float
     supercell_vbm: float
     supercell_cbm: float
-    supercell_volume: float
-    ave_static_diele_const: float
-    ave_electron_mass: float = None
-    ave_hole_mass: float = None
 
     def __post_init__(self):
         """Validate that exactly two relaxed points define the CCD path."""
         assert len(self.relaxed_points) == 2
-
-    def effective_mass(self, carrier: Carrier) -> Optional[float]:
-        """Return the effective mass corresponding to the carrier."""
-        if carrier is Carrier.e:
-            return self.ave_electron_mass
-        return self.ave_hole_mass
 
     @property
     def name(self) -> str:
@@ -103,18 +89,15 @@ class CcdInit(MSONable, ToJsonFileMixIn):
         result = [f"name: {self.name}"]
         table = [["vbm", self.vbm, "supercell vbm", self.supercell_vbm],
                  ["cbm", self.cbm, "supercell cbm", self.supercell_cbm],
-                 ["volume (Å^3)", self.supercell_volume],
+                 ["volume (Å^3)", self.volume],
                  ["Q (amu^0.5 Å)", self.Q],
                  ["R (Å)", self.R],
-                 ["M (amu)", self.modal_mass],
-                 ["electron mass (m0)", self.ave_electron_mass],
-                 ["hole mass (m0)", self.ave_hole_mass],
-                 ["static diele", self.ave_static_diele_const]]
+                 ["M (amu)", self.modal_mass]]
         result.append(tabulate(table, tablefmt="plain", floatfmt=".3f"))
 
         result.append("-" * 60)
 
-        headers = ["q", "ini symm", "final symm", "energy",
+        headers = ["q", "ini symm.", "final symm.", "energy",
                    "correction", "corrected energy", "magnetization",
                    "localized orbitals", "ZPL"]
         table = []

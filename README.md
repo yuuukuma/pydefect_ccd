@@ -34,7 +34,13 @@ Workflow
 -----------------------------------------
 Here, I show an example using C-on-N defect in GaN.
 
-1. Create a `ccd_init.json` file from two directories containing pydefect files. 
+1. First, we prepare the Sommerfeld scaling factor for the material, which is needed to evaluate the capture rate.
+```bash
+pydefect_ccd make-sommerfeld-scaling
+```
+
+
+2. Create a `ccd_init.json` file from two directories containing pydefect files. 
 If the excited state has one more (less) charge state, n-type (p-type) is assumed.
 ```bash
 pydefect_ccd make-ccd-init -u ../unitcell.yaml -pbes ../perfect/perfect_band_edge_state.json -fd ../C_N1_-1 -sd ../C_N1_0 -em ../effective_mass.json
@@ -44,7 +50,7 @@ For example, in the above command, the formation energy of C_N1_-1
 
 You can always check the json files using the `pydefect_print` command in pydefect.
 
-2. We next construct the directories for CCD calculations.
+3. We next construct the directories for CCD calculations.
 ```bash
 pydefect_ccd make-ccd-dirs --ccd_init ccd_init.json -fsr -0.1 -0.05 -0.02 0.0 0.02 0.05 0.1 0.2 -sfr -0.1 -0.05 -0.02 0.0 0.02 0.05 0.1 0.2
 
@@ -61,7 +67,7 @@ vise vs -d disp_* -t defect
 ```
 
 
-3. After finishing the VASP calculations in each directory, 
+4. After finishing the VASP calculations in each directory, 
 run the following commands to generate the pydefect `calc_results.json`, 
 `band_edge_orbital_infos.json`, and `band_edge_states.json` files 
 in each directory.
@@ -77,7 +83,7 @@ In addition, the following line needs to be added to the pydefct.yaml file in th
 similar_orb_criterion: 1.0
 ```
 
-4. We can also evaluate the corrections for the CCD calculations.
+5. We can also evaluate the corrections for the CCD calculations.
 The details are written in 
 [this paper](https://doi.org/10.1103/PhysRevB.107.L220101).
 Note that this correction is needed even for neutral defects.
@@ -85,24 +91,24 @@ Note that this correction is needed even for neutral defects.
 pydefect_ccd make-ccd-corrections -d disp_* -u ../unitcell/unitcell.yaml -ndcr ../../../C_N1_-1/calc_results.json -ndde ../../../C_N1_-1/defect_entry.json -p potential_curve_spec.json
 ```
 
-5. We then create `single_point_info.json` in each directory, which
+6. We then create `single_point_info.json` in each directory, which
 summarize the calculation result for each single point, with the following command.
 ```bash
 pydefect_ccd make-single-point-results -d disp_* 
 ```
 
-6. Next, we create `potential_curve.json` at each q using the following command.
+7. Next, we create `potential_curve.json` at each q using the following command.
 ```bash
 pydefect_ccd make-potential-curve-result -d disp_* 
 ```
 
-7. Finally, we create the `ccd.json` file by merging all the calculated data 
+8. Finally, we create the `ccd.json` file by merging all the calculated data 
 using the following command.
 ```bash
 pydefect_ccd make-ccd --ccd_init ccd_init.json --ground-potential-curve q_0/potential_curve.json --excited-potential-curve q_-1/potential_curve.json
 ```
 
-8. We can plot the configuration coordinate diagram using the following command.
+9. We can plot the configuration coordinate diagram using the following command.
 ```bash
 pydefect_ccd plot-ccd --ccd ccd.json
 ```
@@ -114,14 +120,14 @@ we can add more single point calculations, for  example, as follows.
 ```bash
 pydefect_ccd mcdir --ccd_init ccd_init.json -fsr 1.2 1.4 -sfr -0.4
 ```
-Then, iterate steps 3 to 8 again.
+Then, iterate steps 4 to 9 again.
 
-9. We can also evaluate the total squared transition moment between two potential curves using the following command.
+10. We can also evaluate the total squared transition moment between two potential curves using the following command.
 ```bash
 pydefect_ccd make-total-squared-transition-moment --ccd ccd.json -s ../sommerfeld_scaling.json
 ```
 
-10. We can also plot the eigenvalues along the configuration coordinate using the following command.
+11. We can also plot the eigenvalues along the configuration coordinate using the following command.
 ```bash
 pydefect_ccd plot-eigenvalues --ccd_init ../ccd_init.json -d disp_*
 ```
@@ -129,20 +135,20 @@ Now the following figure is obtained.
 ![eigenvalues_q_-1.png](readme_figs/eigenvalues_q_-1.png)
 ![eigenvalues_q_0.png](readme_figs/eigenvalues_q_0.png)
 
-11. 
+12. 
 ```bash
 pydefect_ccd make-wswq-dirs --ccd_init ../ccd_init.json --dirs disp_{-0.2,-0.1,0.0,0.1,0.2}
 ```
 Under the static approximation, we can evaluate the electron-phonon coupling constant
 near the equilibrium geometry.
 
-12. We calculate the electron-phonon matrix element using the following command.
+13. We calculate the electron-phonon matrix element using the following command.
 ```bash
 pydefect_ccd make-e_p_matrix_element --potential_curve potential_curve.json --band_edge_index 599 --defect_band_index 600 --spin down --dirs disp_{-0.2,-0.1,0.0,0.1,0.2}
 ```
 
 
-13. The capture rate can be calculated using the following command.
+14. The capture rate can be calculated using the following command.
 ```bash
 pydefect_ccd make-capture-rate --ccd_init ccd_init.json --ccd ccd.json -epme q_0/e_p_matrix_element_b599_d600_-1.json --total_moment total_squared_transition_moment.json -s ../sommerfeld_scaling.json
 ```

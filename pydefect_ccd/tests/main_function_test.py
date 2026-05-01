@@ -13,18 +13,29 @@ from vise.input_set.prior_info import PriorInfo
 from pydefect_ccd.potential_curve import SinglePointSpec, PotentialCurveSpec
 from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.cli.main_function import make_ccd_init, make_ccd, plot_ccd, \
-    make_ccd_dirs, make_wswq_dirs, plot_eigenvalues, main_make_e_p_matrix_element
+    make_ccd_dirs, make_wswq_dirs, plot_eigenvalues, main_make_e_p_matrix_element, \
+    make_sommerfeld_scaling
 from pydefect_ccd.e_p_matrix_element import EPMatrixElement
 from pydefect_ccd.local_enum import Carrier
 from pydefect_ccd.relaxed_point import NearEdgeState, RelaxedPoint
 
 
+def test_make_sommerfeld_scaling(test_files, tmpdir):
+    tmpdir.chdir()
+    args = Namespace(epsilon0=10.0,
+                     electron_effective_mass=2.0,
+                     hole_effective_mass=5.0,
+                     temperatures=[100, 200])
+    make_sommerfeld_scaling(args)
+    assert str(loadfn("sommerfeld_scaling.json"))
+
+
 def test_make_ccd_init(test_files, tmpdir):
     tmpdir.chdir()
-    dir_ = test_files / "Na3AgO2"
+    dir_ = test_files / "GaN_C_N" / "relaxed"
 
-    args = Namespace(first_dir=dir_ / "Va_O1_1",
-                     second_dir=dir_ / "Va_O1_0",
+    args = Namespace(first_dir=dir_ / "q_0",
+                     second_dir=dir_ / "q_1",
                      unitcell=Unitcell.from_yaml(dir_ / "unitcell.yaml"),
                      p_state=loadfn(dir_ / "perfect_band_edge_state.json"),
                      effective_mass=loadfn(dir_ / "effective_mass.json"))
@@ -83,9 +94,7 @@ def test_make_ccd_dirs(tmpdir, ground_structure, excited_structure,
                                                             occupation=0.0)]],
                                      ),
                         ],
-        vbm=-100.0, cbm=100.0, supercell_volume=10.0,
-        supercell_vbm=-100.0, supercell_cbm=100.0,
-        ave_electron_mass=1.0, ave_hole_mass=1.0, ave_static_diele_const=1.0)
+        vbm=-100.0, cbm=100.0, supercell_vbm=-100.0, supercell_cbm=100.0)
 
     Path("test").mkdir()
     args = Namespace(ccd_init=ccd_init,

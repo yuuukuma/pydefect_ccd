@@ -11,12 +11,12 @@ def test_json_roundtrip(ccd_init, tmpdir):
     assert_json_roundtrip(ccd_init, tmpdir)
 
 
-def test_dQ(ccd_init):
+def test_Q(ccd_init):
     expected = sqrt((0.1*10)**2*6 * Element.H.atomic_mass)
     assert ccd_init.Q == pytest.approx(expected)
 
 
-def test_dR(ccd_init):
+def test_R(ccd_init):
     expected = sqrt((0.1*10)**2*6)
     assert ccd_init.R == pytest.approx(expected)
 
@@ -35,4 +35,5 @@ def test_volume(ccd_init):
 
 
 def test_ccd_string(ccd_init):
+    print(ccd_init)
     assert str(ccd_init)

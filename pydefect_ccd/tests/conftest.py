@@ -118,10 +118,8 @@ def ccd_init(ground_structure, excited_structure):
                            conduction_bands=[[cb], [cb_w_lo]])
     # transition level = -1.0 from CBM
     return CcdInit(relaxed_points=[va_o1_0, va_o1_1],
-                   vbm=1.0, cbm=3.0, supercell_volume=100.0,
-                   supercell_vbm=1.1, supercell_cbm=2.9,
-                   ave_electron_mass=11.0, ave_hole_mass=12.0,
-                   ave_static_diele_const=13.0)
+                   vbm=1.0, cbm=3.0,
+                   supercell_vbm=1.1, supercell_cbm=2.9)
 
 
 @pytest.fixture(scope="session")

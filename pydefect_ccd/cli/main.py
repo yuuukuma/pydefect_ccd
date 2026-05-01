@@ -42,7 +42,7 @@ def parse_args_main(args):
         help="Show version and exit."
     )
 
-    subparsers = parser.add_subparsers(required=True, dest="command")
+    subparsers = parser.add_subparsers(required=True)
 
     # external common parsers
     unitcell_parser = add_sub_parser(argparse, name="unitcell")
@@ -80,10 +80,11 @@ def parse_args_main(args):
     parser_make_sommerfeld_scaling  = subparsers.add_parser(
         name="make-sommerfeld-scaling",
         description="Calculate sommerfeld scaling parameters and make its file.",
-        parents=[unitcell_parser],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=["mss"],
     )
+    parser_make_sommerfeld_scaling.add_argument(
+        "--epsilon0", "-e", type=float, required=True)
     parser_make_sommerfeld_scaling.add_argument(
        "--electron-effective-mass", "-eem", type=float, required=True)
     parser_make_sommerfeld_scaling.add_argument(
@@ -198,11 +199,11 @@ def parse_args_main(args):
         aliases=["mc"],
     )
     parser_make_ccd.add_argument("--ground-single-points", type=loadfn)
-    parser_make_ccd.add_argument("--ground-potent-curve-spec", type=loadfn)
-    parser_make_ccd.add_argument("--ground-ground-fitting-func", type=loadfn)
+    parser_make_ccd.add_argument("--ground-potential-curve-spec", type=loadfn)
+    parser_make_ccd.add_argument("--ground-fitting-func", type=loadfn)
     parser_make_ccd.add_argument("--excited-single-points", type=loadfn)
-    parser_make_ccd.add_argument("--excited-potent-curve-spec", type=loadfn)
-    parser_make_ccd.add_argument("--excited-ground-fitting-func", type=loadfn)
+    parser_make_ccd.add_argument("--excited-potential-curve-spec", type=loadfn)
+    parser_make_ccd.add_argument("--excited-fitting-func", type=loadfn)
     # parser_make_ccd.add_argument(
     #     "--fixed-Q0",
     #     action=argparse.BooleanOptionalAction,
