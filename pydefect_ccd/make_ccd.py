@@ -41,6 +41,7 @@ class MakeCcd:
                  vbm: float,
                  cbm: float,
                  name: str):
+        """Prepare shifted potential curves and their fitted functions."""
         self._vbm = vbm
         self._cbm = cbm
         self._name = name
@@ -67,10 +68,12 @@ class MakeCcd:
 
     @property
     def _charge_diff(self):
+        """Return excited-charge minus ground-charge."""
         return self._excited_curve.charge - self._ground_curve.charge
 
     @property
     def _carrier_in_excited_state(self):
+        """Return the carrier present in the excited state."""
         carrier_charge = - self._charge_diff
         return Carrier.from_carrier_charge(carrier_charge)
 
@@ -84,6 +87,7 @@ class MakeCcd:
     #         raise ValueError("The charge difference must be ±1.")
 
     def _shifted_energy(self, charge) -> float:
+        """Return the Fermi-level energy offset for a charge state."""
         if self._carrier_in_excited_state == Carrier.e:
             band_edge = self._cbm
         elif self._carrier_in_excited_state == Carrier.h:
@@ -94,7 +98,7 @@ class MakeCcd:
 
     @property
     def ccd(self) -> Ccd:
+        """Return the constructed CCD object."""
         return Ccd(name=self._name,
                    ground_curve=self._ground_curve,
                    excited_curve=self._excited_curve)
-

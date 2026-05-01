@@ -14,22 +14,27 @@ from vise.util.enum import ExtendedEnum
 
 @dataclass
 class FittingFunc(ABC):
-    """Abstract base class for fitting curves used in CCD analysis.
+    """Base class for fitted potential-energy functions in CCD analysis.
 
-    Note that the class needs to be registered in FittingCurveType to be used.
-    For the fitting Q0=0 is assumed and this must be included in the fitting points.
+    ``Q0`` is the minimum position in amu^0.5 Angstrom and ``E0`` is the
+    minimum energy in eV.  Concrete classes provide both an evaluatable curve
+    and a static model function used by ``scipy.optimize.curve_fit``.
 
     Attributes:
+        Q0: Minimum position along the configuration coordinate.
+        E0: Minimum energy of the fitted potential.
     """
     Q0: float
     E0: float
 
     @abstractmethod
     def __call__(self, x: Union[float, np.array]) -> Union[float, np.array]:
+        """Evaluate the fitted function at one or more Q values."""
         pass
 
     @abstractmethod
     def shift(self, shift_Q, shift_energy, revert=False) -> "FittingFunc":
+        """Return a copy shifted in Q and energy."""
         pass
 
     @staticmethod
@@ -41,16 +46,19 @@ class FittingFunc(ABC):
 
     @classmethod
     def n_fit_params(cls) -> int:
+        """Return the number of parameters expected by ``fitting_func``."""
         sig = inspect.signature(cls.fitting_func)
         return len(sig.parameters) - 1
 
     def add_plot(self, ax, x_range: List[float], color):
+        """Draw the fitted function on an axes over the given Q range."""
         xs = np.linspace(x_range[0], x_range[1], 1000)
         ys = self(xs)
         ax.plot(xs, ys, color=color)
 
     @property
     def omega_in_eV(self) -> float:
+        """Return the phonon frequency converted to eV."""
         if not hasattr(self, "omega"):
             raise AttributeError(f"{self.__class__} does not have 'omega' attribute.")
 
@@ -59,16 +67,16 @@ class FittingFunc(ABC):
 
 @dataclass
 class QuadraticFittingFunc(MSONable, FittingFunc):
-    """
-    a(Q-Q0)^2 + dE = 0.5 * omega^2 * (Q-Q0)^2 + dE
-    """
+    """Quadratic potential ``a * (Q - Q0)^2 + E0``."""
     a: float
     # omega: float  # in amu Å^2 / eV
 
     def __call__(self, Q: Union[float, np.ndarray]) -> Union[float, np.array]:
+        """Evaluate the quadratic potential."""
         return self.a * (Q - self.Q0)**2 + self.E0
 
     def shift(self, shift_Q, shift_energy, revert=False) -> "QuadraticFittingFunc":
+        """Return the same curvature with shifted minimum and energy."""
         new_Q0 = self.Q0 + shift_Q
         new_dE = self.E0 + shift_energy
         return QuadraticFittingFunc(new_Q0, new_dE, a=self.a)
@@ -76,29 +84,34 @@ class QuadraticFittingFunc(MSONable, FittingFunc):
     # TODO: Understand why Q0 is not considered here.
     @staticmethod
     def fitting_func(Q: Union[float, np.array], E: float, a) -> Union[float, np.array]:
+        """Model used for fitting when the minimum is fixed at Q=0."""
         return a*Q**2 + E
 
     @property
     def omega(self) -> float:
+        """Return the harmonic coefficient used for frequency conversion."""
         return 0.5 * self.a
 
     def __str__(self):
-         return (f"Quadratic Curve: omega={self.omega_in_eV:.3f} (eV), "
-                 f"Q0={self.Q0:.3f} (amu**0.5*Å), Emin={self.E0:.3f} (eV)")
+        """Return a compact summary of the quadratic fit."""
+        return (f"Quadratic Curve: omega={self.omega_in_eV:.3f} (eV), "
+                f"Q0={self.Q0:.3f} (amu**0.5*Å), Emin={self.E0:.3f} (eV)")
 
 
 @dataclass
 class QuarticFittingFunc(MSONable, FittingFunc):
-    """ a(Q-Q0)^4 + b(Q-Q0)^3 + c(Q-Q0)^2 + d(Q-Q0) + dE """
+    """Quartic potential without a linear term around ``Q0``."""
     a: float  # in ??
     b: float
     c: float
 
     def __call__(self, Q: Union[float, np.array]) -> Union[float, np.array]:
+        """Evaluate the quartic potential."""
         return (self.a * (Q - self.Q0) ** 4 + self.b * (Q - self.Q0) ** 3
                 + self.c * (Q - self.Q0) ** 2 + self.E0)
 
     def shift(self, shift_Q, shift_energy, revert=False) -> "QuarticFittingFunc":
+        """Return a shifted quartic, optionally reversing the odd term."""
         new_Q0 = self.Q0 + shift_Q
         new_dE = self.E0 + shift_energy
         new_b = -self.b if revert else self.b
@@ -106,19 +119,23 @@ class QuarticFittingFunc(MSONable, FittingFunc):
 
     @staticmethod
     def fitting_func(Q: Union[float, np.array], E: float, a, b, c) -> Union[float, np.array]:
+        """Model used for fitting when the minimum is fixed at Q=0."""
         return a*Q**4 + b*Q**3 + c*Q**2 + E
 
     @property
     def omega(self) -> float:
+        """Return the quadratic coefficient used for frequency conversion."""
         return 0.5 * self.c
 
     def __str__(self):
+        """Return a compact summary of the quartic fit."""
         return (f"QuarticCurve: {self.a}*(Q-Q0)^4 + {self.b}*(Q-Q0)^3 + "
                 f"{self.c}*(Q-Q0)^2 + {self.E0} (eV), "
                 f"Q0={self.Q0:.3f} (amu**0.5*Å)")
 
 
 class FittingCurveType(ExtendedEnum):
+    """Registry of supported fitting-function classes."""
     quadratic = ("quadratic", QuadraticFittingFunc)
     quartic = ("quartic", QuarticFittingFunc)
 

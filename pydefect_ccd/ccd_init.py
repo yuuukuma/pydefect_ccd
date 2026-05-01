@@ -17,19 +17,23 @@ logger = get_logger(__name__)
 
 @dataclass
 class CcdInit(MSONable, ToJsonFileMixIn):
-    """ Initial information related to a 1D configuration coordination diagram.
+    """Initial data for a one-dimensional configuration coordinate diagram.
+
+    The two relaxed points define the endpoints of the CCD path.  The first
+    relaxed point is used as the reference structure for derived displacement
+    quantities.
 
     Attributes:
-        relaxed_points (List[RelaxedPoint]): List of two relaxed defects.
-            The charge state difference must be 1.
-            The first one is set as a reference structure.
-        vbm (float): valence band maximum in the unitcell calculation.
-        cbm (float): conduction band minimum in the unitcell calculation.
-        supercell_vbm (float): vbm in the perfect supercell calculation.
-        supercell_cbm (float): cbm in the perfect supercell calculation.
-        ave_static_diele_const (float): Average of the static dielectric
-        ave_electron_mass (float): Average of the electron effective mass
-        ave_hole_mass (float): Average of the hole effective mass
+        relaxed_points: Two relaxed defect states whose charge difference is
+            expected to be one.
+        vbm: Valence band maximum from the unit-cell calculation.
+        cbm: Conduction band minimum from the unit-cell calculation.
+        supercell_vbm: VBM from the perfect-supercell calculation.
+        supercell_cbm: CBM from the perfect-supercell calculation.
+        supercell_volume: Perfect-supercell volume used by downstream rates.
+        ave_static_diele_const: Average static dielectric constant.
+        ave_electron_mass: Average electron effective mass.
+        ave_hole_mass: Average hole effective mass.
     """
     relaxed_points: List[RelaxedPoint]
     vbm: float
@@ -42,23 +46,28 @@ class CcdInit(MSONable, ToJsonFileMixIn):
     ave_hole_mass: float = None
 
     def __post_init__(self):
+        """Validate that exactly two relaxed points define the CCD path."""
         assert len(self.relaxed_points) == 2
 
     def effective_mass(self, carrier: Carrier) -> Optional[float]:
+        """Return the effective mass corresponding to the carrier."""
         if carrier is Carrier.e:
             return self.ave_electron_mass
         return self.ave_hole_mass
 
     @property
     def name(self) -> str:
+        """Return a readable name combining both charge states."""
         return (f"{self.relaxed_points[0].full_name} "
                 f"⇆ {self.relaxed_points[1].full_name}")
 
     @property
     def band_gap(self) -> float:
+        """Return the unit-cell band gap in eV."""
         return self.cbm - self.vbm
 
     def relaxed_point_from_charge(self, charge: int) -> RelaxedPoint:
+        """Return the relaxed point matching the requested charge."""
         for rp in self.relaxed_points:
             if rp.charge == charge:
                 return rp
@@ -90,6 +99,7 @@ class CcdInit(MSONable, ToJsonFileMixIn):
         return (self.Q / self.R) ** 2
 
     def __str__(self):
+        """Return a report of CCD inputs, relaxed points, and band edges."""
         result = [f"name: {self.name}"]
         table = [["vbm", self.vbm, "supercell vbm", self.supercell_vbm],
                  ["cbm", self.cbm, "supercell cbm", self.supercell_cbm],
@@ -157,4 +167,3 @@ plot
 2. consider how to handle the small difference of origin.
 remove ave_static_diele_const
 """
-

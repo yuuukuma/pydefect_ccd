@@ -11,6 +11,7 @@ from pymatgen.electronic_structure.core import Spin
 
 
 def spin_to_idx(spin: Spin, count_from_1=False) -> int:
+    """Convert a pymatgen spin value to an up/down list index."""
     result = 0 if spin == Spin.up else 1
     if count_from_1:
         result += 1
@@ -18,11 +19,12 @@ def spin_to_idx(spin: Spin, count_from_1=False) -> int:
 
 
 def idx_to_spin(idx: int):
+    """Convert a zero-based spin index to a pymatgen spin value."""
     return Spin.up if idx == 0 else Spin.down
 
 
 def reduce_wswq(filename: Path, orbs: List[int]) -> None:
-    """
+    """Keep only WSWQ rows whose band indices are both in ``orbs``.
 
     Args:
         filename: WSWQ filename
@@ -44,6 +46,7 @@ def reduce_wswq(filename: Path, orbs: List[int]) -> None:
 
 
 def _append_ij(line, orbitals, out):
+    """Append one WSWQ data line when both band indices are selected."""
     data = re.search(r'i=\s*(\d+), '
                      r'' r'j=\s*(\d+)\s*:\s*([0-9\-.]+)\s+([0-9\-.]+)',
                      line)
@@ -53,7 +56,7 @@ def _append_ij(line, orbitals, out):
 
 
 def get_dR(ground: Structure, excited: Structure) -> float:
-    """Summation of atomic displacement distances
+    """Return the root-sum-square atomic displacement in Angstrom.
 
     Args:
         ground (Structure): Reference structure
@@ -69,7 +72,7 @@ def get_dR(ground: Structure, excited: Structure) -> float:
 
 
 def get_dQ(ground: Structure, excited: Structure) -> float:
-    """Calculate configuration coordinate difference.
+    """Return the mass-weighted configuration coordinate displacement.
 
     Args:
         ground : pymatgen structure corresponding to the ground (final) state

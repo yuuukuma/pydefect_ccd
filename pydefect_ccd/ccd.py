@@ -18,25 +18,30 @@ logger = get_logger(__name__)
 
 @dataclass
 class Ccd(MSONable, ToJsonFileMixIn):
+    """Configuration coordinate diagram built from two potential curves."""
     name: str
     ground_curve: PotentialCurve
     excited_curve: PotentialCurve
 
     @property
     def Q_diff(self) -> float:
+        """Return the displacement between the two relaxed structures."""
         return self.excited_curve.Q_diff
 
     @property
     def dE(self) -> float:
+        """Return the energy difference between excited and ground minima."""
         return self.excited_curve.lowest_energy - self.ground_curve.lowest_energy
 
     @property
     def captured_carrier(self) -> Carrier:
+        """Return the carrier captured in the transition."""
         carrier_charge = self.ground_curve.charge - self.excited_curve.charge
         return Carrier.from_carrier_charge(carrier_charge)
 
     def intersections(self, min_Q_mul=-2, max_Q_mul=3,
                       num_grids=2001) -> List[Tuple[float, float]]:
+        """Find crossing points between fitted ground and excited curves."""
         ground = self.ground_curve.fitting_curve
         excited = self.excited_curve.fitting_curve
         if excited is None:
@@ -49,9 +54,11 @@ class Ccd(MSONable, ToJsonFileMixIn):
 
     @property
     def crossing_points(self) -> List[Tuple[float, float]]:
+        """Return fitted curve crossings using the default search range."""
         return self.intersections()
 
     def __str__(self):
+        """Return a human-readable CCD summary."""
         result = [f"name: {self.name}",
                   "excited" + "-" * 50, str(self.excited_curve),
                   "ground" + "-" * 50, str(self.ground_curve),
@@ -69,12 +76,15 @@ class Ccd(MSONable, ToJsonFileMixIn):
 
 
 class CcdPlotter:
+    """Plot a configuration coordinate diagram."""
+
     def __init__(self,
                  ccd: Ccd,
                  plt,
                  title: str = None,
                  ground_q_range: list = None,
                  excited_q_range: list = None):
+        """Set CCD data, plotting backend, title, and optional Q ranges."""
         self._title = title or ""
         self._ccd = ccd
         self._ground_q_range = ground_q_range
@@ -83,6 +93,7 @@ class CcdPlotter:
         self.plt = plt
 
     def construct_plot(self):
+        """Draw the CCD and apply title, labels, and formatting."""
         self._add_ccd()
         self._set_title()
         self._set_formatter()
@@ -90,28 +101,35 @@ class CcdPlotter:
         self.plt.tight_layout()
 
     def _add_ccd(self):
+        """Add ground and excited potential curves to the axes."""
         ax = self.plt.gca()
         self._ccd.ground_curve.add_plot(ax, "red", self._ground_q_range)
         self._ccd.excited_curve.add_plot(ax, "blue", self._excited_q_range)
 
     def _set_labels(self):
+        """Set axis labels and legend for the CCD plot."""
         ax = self.plt.gca()
         ax.set_xlabel("Q (amu$^{1/2}$ Å)")
         ax.set_ylabel("Energy (eV)")
         ax.legend()
 
     def _set_title(self):
+        """Set the plot title."""
         self.plt.gca().set_title(self._title)
 
     def _set_formatter(self):
+        """Use compact integer-style tick labels when possible."""
         self.plt.gca().xaxis.set_major_formatter(float_to_int_formatter)
         self.plt.gca().yaxis.set_major_formatter(float_to_int_formatter)
 
 
 
 class NoCcdCorrection(Correction):
+    """Null correction object used when no CCD correction is available."""
+
     @property
     def correction_energy(self) -> float:
+        """Return zero correction energy."""
         return 0.0
 
 

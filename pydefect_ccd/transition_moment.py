@@ -21,21 +21,27 @@ from pydefect_ccd.fitting_func import QuadraticFittingFunc
 
 @dataclass
 class TotalSquaredTransitionMoment(MSONable, ToJsonFileMixIn):
+    """Temperature-dependent total squared transition moment."""
     Ts: List[float]
     total_moments: List[float]  # amu A^2 / eV
 
     def add_plot(self, ax):
+        """Plot the total squared moment against temperature."""
         ax.plot(self.Ts, self.total_moments)
 
 
 class PlottedTotalSquaredTransitionMoment:
+    """Plot wrapper for total squared transition moments."""
+
     def __init__(self,
                  total_squared_transition_moment: TotalSquaredTransitionMoment,
                  title: Optional[str] = None):
+        """Set transition-moment data and optional title."""
         self._transition_moment = total_squared_transition_moment
         self._title = title or ""
 
     def plot(self, ax: Optional[Axes] = None) -> Tuple[Figure, Axes]:
+        """Create or update a plot and return its figure and axes."""
         if ax is None:
             fig, ax = plt.subplots()
         else:
@@ -55,16 +61,20 @@ class PlottedTotalSquaredTransitionMoment:
         return fig, ax
 
     def _add_transition_moment(self, ax: Axes) -> None:
+        """Add transition-moment data to the axes."""
         self._transition_moment.add_plot(ax)
 
     def _set_title(self, ax: Axes) -> None:
+        """Set the plot title."""
         ax.set_title(self._title)
 
     def _set_formatter(self, ax: Axes) -> None:
+        """Use compact integer-style tick labels when possible."""
         ax.xaxis.set_major_formatter(float_to_int_formatter)
         ax.yaxis.set_major_formatter(float_to_int_formatter)
 
     def _set_labels(self, ax: Axes) -> None:
+        """Set axis labels and add a legend when labels are present."""
         ax.set_xlabel("T (K)")
         ax.set_ylabel("$Total squared moment$ (amu Å$^2$ / eV)")
 
@@ -75,6 +85,7 @@ class PlottedTotalSquaredTransitionMoment:
 
 @dataclass
 class CalcTotalSquaredTransitionMoment:
+    """Compute total squared transition moments from fitted CCD curves."""
     ground_curve: PotentialCurve
     excited_curve: PotentialCurve
     Ts: List[float]

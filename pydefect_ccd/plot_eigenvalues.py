@@ -11,6 +11,8 @@ logger = get_logger(__name__)
 
 
 class EigenvalPlotter:
+    """Plot band eigenvalues along a displacement path."""
+
     def __init__(self,
                  orb_infos: List[BandEdgeOrbitalInfos],
                  disp_ratios: List[float],
@@ -19,6 +21,7 @@ class EigenvalPlotter:
                  title: str = None,
                  y_range: Optional[List[float]] = None,
                  ):
+        """Validate orbital data and create one subplot per spin channel."""
         try:
             num_kpt = len(orb_infos[0].kpt_weights)
             assert num_kpt == 1
@@ -46,6 +49,7 @@ class EigenvalPlotter:
         self._y_range = y_range
 
     def construct_plot(self):
+        """Draw eigenvalues, optional band edges, and plot formatting."""
         self._add_eigenvalues()
         if self._supercell_vbm and self._supercell_cbm:
             self._add_vbm_cbm()
@@ -58,6 +62,7 @@ class EigenvalPlotter:
         self.plt.tight_layout()
 
     def _add_eigenvalues(self):
+        """Scatter eigenvalues colored by occupation."""
         num_spin = len(self._orb_infos[0].orbital_infos)
 
         for spin_idx in range(num_spin):
@@ -71,23 +76,27 @@ class EigenvalPlotter:
         # self.plt.colorbar(ax=axs[0])
 
     def _add_vbm_cbm(self):
+        """Add horizontal VBM and CBM reference lines."""
         args = dict(linestyle="-.", linewidth=0.75)
         for ax in self.axs:
             ax.axhline(y=self._supercell_vbm, **args)
             ax.axhline(y=self._supercell_cbm, **args)
 
     def _set_labels(self):
+        """Set shared x label and energy y label."""
         self.fig.text(0.55, 0, "Displacement ratio", ha='center')
         self.axs[0].set_ylabel(f"Energy (eV)")
 
     def _set_title(self):
+        """Set the plot title."""
         self.plt.gca().set_title(self._title)
 
     def _set_y_range(self):
+        """Apply the configured y-axis range to all spin axes."""
         for ax in self.axs:
             ax.set_ylim(self._y_range[0], self._y_range[1])
 
     def _set_formatter(self):
+        """Use compact integer-style tick labels when possible."""
         self.plt.gca().xaxis.set_major_formatter(float_to_int_formatter)
         self.plt.gca().yaxis.set_major_formatter(float_to_int_formatter)
-

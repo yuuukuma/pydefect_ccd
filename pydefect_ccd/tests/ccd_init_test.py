@@ -35,4 +35,4 @@ def test_volume(ccd_init):
 
 
 def test_ccd_string(ccd_init):
-    print(ccd_init)
+    assert str(ccd_init)

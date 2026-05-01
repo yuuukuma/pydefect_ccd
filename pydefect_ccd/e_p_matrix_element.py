@@ -12,15 +12,22 @@ from vise.util.mix_in import ToJsonFileMixIn
 
 @dataclass
 class EPMatrixElement(MSONable, ToJsonFileMixIn):
-    """ Electron-phonon (E-P) matrix element between defect band and band edge
+    """Electron-phonon matrix element between a defect band and a band edge.
 
-    The phonon mode is only 1D mode.
+    The stored inner products are sampled along the one-dimensional
+    configuration coordinate.  A linear fit against ``dQ`` gives the gradient
+    used to compute ``W_if_tilde``.
 
     Attributes:
-        band_edge_index: The band index for band edges starting from 1.
-        eigenvalue_diff: The eigenvalue difference from final to initial states
-        abs_inner_prods: List of <psi_i(0) | S(0) |psi_f(Q)>
-            at the given Q points.
+        charge: Charge state used for the matrix element.
+        band_edge_index: Band-edge band index, starting from 1.
+        defect_band_index: Defect-localized band index, starting from 1.
+        spin: Spin channel for both bands.
+        eigenvalue_diff: Eigenvalue difference between final and initial
+            electronic states in eV.
+        dQs: Configuration-coordinate displacements in amu^0.5 Angstrom.
+        abs_inner_prods: Absolute overlap-like inner products at each ``dQ``.
+        fit_q_range: Optional Q range for selecting fitting points.
     """
     charge: int
     band_edge_index: int
@@ -34,6 +41,7 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
     fit_q_range: List[float] = None
 
     def __post_init__(self):
+        """Normalize spin input and fit the inner-product slope."""
         if isinstance(self.spin, str):
             self.spin = Spin[self.spin]
         try:
@@ -49,20 +57,24 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
 
     @property
     def _json_filename(self):
+        """Return the default JSON filename including band and spin indices."""
         return self._filename + "_" + self.index_info + ".json"
 
     def to_json_file(self, filename: Optional[str] = None) -> None:
+        """Write the matrix element to JSON."""
         if filename is None:
             filename = self._json_filename
         super().to_json_file(filename)
 
     @property
     def index_info(self):
+        """Return a compact band/spin identifier used in filenames."""
         return "_".join([f"b{self.band_edge_index}",
                          f"d{self.defect_band_index}",
                          str(self.spin)])
 
     def as_dict(self) -> dict:
+        """Return a MSON dictionary with spin serialized by name."""
         result = super().as_dict()
         result["spin"] = result["spin"].name
         return result
@@ -75,6 +87,7 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
         ax.plot(x, y, alpha=0.5)
 
     def __str__(self):
+        """Return a tabulated summary of the fitted matrix element."""
         result = []
         table_1 = [["band edge index", self.band_edge_index],
                    ["defect band index", self.defect_band_index],
@@ -96,6 +109,7 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
 
     @property
     def to_W_if_tilde(self) -> "WifTilde":
+        """Convert to the smaller ``WifTilde`` transfer object."""
         return WifTilde(W_if_tilde=self.W_if_tilde,
                         band_edge_index=self.band_edge_index,
                         charge=self.charge)
@@ -103,8 +117,8 @@ class EPMatrixElement(MSONable, ToJsonFileMixIn):
 
 @dataclass
 class WifTilde(MSONable, ToJsonFileMixIn):
+    """Scaled electron-phonon matrix element for a band and charge state."""
     W_if_tilde: float  # eV / Angstrom / amu^0.5
     band_edge_index: int
     charge: int
     uniform_scaling_factor: float = 1.0
-

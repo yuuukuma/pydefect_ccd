@@ -13,6 +13,11 @@ from vise.util.mix_in import ToJsonFileMixIn
 
 @dataclass
 class CaptureRate(MSONable, ToJsonFileMixIn):
+    """Nonradiative capture rate evaluated over a temperature grid.
+
+    The supercell volume is stored in Angstrom cubed, while the reported
+    capture rate is converted to cm^3/s.
+    """
     Ts: List[float]
     volume: float  # in Å^3, which is the volume of the supercell.
     sommerfeld_parameter: List[float] # as a function of T
@@ -28,6 +33,7 @@ class CaptureRate(MSONable, ToJsonFileMixIn):
 
     @property
     def capture_rate(self) -> np.ndarray:
+        """Return capture coefficients for each temperature in cm^3/s."""
         volume_cm3 = self.volume * 1e-24  # convert from Å^3 to cm^3
         hbar_eVs = constants.hbar / constants.e  # eV s
         print(2 * np.pi / hbar_eVs * volume_cm3 * self.site_degeneracy
@@ -38,6 +44,7 @@ class CaptureRate(MSONable, ToJsonFileMixIn):
                 * np.array(self.total_squared_transition_moment))
 
     def __str__(self):
+        """Return a tabulated summary of inputs and capture coefficients."""
         header = [["site degeneracy:", f"{self.site_degeneracy}"],
                   ["volume (Å^3):", f"{self.volume}"],
                   ["W_if_tilde (eV / (amu$^{0.5}$ Å)):", f"{self.W_if_tilde:.2e}"]]
@@ -58,13 +65,16 @@ class CaptureRate(MSONable, ToJsonFileMixIn):
 
 
 class CaptureRatePlotter:
+    """Plot temperature-dependent capture coefficients."""
 
     def __init__(self, capture_rate: CaptureRate, plt, title: str = None):
+        """Set capture-rate data, plotting backend, and optional title."""
         self._title = title or ""
         self._capture_rate = capture_rate
         self.plt = plt
 
     def construct_plot(self):
+        """Build the capture-rate plot on the current axes."""
         self._add_capture_rate()
         self._set_title()
         self._set_formatter()
@@ -72,19 +82,22 @@ class CaptureRatePlotter:
         self.plt.tight_layout()
 
     def _add_capture_rate(self):
+        """Add capture coefficients as a semilog curve."""
         ax = self.plt.gca()
         ax.semilogy(self._capture_rate.Ts, self._capture_rate.capture_rate)
 
     def _set_labels(self):
+        """Set axis labels and legend for the plot."""
         ax = self.plt.gca()
         ax.set_xlabel("T (K)")
         ax.set_ylabel("C$_p$ (cm$^3$/s)")
         ax.legend()
 
     def _set_title(self):
+        """Set the plot title."""
         self.plt.gca().set_title(self._title)
 
     def _set_formatter(self):
+        """Use compact integer-style tick labels when possible."""
         self.plt.gca().xaxis.set_major_formatter(float_to_int_formatter)
         self.plt.gca().yaxis.set_major_formatter(float_to_int_formatter)
-

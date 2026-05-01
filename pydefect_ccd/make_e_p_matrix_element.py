@@ -23,6 +23,7 @@ def make_e_p_matrix_element(charge: int,
                             dQs: List[float],
                             wswqs: List[complex],
                             eigenvalue_diff: Optional[float] = None) -> EPMatrixElement:
+    """Build an electron-phonon matrix element from WSWQ overlaps."""
     spin_idx = spin_to_idx(spin)
     band_idx = band_edge_index - base_band_edge_orbital_infos.lowest_band_index - 1
     defect_idx = defect_band_index - base_band_edge_orbital_infos.lowest_band_index - 1

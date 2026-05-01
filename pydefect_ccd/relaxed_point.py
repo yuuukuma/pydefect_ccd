@@ -12,18 +12,18 @@ from vise.util.structure_symmetrizer import num_sym_op
 
 @dataclass
 class NearEdgeState(MSONable):
-    """Information about band-edge states near the VBM or CBM.
+    """Band-edge state near the VBM or CBM.
 
-    Note: In this code, we assume the Gamma point only.
+    This stores the minimum information needed to identify and report a
+    valence- or conduction-band state that is relevant to a defect.
 
     Attributes:
-        band_index: Index of the band (begin from 1).
-        kpt_coord: Coordinates of the k-point in fractional coordinates.
-        kpt_index: Index of the k-point (begin from 1).
-        eigenvalue: Eigenvalue of the state (in eV).
-        occupation: Occupation number of the state.
+        band_index: Band index starting from 1.
+        kpt_coord: Fractional k-point coordinate.
+        kpt_index: K-point index starting from 1.
+        eigenvalue: Single-particle energy in the absolute scale in eV.
+        occupation: Electron occupation number.
     """
-
     band_index: int
     kpt_coord: List[float]
     kpt_index: int
@@ -31,6 +31,7 @@ class NearEdgeState(MSONable):
     occupation: float
 
     def __str__(self):
+        """Return a compact one-line description of the band-edge state."""
         k_coord = " ".join([f"{x:.2f}" for x in self.kpt_coord])
         k_info = [f"index : {self.kpt_index}", f"coord: {k_coord}"]
         x = [f"band index: {self.band_index}",
@@ -42,6 +43,7 @@ class NearEdgeState(MSONable):
 
 def _joined_local_orbital_info(localized_orbitals: List[List[LocalizedOrbital]]
                                ) -> str:
+    """Return localized orbital labels grouped by spin channel."""
     lo_str = []
     for lo_by_spin, spin in zip(localized_orbitals, ["up", "down"]):
         for lo_by_band in lo_by_spin:
@@ -52,9 +54,18 @@ def _joined_local_orbital_info(localized_orbitals: List[List[LocalizedOrbital]]
 
 @dataclass(kw_only=True)
 class OrbitalInfoMixIn(MSONable):
-    """Mix-in class that stores information for a fixed structural point.
+    """Electronic-state information attached to one fixed structure.
 
-    Indices for orbitals and bands are organized as [spin][band].
+    The spin-resolved lists are organized as ``[spin][state]``.  The first
+    spin channel is spin-up and the second is spin-down.  Consumers in this
+    package generally expect these lists to be populated with empty inner lists
+    when no state is present, rather than left as ``None``.
+
+    Attributes:
+        magnetization: Total magnetization of the calculation.
+        localized_orbitals: Localized defect orbitals at each spin channel.
+        valence_bands: Valence-band edge states at each spin channel.
+        conduction_bands: Conduction-band edge states at each spin channel.
     """
     magnetization: float
     localized_orbitals: Optional[List[List[LocalizedOrbital]]] = field(default=None)
@@ -64,24 +75,33 @@ class OrbitalInfoMixIn(MSONable):
 
 @dataclass
 class RelaxedPoint(OrbitalInfoMixIn):
-    """Information at the relaxed structure for a given charge state
+    """Relaxed defect structure and electronic data for one charge state.
+
+    A ``RelaxedPoint`` represents a local minimum on the configuration
+    coordinate diagram.  It stores the relaxed geometry, formation energy,
+    finite-size correction, symmetry labels, and band-edge information needed
+    to build CCD paths between two charge states.
+
+    The spin-resolved band and orbital lists inherited from
+    ``OrbitalInfoMixIn`` are ordered as ``[spin][state]``.  The first spin
+    channel is spin-up and the second is spin-down.
 
     Attributes:
-        name: The defect name.
-        charge: The charge state.
-        correction_energy: Correction energy estimated e.g. by eFNV method.
-        structure: The atomic configuration.
-        formation_energy: Formation energy at Ef=VBM and chemical potentials
-            being standard states.
-        magnetization: Magnetization
+        name: Defect name without the charge suffix.
+        charge: Defect charge state.
+        formation_energy: Formation energy at ``Ef = VBM`` before adding the
+            correction energy.
+        correction_energy: Energy correction estimated by methods such as
+            eFNV.  This is added to ``formation_energy`` in ``corrected_energy``.
+        structure: Relaxed atomic structure for this charge state.
+        initial_site_symmetry: Site symmetry before structural relaxation.
+        final_site_symmetry: Site symmetry after structural relaxation.
+        parsed_dir: Directory containing the parsed calculation results.
+            This should be an absolute path when possible.
+        magnetization: Total magnetization of the calculation.
         localized_orbitals: List of localized orbitals at each spin channel.
-            [Spin up orbitals, Spin down orbitals]
-        initial_site_symmetry (str): Site symmetry before relaxing the defect
-        final_site_symmetry (str): Site symmetry after relaxing the defect
-        valence_bands: List of valence band edge states at each spin channel.
-        conduction_bands: List of conduction band edge states at each spin channel.
-        parsed_dir (str): Directory where the calculation results of this
-            minimum point are stored. This should be an absolute path.
+        valence_bands: Valence-band edge states at each spin channel.
+        conduction_bands: Conduction-band edge states at each spin channel.
     """
     name: str
     charge: int
@@ -94,25 +114,31 @@ class RelaxedPoint(OrbitalInfoMixIn):
 
     @property
     def full_name(self) -> str:
+        """Return defect name with charge suffix."""
         return f"{self.name}_{self.charge}"
 
     @property
     def corrected_energy(self) -> float:
+        """Return formation energy plus correction energy."""
         return self.formation_energy + self.correction_energy
 
     @property
     def dir_path(self) -> Path:
+        """Return the parsed calculation directory as a path."""
         return Path(self.parsed_dir)
 
     @property
     def is_spin_polarized(self):
+        """Return whether the magnetization indicates spin polarization."""
         return abs(self.magnetization) > 0.95
 
     @property
     def related_band_indices(self) -> set:
+        """Return all band indices referenced by stored band/orbital data."""
         result = set()
 
         def add(bands):
+            """Add band indices from one spin-resolved collection."""
             for i in bands:
                 for j in i:
                     try:
@@ -127,7 +153,7 @@ class RelaxedPoint(OrbitalInfoMixIn):
 
     @property
     def degeneracy_by_symmetry_reduction(self) -> float:
+        """Return the degeneracy from initial-to-final symmetry reduction."""
         initial_num_sym_op = num_sym_op[self.initial_site_symmetry]
         final_num_sym_op = num_sym_op[self.final_site_symmetry]
         return initial_num_sym_op / final_num_sym_op
-
