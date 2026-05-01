@@ -31,16 +31,16 @@ def test_make_sommerfeld_scaling(test_files, tmpdir):
 
 
 def test_make_ccd_init(test_files, tmpdir):
+    print(tmpdir)
     tmpdir.chdir()
-    dir_ = test_files / "GaN_C_N" / "relaxed"
+    dir_ = test_files / "GaN_C_N"
 
-    args = Namespace(first_dir=dir_ / "q_0",
-                     second_dir=dir_ / "q_1",
+    args = Namespace(first_dir=dir_ / "relaxed" / "q_0",
+                     second_dir=dir_ / "relaxed" / "q_-1",
                      unitcell=Unitcell.from_yaml(dir_ / "unitcell.yaml"),
-                     p_state=loadfn(dir_ / "perfect_band_edge_state.json"),
-                     effective_mass=loadfn(dir_ / "effective_mass.json"))
+                     p_state=loadfn(dir_ / "perfect_band_edge_state.json"))
     make_ccd_init(args)
-    print(loadfn("Va_O1_1⇆Va_O1_0/ccd_init.json"))
+    print(loadfn("C_N1_0_-1/ccd_init.json"))
 
 
 def test_make_ccd_dirs(tmpdir, ground_structure, excited_structure,
