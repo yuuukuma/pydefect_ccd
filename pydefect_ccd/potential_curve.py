@@ -15,7 +15,6 @@ from tabulate import tabulate
 from vise.util.mix_in import ToJsonFileMixIn
 
 from pydefect_ccd.fitting_func import FittingFunc
-# from pydefect_ccd.fitting_curve import FittingCurve
 from pydefect_ccd.relaxed_point import OrbitalInfoMixIn, NearEdgeState, \
     _joined_local_orbital_info
 from pydefect_ccd.util import spin_to_idx

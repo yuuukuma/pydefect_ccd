@@ -166,8 +166,8 @@ def parse_args_main(args):
 
     # -- make-single-point-results ------------------------
     parser_make_single_point_results = subparsers.add_parser(
-        name="make-single-point-results",
-        description="Make single point results.",
+        name="make-single-point",
+        description="Make single points.",
         parents=[dirs],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=["mspr"],
