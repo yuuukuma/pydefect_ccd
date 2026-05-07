@@ -1,0 +1,10 @@
+name: C_N1
+charge: 0
+formation_energy: -6.290528620000298
+atom_io:
+  C: 1
+  N: -1
+energy_corrections:
+  pc term: 0.0
+  alignment term: 0.0
+is_shallow: False
