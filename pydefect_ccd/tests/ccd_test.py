@@ -11,7 +11,7 @@ from pydefect_ccd.ccd import Ccd
 from pydefect_ccd.fitting_func import QuadraticFittingFunc, intersections
 from pydefect_ccd.local_enum import Carrier
 from pydefect_ccd.potential_curve import SinglePointSpec, SinglePoint, \
-    PotentialCurveSpec, PotentialCurve, Shifter, SinglePoints
+    CurveTransform, PotentialCurveSpec, PotentialCurve, SinglePoints
 
 
 @pytest.fixture
@@ -50,16 +50,13 @@ def potential_curve(single_point):
                               Q_diff=10.0)
 
     return PotentialCurve(spec=spec,
-                          original_single_points=[single_point],
-                          shifted_energy=3.0)
+                          original_single_points=SinglePoints([single_point]),
+                          curve_transform=CurveTransform(3.0, False))
 
 
 def test_potential_curve_Qs_and_energies(potential_curve):
     actual = potential_curve.Qs_and_energies
-    dQs = [1.0]
-    energies = [10.0+1.0+1.0+3.0]
-    expected = (dQs, energies)
-    assert np.array(actual) == pytest.approx(np.array(expected))
+    assert actual == pytest.approx([(1.0, 10.0+1.0+1.0+3.0)])
 
 
 @pytest.fixture
@@ -70,7 +67,7 @@ def potential_curve_final(single_point):
                               Q_diff=10.0)
     return PotentialCurve(spec=spec,
                           original_single_points=SinglePoints([single_point]),
-                          shifter=Shifter(1.0, True))
+                          curve_transform=CurveTransform(1.0, True))
 
 
 @pytest.fixture

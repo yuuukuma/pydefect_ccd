@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 #  Copyright (c) 2026 Kumagai group.
 
-from pydefect_ccd.ccd import Ccd
+import pytest
+
+from pydefect_ccd.fitting_func import QuadraticFittingFunc
 from pydefect_ccd.potential_curve import SinglePointSpec, SinglePoint, \
-    PotentialCurveSpec, PotentialCurve
+    CurveTransform, PotentialCurveSpec, SinglePoints
 from pydefect_ccd.make_ccd import MakeCcd
 
 band_edges = dict(vbm=1.0, cbm=3.0, supercell_vbm=1.1, supercell_cbm=2.9)
@@ -17,65 +19,57 @@ def test_make_ccd(excited_structure, ground_structure):
     excited_spec = PotentialCurveSpec(charge=1, correction_energy=1.0,
                                       counter_charge=0, Q_diff=5.0)
 
-    ground_single_points = [
-        SinglePoint(SinglePointSpec(Q=0.0, disp_ratio=0.0),
+    ground_single_points = SinglePoints([
+        SinglePoint(spec=SinglePointSpec(Q=0.0, disp_ratio=0.0),
                     energy=0.0,
                     magnetization=0.0,
-                    ccd_correction_energy=0.0),
-        SinglePoint(SinglePointSpec(Q=2.5, disp_ratio=0.5),
+                    ccd_correction_energy=0.0,
+                    used_for_fitting=True),
+        SinglePoint(spec=SinglePointSpec(Q=2.5, disp_ratio=0.5),
                     energy=10.0,
                     magnetization=0.0,
-                    ccd_correction_energy=10.0)
-    ]
-    excited_single_points = [
-        SinglePoint(SinglePointSpec(Q=0.0, disp_ratio=0.0),
+                    ccd_correction_energy=10.0,
+                    used_for_fitting=True),
+        SinglePoint(spec=SinglePointSpec(Q=5.0, disp_ratio=1.0),
+                    energy=40.0,
+                    magnetization=0.0,
+                    ccd_correction_energy=40.0,
+                    used_for_fitting=True)
+    ])
+    excited_single_points = SinglePoints([
+        SinglePoint(spec=SinglePointSpec(Q=0.0, disp_ratio=0.0),
                     energy=3.0,
                     magnetization=1.0,
-                    ccd_correction_energy=0.0),
-        SinglePoint(SinglePointSpec(Q=2.5, disp_ratio=0.5),
+                    ccd_correction_energy=0.0,
+                    used_for_fitting=True),
+        SinglePoint(spec=SinglePointSpec(Q=2.5, disp_ratio=0.5),
                     energy=13.0,
                     magnetization=1.0,
-                    ccd_correction_energy=10.0)
-    ]
+                    ccd_correction_energy=10.0,
+                    used_for_fitting=True),
+        SinglePoint(spec=SinglePointSpec(Q=5.0, disp_ratio=1.0),
+                    energy=43.0,
+                    magnetization=1.0,
+                    ccd_correction_energy=40.0,
+                    used_for_fitting=True)
+    ])
 
-    ground = PotentialCurve(ground_spec, ground_single_points)
-    excited = PotentialCurve(excited_spec, excited_single_points)
+    actual = MakeCcd(ground_single_points=ground_single_points,
+                     ground_pot_curve_spec=ground_spec,
+                     ground_fitting_func=QuadraticFittingFunc,
+                     excited_single_points=excited_single_points,
+                     excited_pot_curve_spec=excited_spec,
+                     excited_fitting_func=QuadraticFittingFunc,
+                     vbm=100.0,
+                     cbm=200.0,
+                     name="test").ccd
 
-    actual = MakeCcd(ground, excited, vbm=100.0, cbm=200.0, name="test").ccd
-
-    # ----------------
-    expected_ground_curve = PotentialCurve(
-        ground_spec,
-        [
-            SinglePoint(SinglePointSpec(Q=0.0, disp_ratio=0.0),
-                        energy=0.0,
-                        magnetization=0.0,
-                        ccd_correction_energy=0.0),
-            SinglePoint(SinglePointSpec(Q=2.5, disp_ratio=0.5),
-                        energy=10.0,
-                        magnetization=0.0,
-                        ccd_correction_energy=10.0)
-        ]
-    )
-
-    expected_excited_curve = PotentialCurve(
-        excited_spec,
-        [
-            SinglePoint(SinglePointSpec(Q=5.0, disp_ratio=1.0),
-                        energy=3.0,
-                        magnetization=1.0,
-                        ccd_correction_energy=0.0),
-            SinglePoint(SinglePointSpec(Q=2.5, disp_ratio=0.5),
-                        energy=13.0,
-                        magnetization=1.0,
-                        ccd_correction_energy=10.0)
-        ],
-        shifted_energy=200.0
-    )
-
-    expected = Ccd(name="test",
-                   ground_curve=expected_ground_curve,
-                   excited_curve=expected_excited_curve)
-
-    assert actual == expected
-
+    assert actual.name == "test"
+    assert actual.ground_curve.curve_transform == CurveTransform(0.0, False)
+    assert actual.excited_curve.curve_transform == CurveTransform(196.0, True)
+    assert actual.excited_curve.single_points.single_points[0].spec \
+        == SinglePointSpec(Q=5.0, disp_ratio=1.0)
+    assert actual.excited_curve.single_points.lowest_energy == pytest.approx(200.0)
+    assert actual.excited_curve.lowest_energy == pytest.approx(201.0)
+    assert actual.ground_curve.fitting_curve
+    assert actual.excited_curve.fitting_curve

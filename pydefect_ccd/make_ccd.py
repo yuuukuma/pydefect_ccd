@@ -9,7 +9,7 @@ from pydefect_ccd.ccd import Ccd
 from pydefect_ccd.fitting_func import FittingFunc
 from pydefect_ccd.local_enum import Carrier
 from pydefect_ccd.potential_curve import PotentialCurve, SinglePoints, \
-    PotentialCurveSpec, make_shifter
+    PotentialCurveSpec, make_curve_transform
 
 logger = get_logger(__name__)
 
@@ -45,31 +45,34 @@ class MakeCcd:
         self._vbm = vbm
         self._cbm = cbm
         self._name = name
+        self._ground_charge = ground_pot_curve_spec.charge
+        self._excited_charge = excited_pot_curve_spec.charge
 
         assert ground_pot_curve_spec.counter_charge == excited_pot_curve_spec.charge
         assert excited_pot_curve_spec.counter_charge == ground_pot_curve_spec.charge
         assert_almost_equal(ground_pot_curve_spec.Q_diff, excited_pot_curve_spec.Q_diff)
 
-        ground_shifter = make_shifter(ground_pot_curve_spec, ground_single_points)
+        ground_curve_transform = make_curve_transform(ground_pot_curve_spec,
+                                                      ground_single_points)
         self._ground_curve = PotentialCurve(ground_pot_curve_spec,
                                             ground_single_points,
-                                            ground_shifter)
+                                            ground_curve_transform)
         self._ground_curve.set_fitting_curve(ground_fitting_func)
 
         excited_offset = self._shifted_energy(excited_pot_curve_spec.charge)
-        excited_shifter = make_shifter(excited_pot_curve_spec,
-                                       excited_single_points,
-                                       excited_offset,
-                                       flip=True)
+        excited_curve_transform = make_curve_transform(excited_pot_curve_spec,
+                                                       excited_single_points,
+                                                       excited_offset,
+                                                       flip=True)
         self._excited_curve = PotentialCurve(excited_pot_curve_spec,
                                              excited_single_points,
-                                             excited_shifter)
+                                             excited_curve_transform)
         self._excited_curve.set_fitting_curve(excited_fitting_func)
 
     @property
     def _charge_diff(self):
         """Return excited-charge minus ground-charge."""
-        return self._excited_curve.charge - self._ground_curve.charge
+        return self._excited_charge - self._ground_charge
 
     @property
     def _carrier_in_excited_state(self):

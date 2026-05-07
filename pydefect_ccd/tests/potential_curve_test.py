@@ -4,9 +4,9 @@
 import pytest
 
 from pydefect_ccd.fitting_func import QuadraticFittingFunc, QuarticFittingFunc
-from pydefect_ccd.potential_curve import make_fitting_func, make_shifter, \
-    PotentialCurve, PotentialCurveSpec, Shifter, SinglePoint, SinglePointSpec, \
-    SinglePoints
+from pydefect_ccd.potential_curve import CurveTransform, make_curve_transform, \
+    make_fitting_func, PotentialCurve, PotentialCurveSpec, SinglePoint, \
+    SinglePointSpec, SinglePoints
 
 
 def make_single_point(Q: float,
@@ -24,35 +24,33 @@ def make_single_point(Q: float,
 
 
 def test_single_point_spec_flip():
-    spec = SinglePointSpec(Q=1.25, disp_ratio=0.2)
-
+    spec = SinglePointSpec(Q=0.8, disp_ratio=0.2)
     actual = spec.flip(Q_diff=4.0)
+    assert actual == SinglePointSpec(Q=3.2, disp_ratio=0.8)
+    assert spec == SinglePointSpec(Q=0.8, disp_ratio=0.2)
 
-    assert actual == SinglePointSpec(Q=2.75, disp_ratio=0.8)
-    assert spec == SinglePointSpec(Q=1.25, disp_ratio=0.2)
 
-
-def test_single_points_flip_shifts_energy_and_flips_coordinate():
+def test_single_points_transform_shifts_energy_and_flips_coordinate():
     single_point = make_single_point(Q=1.0,
-                                     disp_ratio=0.25,
+                                     disp_ratio=0.2,
                                      energy=10.0,
                                      ccd_correction_energy=0.5)
     single_points = SinglePoints([single_point])
 
-    actual = single_points.flip(Shifter(shift_energy=2.0, flip=True),
-                                Q_diff=5.0,
-                                total_energy_correction=0.3)
+    actual = single_points.transform(CurveTransform(shift_energy=2.0, flip=True),
+                                     Q_diff=5.0,
+                                     total_energy_correction=0.3)
     shifted_point = actual.single_points[0]
 
     assert shifted_point is not single_point
-    assert shifted_point.spec == SinglePointSpec(Q=4.0, disp_ratio=0.75)
+    assert shifted_point.spec == SinglePointSpec(Q=4.0, disp_ratio=0.8)
     assert shifted_point.energy == pytest.approx(12.3)
     assert shifted_point.ccd_corrected_energy == pytest.approx(12.8)
-    assert single_point.spec == SinglePointSpec(Q=1.0, disp_ratio=0.25)
+    assert single_point.spec == SinglePointSpec(Q=1.0, disp_ratio=0.2)
     assert single_point.energy == pytest.approx(10.0)
 
 
-def test_make_shifter_places_lowest_energy_at_offset():
+def test_make_curve_transform_places_lowest_energy_at_offset():
     single_points = SinglePoints([
         make_single_point(Q=0.0, disp_ratio=0.0, energy=5.0,
                           ccd_correction_energy=0.5),
@@ -64,14 +62,14 @@ def test_make_shifter_places_lowest_energy_at_offset():
                               counter_charge=0,
                               Q_diff=5.0)
 
-    actual = make_shifter(spec, single_points, offset=2.0, flip=True)
+    actual = make_curve_transform(spec, single_points, offset=2.0, flip=True)
 
-    assert actual == Shifter(shift_energy=pytest.approx(-2.25), flip=True)
+    assert actual == CurveTransform(shift_energy=pytest.approx(-2.25), flip=True)
 
 
-def test_potential_curve_applies_shifter_to_single_points():
+def test_potential_curve_applies_curve_transform_to_single_points():
     single_point = make_single_point(Q=1.0,
-                                     disp_ratio=0.25,
+                                     disp_ratio=0.2,
                                      energy=4.0,
                                      ccd_correction_energy=0.2)
     spec = PotentialCurveSpec(charge=1,
@@ -80,15 +78,16 @@ def test_potential_curve_applies_shifter_to_single_points():
                               Q_diff=5.0)
     curve = PotentialCurve(spec=spec,
                            original_single_points=SinglePoints([single_point]),
-                           shifter=Shifter(shift_energy=-2.0, flip=True))
+                           curve_transform=CurveTransform(shift_energy=-2.0,
+                                                          flip=True))
 
     shifted_point = curve.single_points.single_points[0]
 
-    assert shifted_point.spec == SinglePointSpec(Q=4.0, disp_ratio=0.75)
+    assert shifted_point.spec == SinglePointSpec(Q=4.0, disp_ratio=0.8)
     assert shifted_point.energy == pytest.approx(3.5)
     assert shifted_point.ccd_corrected_energy == pytest.approx(3.7)
     assert curve.Qs_and_energies == pytest.approx([(4.0, 3.7)])
-    assert single_point.spec == SinglePointSpec(Q=1.0, disp_ratio=0.25)
+    assert single_point.spec == SinglePointSpec(Q=1.0, disp_ratio=0.2)
     assert single_point.energy == pytest.approx(4.0)
 
 
@@ -105,8 +104,9 @@ def test_potential_curve_lowest_energy_adds_spec_correction_to_shifted_minimum()
                               Q_diff=5.0)
     curve = PotentialCurve(spec=spec,
                            original_single_points=single_points,
-                           shifter=make_shifter(spec, single_points,
-                                                offset=2.0))
+                           curve_transform=make_curve_transform(spec,
+                                                                single_points,
+                                                                offset=2.0))
 
     assert curve.single_points.lowest_energy == pytest.approx(2.0)
     assert curve.lowest_energy == pytest.approx(3.5)

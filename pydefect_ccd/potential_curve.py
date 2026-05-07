@@ -8,6 +8,7 @@ from typing import List, Optional, Type, Tuple
 
 import numpy as np
 from monty.json import MSONable
+from numpy.testing import assert_almost_equal
 from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from pymatgen.electronic_structure.core import Spin
 from scipy.optimize import curve_fit
@@ -28,6 +29,9 @@ class SinglePointSpec(MSONable, ToJsonFileMixIn):
 
     def flip(self, Q_diff: float) -> "SinglePointSpec":
         """Return the same point measured from the opposite endpoint."""
+        if not np.isclose(self.Q, 0.0):
+            assert_almost_equal(Q_diff, self.Q / self.disp_ratio)
+
         flipped_Q = Q_diff - self.Q
         flipped_disp_ratio = 1.0 - self.disp_ratio
         return SinglePointSpec(Q=flipped_Q, disp_ratio=flipped_disp_ratio)
@@ -36,9 +40,9 @@ class SinglePointSpec(MSONable, ToJsonFileMixIn):
 @dataclass
 class SinglePoint(OrbitalInfoMixIn, ToJsonFileMixIn):
     """Single-point calculation result at a fixed displaced structure."""
-    energy: float  # bare total energy
+    energy: float
     spec: SinglePointSpec
-    ccd_correction_energy: float  # CCD correction at a fixed structure
+    ccd_correction_energy: float
     used_for_fitting: bool
     is_shallow: bool = None
     # This needs to be here to make table_for_plot
@@ -98,8 +102,8 @@ class SinglePoint(OrbitalInfoMixIn, ToJsonFileMixIn):
                         headers=self.table_headers)
 
 
-@dataclass
-class Shifter(MSONable, ToJsonFileMixIn):
+@dataclass(frozen=True)
+class CurveTransform(MSONable, ToJsonFileMixIn):
     """Energy and coordinate transformation applied to single points."""
     shift_energy: float
     flip: bool
@@ -178,13 +182,17 @@ class SinglePoints(MSONable):
         if n_params > len(self):
             raise ValueError(f"The number of Q points must be >= {n_params}.")
 
-    def flip(self, shifter: Shifter, Q_diff: float, total_energy_correction: float) -> "SinglePoints":
+    def transform(self,
+                  curve_transform: CurveTransform,
+                  Q_diff: float,
+                  total_energy_correction: float) -> "SinglePoints":
         """Return shifted points, optionally measured from the other endpoint."""
         result = []
         for sp in self:
             new_sp = deepcopy(sp)
-            new_sp.energy += shifter.shift_energy + total_energy_correction
-            if shifter.flip:
+            new_sp.energy += (
+                curve_transform.shift_energy + total_energy_correction)
+            if curve_transform.flip:
                 new_sp.spec = sp.spec.flip(Q_diff)
             result.append(new_sp)
         return SinglePoints(result)
@@ -220,14 +228,14 @@ class PotentialCurveSpec(MSONable, ToJsonFileMixIn):
         return self.charge - self.counter_charge
 
 
-def make_shifter(spec: PotentialCurveSpec,
-                 single_points: SinglePoints,
-                 offset: float = 0.0,
-                 flip: bool = False) -> Shifter:
+def make_curve_transform(spec: PotentialCurveSpec,
+                         single_points: SinglePoints,
+                         offset: float = 0.0,
+                         flip: bool = False) -> CurveTransform:
     """Create the energy shift that places the curve minimum at the offset."""
-    lowest_energy = single_points.lowest_energy + spec.correction_energy
-    shift_energy = - lowest_energy + offset
-    return Shifter(shift_energy, flip)
+    shift_to_zero = - (single_points.lowest_energy + spec.correction_energy)
+    shift_energy = shift_to_zero + offset
+    return CurveTransform(shift_energy, flip)
 
 
 @dataclass
@@ -235,24 +243,20 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
     """Potential-energy curve for one charge state.
 
     ``original_single_points`` preserves the raw parsed points.  The
-    ``single_points`` property applies the configured shifter and optional
+    ``single_points`` property applies the configured curve transform and optional
     coordinate flip before fitting or plotting.
 
     """
-
     spec: PotentialCurveSpec
     original_single_points: SinglePoints # Bare energies.
-    shifter: Shifter
+    curve_transform: CurveTransform
     fitting_curve: Optional[FittingFunc] = None
 
     @cached_property
     def single_points(self) -> SinglePoints:
-        """Return single points after applying the curve shifter."""
-        if self.shifter:
-            return self.original_single_points.flip(self.shifter,
-                                                    self.Q_diff,
-                                                    self.spec.correction_energy)
-        return self.original_single_points
+        """Return single points after applying the curve transform."""
+        return self.original_single_points.transform(
+            self.curve_transform, self.Q_diff, self.spec.correction_energy)
 
     @property
     def charge(self) -> int:
@@ -332,4 +336,3 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
         tables.append(single_point_table)
 
         return "\n".join(tables)
-
