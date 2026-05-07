@@ -7,6 +7,7 @@ import warnings
 from pathlib import Path
 
 from monty.serialization import loadfn
+from pydefect.analyzer.unitcell import Unitcell
 from pydefect.cli.main import add_sub_parser
 from pymatgen.electronic_structure.core import Spin
 from pymatgen.io.vasp.inputs import UnknownPotcarWarning
@@ -84,12 +85,38 @@ def parse_args_main(args):
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=["mss"],
     )
-    parser_make_sommerfeld_scaling.add_argument(
-        "--epsilon0", "-e", type=float, required=True)
-    parser_make_sommerfeld_scaling.add_argument(
-       "--electron-effective-mass", "-eem", type=float, required=True)
-    parser_make_sommerfeld_scaling.add_argument(
-        "--hole-effective-mass", "-hem", type=float, required=True)
+
+    epsilon_source = parser_make_sommerfeld_scaling.add_mutually_exclusive_group(
+        required=True
+    )
+    epsilon_source.add_argument(
+        "--epsilon0", "-e",
+        type=float,
+        help="Static dielectric constant."
+    )
+    epsilon_source.add_argument(
+        "--unitcell", "-u",
+        type=Unitcell.from_yaml,
+        help="unitcell.yaml file."
+    )
+
+    effective_mass_source = (
+        parser_make_sommerfeld_scaling.add_mutually_exclusive_group(
+            required=True))
+    effective_mass_source.add_argument(
+        "--electron-and-hole-effective-mass",
+        type=float,
+        nargs=2,
+        metavar=("ELECTRON", "HOLE"),
+        help="Electron and hole effective masses in units of m0.")
+    effective_mass_source.add_argument(
+        "--effective-mass-file",
+        type=loadfn,
+        nargs="?",
+        const="effective_mass.json",
+        metavar="EFFECTIVE_MASS_FILE",
+        help="effective_mass.json file.")
+
     parser_make_sommerfeld_scaling.add_argument(
         "-Ts", "--temperatures", type=float, nargs="+",
         default=[T for T in range(100, 510, 10)],

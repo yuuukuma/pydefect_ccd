@@ -8,6 +8,7 @@ from monty.serialization import loadfn
 from pydefect.analyzer.unitcell import Unitcell
 from pymatgen.core import Structure
 from pymatgen.electronic_structure.core import Spin
+from vise.analyzer.effective_mass import EffectiveMass
 from vise.input_set.incar import ViseIncar
 from vise.input_set.prior_info import PriorInfo
 
@@ -16,8 +17,9 @@ from pydefect_ccd.potential_curve import SinglePointSpec, PotentialCurveSpec, \
     SinglePoints
 from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.cli.main_function import make_ccd_init, make_ccd, plot_ccd, \
-    make_ccd_dirs, make_wswq_dirs, plot_eigenvalues, main_make_e_p_matrix_element, \
-    make_sommerfeld_scaling, make_ccd_corrections, make_single_points, _fit_curve
+    make_ccd_dirs, make_wswq_dirs, plot_eigenvalues, \
+    main_make_e_p_matrix_element, make_sommerfeld_scaling, \
+    make_ccd_corrections, make_single_points, _fit_curve
 from pydefect_ccd.e_p_matrix_element import EPMatrixElement
 from pydefect_ccd.local_enum import Carrier
 from pydefect_ccd.relaxed_point import NearEdgeState, RelaxedPoint
@@ -26,11 +28,36 @@ from pydefect_ccd.relaxed_point import NearEdgeState, RelaxedPoint
 def test_make_sommerfeld_scaling(test_files, tmpdir):
     tmpdir.chdir()
     args = Namespace(epsilon0=10.0,
-                     electron_effective_mass=2.0,
-                     hole_effective_mass=5.0,
+                     unitcell=None,
+                     electron_and_hole_effective_mass=[2.0, 5.0],
+                     effective_mass_file=None,
                      temperatures=[100, 200])
     make_sommerfeld_scaling(args)
     assert str(loadfn("sommerfeld_scaling.json"))
+
+
+def test_make_sommerfeld_scaling_from_effective_mass_file(tmpdir):
+    tmpdir.chdir()
+    effective_mass = EffectiveMass(
+        p=[[[3.0, 0.0, 0.0],
+            [0.0, 6.0, 0.0],
+            [0.0, 0.0, 9.0]]],
+        n=[[[2.0, 0.0, 0.0],
+            [0.0, 4.0, 0.0],
+            [0.0, 0.0, 6.0]]],
+        temperature=300.0,
+        concentrations=[1e18])
+    args = Namespace(epsilon0=10.0,
+                     unitcell=None,
+                     electron_and_hole_effective_mass=None,
+                     effective_mass_file=effective_mass,
+                     temperatures=[100, 200])
+
+    make_sommerfeld_scaling(args)
+
+    actual = loadfn("sommerfeld_scaling.json")
+    assert actual.electron_effective_mass == pytest.approx(4.0)
+    assert actual.hole_effective_mass == pytest.approx(6.0)
 
 
 def test_make_ccd_init(test_files, tmpdir):

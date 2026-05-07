@@ -28,18 +28,36 @@ def loadfn_effect(d: dict):
 
 
 @pytest.mark.parametrize("command", ["make-sommerfeld-scaling", "mss"])
-def test_main_make_sommerfeld_scaling(command):
+def test_main_make_sommerfeld_scaling(mocker, command):
+    mock_effective_mass = mocker.Mock()
+    side_effect = loadfn_effect({"effective_mass.json": mock_effective_mass})
+    mocker.patch("pydefect_ccd.cli.main.loadfn", side_effect=side_effect)
+
     args = parse_args_main([command,
                             "-e", "0.5",
-                            "-eem", "1.0",
-                            "-hem", "2.0",
+                            "--electron-and-hole-effective-mass",
+                            "1.0", "2.0",
                             "-Ts", "10", "20"])
 
     assert args.epsilon0 == pytest.approx(0.5)
-    assert args.electron_effective_mass == pytest.approx(1.0)
-    assert args.hole_effective_mass == pytest.approx(2.0)
+    assert args.electron_and_hole_effective_mass == pytest.approx([1.0, 2.0])
+    assert args.effective_mass_file is None
     assert args.temperatures == [10.0, 20.0]
     assert args.func is make_sommerfeld_scaling
+
+    args = parse_args_main([command,
+                            "-e", "0.5",
+                            "--effective-mass-file"])
+
+    assert args.effective_mass_file is mock_effective_mass
+    assert args.electron_and_hole_effective_mass is None
+
+    with pytest.raises(SystemExit):
+        parse_args_main([command,
+                         "-e", "0.5",
+                         "--electron-and-hole-effective-mass",
+                         "1.0", "2.0",
+                         "--effective-mass-file", "effective_mass.json"])
 
 
 @pytest.mark.parametrize("command", ["make-ccd-init", "mci"])

@@ -50,9 +50,21 @@ logger = get_logger(__name__)
 
 
 def make_sommerfeld_scaling(args: Namespace):
-    scaling = SommerfeldScaling(epsilon0=args.epsilon0,
-                                electron_effective_mass=args.electron_effective_mass,
-                                hole_effective_mass=args.hole_effective_mass,
+    epsilon0 = (args.epsilon0 if args.epsilon0 is not None
+                else args.unitcell.ave_diele)
+    if args.electron_and_hole_effective_mass is not None:
+        electron_effective_mass, hole_effective_mass = \
+            args.electron_and_hole_effective_mass
+    else:
+        concentration = args.effective_mass_file.concentrations[0]
+        electron_effective_mass = args.effective_mass_file.average_mass(
+            "n", concentration)
+        hole_effective_mass = args.effective_mass_file.average_mass(
+            "p", concentration)
+
+    scaling = SommerfeldScaling(epsilon0=epsilon0,
+                                electron_effective_mass=electron_effective_mass,
+                                hole_effective_mass=hole_effective_mass,
                                 Ts=args.temperatures)
     scaling.to_json_file()
 
