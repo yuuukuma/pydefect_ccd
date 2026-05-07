@@ -117,7 +117,8 @@ def ccd_init(ground_structure, excited_structure):
                            valence_bands=[[vb], [vb]],
                            conduction_bands=[[cb], [cb_w_lo]])
     # transition level = -1.0 from CBM
-    return CcdInit(relaxed_points=[va_o1_0, va_o1_1],
+    return CcdInit(first_relaxed_point=va_o1_0,
+                   second_relaxed_point=va_o1_1,
                    vbm=1.0, cbm=3.0,
                    supercell_vbm=1.1, supercell_cbm=2.9)
 

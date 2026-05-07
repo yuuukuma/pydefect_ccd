@@ -14,7 +14,7 @@ from pydefect_ccd.potential_curve import SinglePointSpec, PotentialCurveSpec
 from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.cli.main_function import make_ccd_init, make_ccd, plot_ccd, \
     make_ccd_dirs, make_wswq_dirs, plot_eigenvalues, main_make_e_p_matrix_element, \
-    make_sommerfeld_scaling
+    make_sommerfeld_scaling, make_ccd_corrections, make_single_points
 from pydefect_ccd.e_p_matrix_element import EPMatrixElement
 from pydefect_ccd.local_enum import Carrier
 from pydefect_ccd.relaxed_point import NearEdgeState, RelaxedPoint
@@ -48,52 +48,51 @@ def test_make_ccd_dirs(tmpdir, ground_structure, excited_structure,
     print(tmpdir)
     tmpdir.chdir()
     ccd_init = CcdInit(
-        relaxed_points=[RelaxedPoint(name="test",
-                                     charge=1,
-                                     structure=ground_structure,
-                                     formation_energy=10.0,
-                                     correction_energy=200.0,
-                                     magnetization=0.0,
-                                     localized_orbitals=[[]],
-                                     initial_site_symmetry="",
-                                     final_site_symmetry="",
-                                     parsed_dir="",
-                                     valence_bands=[
-                                         [NearEdgeState(band_index=10,
-                                                        kpt_coord=[0.0] * 3,
-                                                        kpt_index=1,
-                                                        eigenvalue=1.0,
-                                                        occupation=1.0)]],
-                                     conduction_bands=[
-                                         [NearEdgeState(band_index=11,
-                                                        kpt_coord=[0.0] * 3,
-                                                        kpt_index=1,
-                                                        eigenvalue=2.0,
-                                                        occupation=0.0)]]),
-                        RelaxedPoint(name="test",
-                                     charge=0,
-                                     structure=excited_structure,
-                                     formation_energy=10.0,
-                                     correction_energy=100.0,
-                                     magnetization=1.0,
-                                     localized_orbitals=[[]],
-                                     initial_site_symmetry="",
-                                     final_site_symmetry="",
-                                     parsed_dir="",
-                                     valence_bands=[
+        first_relaxed_point=RelaxedPoint(name="test",
+                                         charge=1,
+                                         structure=ground_structure,
+                                         formation_energy=10.0,
+                                         correction_energy=200.0,
+                                         magnetization=0.0,
+                                         localized_orbitals=[[]],
+                                         initial_site_symmetry="",
+                                         final_site_symmetry="",
+                                         parsed_dir="",
+                                         valence_bands=[
                                              [NearEdgeState(band_index=10,
                                                             kpt_coord=[0.0] * 3,
                                                             kpt_index=1,
                                                             eigenvalue=1.0,
                                                             occupation=1.0)]],
-                                     conduction_bands=[
+                                         conduction_bands=[
                                              [NearEdgeState(band_index=11,
                                                             kpt_coord=[0.0] * 3,
                                                             kpt_index=1,
                                                             eigenvalue=2.0,
-                                                            occupation=0.0)]],
-                                     ),
-                        ],
+                                                            occupation=0.0)]]),
+        second_relaxed_point=RelaxedPoint(name="test",
+                                          charge=0,
+                                          structure=excited_structure,
+                                          formation_energy=10.0,
+                                          correction_energy=100.0,
+                                          magnetization=1.0,
+                                          localized_orbitals=[[]],
+                                          initial_site_symmetry="",
+                                          final_site_symmetry="",
+                                          parsed_dir="",
+                                          valence_bands=[
+                                              [NearEdgeState(band_index=10,
+                                                             kpt_coord=[0.0] * 3,
+                                                             kpt_index=1,
+                                                             eigenvalue=1.0,
+                                                             occupation=1.0)]],
+                                          conduction_bands=[
+                                              [NearEdgeState(band_index=11,
+                                                             kpt_coord=[0.0] * 3,
+                                                             kpt_index=1,
+                                                             eigenvalue=2.0,
+                                                             occupation=0.0)]],
+                                          ),
         vbm=-100.0, cbm=100.0, supercell_vbm=-100.0, supercell_cbm=100.0)
 
     Path("test").mkdir()
@@ -128,6 +127,115 @@ def test_make_ccd_dirs(tmpdir, ground_structure, excited_structure,
     expected = PotentialCurveSpec(charge=0, correction_energy=100.0,
                                   counter_charge=1, Q_diff=dQ)
     assert actual == expected
+
+
+def test_make_ccd_corrections(tmpdir, mocker):
+    tmpdir.chdir()
+    dir_ = Path("disp_0.5")
+    dir_.mkdir()
+    SinglePointSpec(Q=1.0, disp_ratio=0.5).to_json_file(
+        dir_ / "single_point_spec.json")
+
+    calc_results = mocker.Mock()
+    no_disp_calc_results = mocker.Mock()
+    ccd_correction = mocker.Mock()
+    plotter = mocker.Mock()
+    plotter.plt = mocker.Mock()
+
+    mock_get_calc_results = mocker.patch(
+        "pydefect_ccd.cli.main_function.get_calc_results",
+        return_value=calc_results)
+    mock_make_efnv_correction = mocker.patch(
+        "pydefect_ccd.cli.main_function.make_efnv_correction",
+        return_value=ccd_correction)
+    mock_plotter_cls = mocker.patch(
+        "pydefect_ccd.cli.main_function.SitePotentialMplPlotter")
+    mock_plotter_cls.from_efnv_corr.return_value = plotter
+
+    args = Namespace(
+        dirs=[dir_],
+        potential_curve_spec=PotentialCurveSpec(charge=1,
+                                                correction_energy=0.0,
+                                                counter_charge=-2,
+                                                Q_diff=1.0),
+        no_disp_calc_results=no_disp_calc_results,
+        unitcell=Namespace(effective_ionic_diele_const=12.3),
+        no_disp_defect_entry=Namespace(defect_center=[0.1, 0.2, 0.3]))
+
+    make_ccd_corrections(args)
+
+    mock_get_calc_results.assert_called_once_with(dir_, False)
+    mock_make_efnv_correction.assert_called_once_with(
+        1.5,
+        calc_results,
+        no_disp_calc_results,
+        12.3,
+        [0.1, 0.2, 0.3])
+    ccd_correction.to_json_file.assert_called_once_with(
+        dir_ / "ccd_correction.json")
+    mock_plotter_cls.from_efnv_corr.assert_called_once_with(
+        title="ccd_correction", efnv_correction=ccd_correction)
+    plotter.construct_plot.assert_called_once_with()
+    plotter.plt.savefig.assert_called_once_with(
+        fname=dir_ / "ccd_correction.pdf")
+    plotter.plt.clf.assert_called_once_with()
+
+
+def test_make_single_points(tmpdir, mocker):
+    tmpdir.chdir()
+    dir_ = Path("disp_0.5")
+    dir_.mkdir()
+
+    calc_results = Namespace(energy=-10.5, magnetization=2.0)
+    ccd_correction = Namespace(correction_energy=0.7)
+    band_edge_states = Namespace(is_shallow=True)
+    band_edge_orbital_infos = mocker.Mock()
+    spec = SinglePointSpec(Q=1.0, disp_ratio=0.5)
+    localized_orbitals = [["lo"]]
+    valence_bands = [["vb"]]
+    conduction_bands = [["cb"]]
+    single_point = mocker.Mock()
+
+    mock_get_calc_results = mocker.patch(
+        "pydefect_ccd.cli.main_function.get_calc_results",
+        return_value=calc_results)
+    mock_loadfn = mocker.patch(
+        "pydefect_ccd.cli.main_function.loadfn",
+        side_effect=[
+            ccd_correction,
+            band_edge_states,
+            band_edge_orbital_infos,
+            spec])
+    mock_get_band_edge_info = mocker.patch(
+        "pydefect_ccd.cli.main_function._get_band_edge_info",
+        return_value=(localized_orbitals, valence_bands, conduction_bands))
+    mock_single_point = mocker.patch(
+        "pydefect_ccd.cli.main_function.SinglePoint",
+        return_value=single_point)
+
+    args = Namespace(dirs=[dir_], parse_ccd_correction=True)
+
+    make_single_points(args)
+
+    mock_get_calc_results.assert_called_once_with(dir_, False)
+    assert mock_loadfn.call_args_list == [
+        mocker.call(dir_ / "ccd_correction.json"),
+        mocker.call(dir_ / "band_edge_states.json"),
+        mocker.call(dir_ / "band_edge_orbital_infos.json"),
+        mocker.call(dir_ / "single_point_spec.json")]
+    mock_get_band_edge_info.assert_called_once_with(
+        band_edge_orbital_infos, band_edge_states)
+    mock_single_point.assert_called_once_with(
+        spec=spec,
+        energy=-10.5,
+        ccd_correction_energy=0.7,
+        magnetization=2.0,
+        localized_orbitals=localized_orbitals,
+        valence_bands=valence_bands,
+        conduction_bands=conduction_bands,
+        is_shallow=True)
+    single_point.to_json_file.assert_called_once_with(
+        dir_ / "single_point.json")
 
 
 # @pytest.fixture
@@ -203,15 +311,13 @@ def test_make_wswq_dirs(tmpdir, mocker):
     min_point_info2.parsed_dir = str(tmpdir / "excited_original")
     min_point_info2.charge = 1
 
-    dephon_init = CcdInit(relaxed_points=[min_point_info1, min_point_info2],
-                          vbm=1.0, cbm=2.0,
-                          supercell_volume=10.0,
-                          supercell_vbm=1.0, supercell_cbm=2.0,
-                          ave_electron_mass=1.0, ave_hole_mass=1.0,
-                          ave_static_diele_const=1.0)
+    ccd_init = CcdInit(first_relaxed_point=min_point_info1,
+                       second_relaxed_point=min_point_info2,
+                       vbm=1.0, cbm=2.0,
+                       supercell_vbm=1.0, supercell_cbm=2.0)
 
     args = Namespace(dirs=[Path(f"ground/disp_-0.2"), Path(f"excited/disp_-0.2")],
-                     dephon_init=dephon_init)
+                     ccd_init=ccd_init)
     make_wswq_dirs(args)
 
     for state in ["ground"]:

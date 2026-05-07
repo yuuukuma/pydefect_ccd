@@ -27,7 +27,7 @@ def test_modal_mass(ccd_init):
 
 def test_relaxed_point_from_charge(ccd_init):
     actual = ccd_init.relaxed_point_from_charge(charge=1)
-    assert actual == ccd_init.relaxed_points[1]
+    assert actual == ccd_init.second_relaxed_point
 
 
 def test_volume(ccd_init):

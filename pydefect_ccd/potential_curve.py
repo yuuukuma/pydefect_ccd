@@ -216,6 +216,10 @@ class PotentialCurveSpec(MSONable, ToJsonFileMixIn):
     counter_charge: int  # charge state to which the structure shifts
     Q_diff: float  # Q difference between two charge states
 
+    @property
+    def effective_charge(self):
+        return self.charge - self.counter_charge
+
 
 def make_shifter(spec: PotentialCurveSpec,
                  single_points: SinglePoints,

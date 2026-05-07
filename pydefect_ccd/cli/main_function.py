@@ -142,7 +142,8 @@ def make_ccd_init(args: Namespace):
         logger.warning(f"The charge difference is {charge_diff} and not 1. Please "
                        f"ensure you understand the implications.")
 
-    ccd_init = CcdInit(relaxed_points=[min_point_1, min_point_2],
+    ccd_init = CcdInit(first_relaxed_point=min_point_1,
+                       second_relaxed_point=min_point_2,
                        vbm=args.unitcell.vbm,
                        cbm=args.unitcell.cbm,
                        supercell_vbm=args.p_state.vbm_info.energy,
@@ -163,12 +164,12 @@ user_incar_settings:
 
 def make_ccd_dirs(args: Namespace):
     os.chdir(args.calc_dir)
-    s1 = args.ccd_init.relaxed_points[0].structure
-    s2 = args.ccd_init.relaxed_points[1].structure
+    s1 = args.ccd_init.first_relaxed_point.structure
+    s2 = args.ccd_init.second_relaxed_point.structure
     s1_to_s2 = s1.interpolate(s2, nimages=args.first_to_second_div_ratios)
     s2_to_s1 = s2.interpolate(s1, nimages=args.second_to_first_div_ratios)
-    rp1 = args.ccd_init.relaxed_points[0]
-    rp2 = args.ccd_init.relaxed_points[1]
+    rp1 = args.ccd_init.first_relaxed_point
+    rp2 = args.ccd_init.second_relaxed_point
 
     Q_diff = args.ccd_init.Q
 

@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
 #  Copyright (c) 2026 Kumagai group.
 from dataclasses import dataclass
-from typing import List, Optional
 
 from monty.json import MSONable
 from tabulate import tabulate
 from vise.util.logger import get_logger
 from vise.util.mix_in import ToJsonFileMixIn
 
-from pydefect_ccd.local_enum import Carrier
 from pydefect_ccd.relaxed_point import _joined_local_orbital_info, RelaxedPoint
 from pydefect_ccd.util import get_dR, get_dQ
 
@@ -24,28 +22,25 @@ class CcdInit(MSONable, ToJsonFileMixIn):
     quantities.
 
     Attributes:
-        relaxed_points: Two relaxed defect states whose charge difference is
-            expected to be one.
+        first_relaxed_point: First endpoint of the CCD path.
+        second_relaxed_point: Second endpoint of the CCD path.
         vbm: Valence band maximum from the unit-cell calculation.
         cbm: Conduction band minimum from the unit-cell calculation.
         supercell_vbm: VBM from the perfect-supercell calculation.
         supercell_cbm: CBM from the perfect-supercell calculation.
     """
-    relaxed_points: List[RelaxedPoint]
+    first_relaxed_point: RelaxedPoint
+    second_relaxed_point: RelaxedPoint
     vbm: float
     cbm: float
     supercell_vbm: float
     supercell_cbm: float
 
-    def __post_init__(self):
-        """Validate that exactly two relaxed points define the CCD path."""
-        assert len(self.relaxed_points) == 2
-
     @property
     def name(self) -> str:
         """Return a readable name combining both charge states."""
-        return (f"{self.relaxed_points[0].full_name} "
-                f"⇆ {self.relaxed_points[1].full_name}")
+        return (f"{self.first_relaxed_point.full_name} "
+                f"⇆ {self.second_relaxed_point.full_name}")
 
     @property
     def band_gap(self) -> float:
@@ -54,7 +49,7 @@ class CcdInit(MSONable, ToJsonFileMixIn):
 
     def relaxed_point_from_charge(self, charge: int) -> RelaxedPoint:
         """Return the relaxed point matching the requested charge."""
-        for rp in self.relaxed_points:
+        for rp in (self.first_relaxed_point, self.second_relaxed_point):
             if rp.charge == charge:
                 return rp
         else:
@@ -63,21 +58,21 @@ class CcdInit(MSONable, ToJsonFileMixIn):
     @property
     def volume(self) -> float:
         """ Volume of the supercell structure in Å^3. """
-        assert (self.relaxed_points[0].structure.volume
-                == self.relaxed_points[1].structure.volume)
-        return self.relaxed_points[0].structure.volume
+        assert (self.first_relaxed_point.structure.volume
+                == self.second_relaxed_point.structure.volume)
+        return self.first_relaxed_point.structure.volume
 
     @property
     def Q(self):
         """ Unit: amu^{1/2} Å. """
-        return abs(get_dQ(self.relaxed_points[0].structure,
-                          self.relaxed_points[1].structure))
+        return abs(get_dQ(self.first_relaxed_point.structure,
+                          self.second_relaxed_point.structure))
 
     @property
     def R(self):
         """ Unit: Å."""
-        return abs(get_dR(self.relaxed_points[0].structure,
-                          self.relaxed_points[1].structure))
+        return abs(get_dR(self.first_relaxed_point.structure,
+                          self.second_relaxed_point.structure))
 
     @property
     def modal_mass(self):
@@ -104,21 +99,20 @@ class CcdInit(MSONable, ToJsonFileMixIn):
 
         last_energy = None
 
-        for min_info in self.relaxed_points:
-
+        for relaxed_point in [self.first_relaxed_point, self.second_relaxed_point]:
             localized_state_idxs = []
-            for s, spin in zip(min_info.localized_orbitals, ["up", "down"]):
+            for s, spin in zip(relaxed_point.localized_orbitals, ["up", "down"]):
                 for ss in s:
                     localized_state_idxs.append(f"{spin}-{ss.band_idx}")
             table.append(
-                [min_info.charge, min_info.initial_site_symmetry,
-                 min_info.final_site_symmetry, min_info.formation_energy,
-                 min_info.correction_energy, min_info.corrected_energy,
-                 min_info.magnetization,
-                 _joined_local_orbital_info(min_info.localized_orbitals)])
+                [relaxed_point.charge, relaxed_point.initial_site_symmetry,
+                 relaxed_point.final_site_symmetry, relaxed_point.formation_energy,
+                 relaxed_point.correction_energy, relaxed_point.corrected_energy,
+                 relaxed_point.magnetization,
+                 _joined_local_orbital_info(relaxed_point.localized_orbitals)])
             if last_energy:
-                table[-1].append(last_energy - min_info.corrected_energy)
-            last_energy = min_info.corrected_energy
+                table[-1].append(last_energy - relaxed_point.corrected_energy)
+            last_energy = relaxed_point.corrected_energy
 
         result.append(
             tabulate(table, tablefmt="plain", headers=headers, floatfmt=".3f",
@@ -126,18 +120,18 @@ class CcdInit(MSONable, ToJsonFileMixIn):
 
         result.append("-" * 60)
 
-        for min_info in self.relaxed_points:
-            result.append(f"- q={min_info.charge}")
-            for vb, spin in zip(min_info.valence_bands, ["up", "down"]):
+        for relaxed_point in [self.first_relaxed_point, self.second_relaxed_point]:
+            result.append(f"- q={relaxed_point.charge}")
+            for vb, spin in zip(relaxed_point.valence_bands, ["up", "down"]):
                 result.append(f"-- VBM spin-{spin}")
                 for v in vb:
                     result.append(str(v))
             result.append(f"")
-            for cb, spin in zip(min_info.conduction_bands, ["up", "down"]):
+            for cb, spin in zip(relaxed_point.conduction_bands, ["up", "down"]):
                 result.append(f"-- CBM spin-{spin}")
                 for c in cb:
                     result.append(str(c))
-            result.append(f"-- parse dir: {min_info.parsed_dir}")
+            result.append(f"-- parse dir: {relaxed_point.parsed_dir}")
             result.append(f"")
 
         return "\n".join(result)
