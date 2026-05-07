@@ -70,6 +70,6 @@ def test_make_ccd(excited_structure, ground_structure):
     assert actual.excited_curve.single_points.single_points[0].spec \
         == SinglePointSpec(Q=5.0, disp_ratio=1.0)
     assert actual.excited_curve.single_points.lowest_energy == pytest.approx(200.0)
-    assert actual.excited_curve.lowest_energy == pytest.approx(201.0)
+    assert actual.excited_curve.lowest_energy == pytest.approx(200.0)
     assert actual.ground_curve.fitting_curve
     assert actual.excited_curve.fitting_curve

@@ -4,11 +4,10 @@ import inspect
 from copy import deepcopy
 from dataclasses import dataclass
 from functools import cached_property
-from typing import List, Optional, Type, Tuple
+from typing import List, Optional, Type
 
 import numpy as np
 from monty.json import MSONable
-from numpy.testing import assert_almost_equal
 from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from pymatgen.electronic_structure.core import Spin
 from scipy.optimize import curve_fit
@@ -30,7 +29,15 @@ class SinglePointSpec(MSONable, ToJsonFileMixIn):
     def flip(self, Q_diff: float) -> "SinglePointSpec":
         """Return the same point measured from the opposite endpoint."""
         if not np.isclose(self.Q, 0.0):
-            assert_almost_equal(Q_diff, self.Q / self.disp_ratio)
+            if np.isclose(self.disp_ratio, 0.0):
+                raise ValueError(
+                    f"Q={self.Q} cannot have disp_ratio={self.disp_ratio}.")
+            actual_Q_diff = self.Q / self.disp_ratio
+            if not np.isclose(Q_diff, actual_Q_diff):
+                raise ValueError(
+                    f"Q_diff={Q_diff} does not match Q / disp_ratio="
+                    f"{actual_Q_diff} for Q={self.Q} and "
+                    f"disp_ratio={self.disp_ratio}.")
 
         flipped_Q = Q_diff - self.Q
         flipped_disp_ratio = 1.0 - self.disp_ratio
@@ -113,7 +120,6 @@ class CurveTransform(MSONable, ToJsonFileMixIn):
 class SinglePoints(MSONable):
     """Container for single-point calculations on one potential curve."""
     single_points: List[SinglePoint]
-    # fitting_curve: FittingCurve
 
     def __iter__(self):
         """Iterate over contained single points."""
@@ -129,25 +135,24 @@ class SinglePoints(MSONable):
         return [sp.Q for sp in self]
 
     @property
+    def fitting_points(self) -> List[SinglePoint]:
+        """Return single points marked for fitting."""
+        return [sp for sp in self if getattr(sp, "used_for_fitting", True)]
+
+    @property
+    def fitting_Qs(self) -> List[float]:
+        """Return Q coordinates for points used in fitting."""
+        return [sp.Q for sp in self.fitting_points]
+
+    @property
     def corrected_energies(self) -> List[float]:
         """Return CCD-corrected energies for all points."""
         return [sp.ccd_corrected_energy for sp in self]
 
     @property
-    def Qs_and_energies(self):
-        """Return paired Q coordinates and CCD-corrected energies."""
-        return list(zip(self.Qs, self.corrected_energies))
-        # Qs, energies = [], []
-        # for sp in self:
-        #     # if disp_ratio_range and not (disp_ratio_range[0]
-        #     #                              <= single_point.disp_ratio
-        #     #                              <= disp_ratio_range[1]):
-        #     #     continue
-        #     Qs.append(sp.Q)
-        #     energy = (sp.energy + sp.ccd_correction_energy
-        #               + self.spec.correction_energy + self.shifted_energy)
-        #     energies.append(energy)
-        # return Qs, energies
+    def fitting_corrected_energies(self) -> List[float]:
+        """Return CCD-corrected energies for points used in fitting."""
+        return [sp.ccd_corrected_energy for sp in self.fitting_points]
 
     def single_point_from_disp(self, disp_ratio: float):
         """Return the point whose displacement ratio matches the input."""
@@ -204,9 +209,8 @@ def make_fitting_func(curve: Type[FittingFunc], single_points: SinglePoints) -> 
     """Fit a potential function class to a set of single points."""
     # TODO: Consider if Q0, E0 need to be fixed or not.
     vals, _ = curve_fit(curve.fitting_func,
-                        single_points.Qs,
-                        single_points.corrected_energies)
-    # vals, _ = curve_fit(f, self.Qs, self.corrected_energies, bounds=bounds)
+                        single_points.fitting_Qs,
+                        single_points.fitting_corrected_energies)
 
     kwargs = {'Q0': 0.0, 'E0': vals[0]}
     param_names = list(inspect.signature(curve.fitting_func).parameters.keys())[2:]
@@ -269,11 +273,6 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
         return self.spec.counter_charge
 
     @property
-    def Qs_and_energies(self) -> List[Tuple[float, float]]:
-        """Return paired Q coordinates and corrected energies."""
-        return self.single_points.Qs_and_energies
-
-    @property
     def Q_diff(self) -> float:
         """Return the endpoint separation in amu^0.5 Angstrom."""
         return self.spec.Q_diff
@@ -289,23 +288,53 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
 
     @property
     def lowest_energy(self) -> float:
-        """Return the lowest energy after adding the curve correction."""
-        return self.lowest_energy_single_point.ccd_corrected_energy + \
-                self.spec.correction_energy
+        """Return the lowest energy in the transformed curve coordinates."""
+        return self.lowest_energy_single_point.ccd_corrected_energy
 
     def set_fitting_curve(self, curve: Type[FittingFunc]) -> None:
         """Fit and store a fitting-function instance for this curve."""
-        # TODO: Consider if Q0, E0 need to be fixed or not.
-        vals, _ = curve_fit(curve.fitting_func,
-                            self.single_points.Qs,
-                            self.single_points.corrected_energies)
-        # vals, _ = curve_fit(f, self.Qs, self.corrected_energies, bounds=bounds)
+        self.fitting_curve = make_fitting_func(curve, self.single_points)
 
-        kwargs = {'Q0': 0.0, 'E0': vals[0]}
-        param_names = list(inspect.signature(curve.fitting_func).parameters.keys())[2:]
-        for i, name in enumerate(param_names):
-            kwargs[name] = vals[i + 1]
-        self.fitting_curve = curve(**kwargs)
+    def add_plot(self, ax, color: str, q_range: List[float] = None):
+        """Add the fitted curve and shifted single points to an axes."""
+        has_fitting_curve = self.fitting_curve is not None
+
+        if has_fitting_curve:
+            x_range = q_range or self._default_plot_q_range
+            xs = np.linspace(x_range[0], x_range[1], 1000)
+            ax.plot(xs, self.fitting_curve(xs),
+                    color=color, label=f"q={self.charge}")
+
+        self._add_single_point_markers(ax, color, label=not has_fitting_curve)
+
+    def _add_single_point_markers(self, ax, color: str, label: bool = False):
+        """Add filled deep points and unfilled shallow points to an axes."""
+        deep_points = [sp for sp in self.single_points if not sp.is_shallow]
+        shallow_points = [sp for sp in self.single_points if sp.is_shallow]
+
+        if deep_points:
+            ax.scatter([sp.Q for sp in deep_points],
+                       [sp.ccd_corrected_energy for sp in deep_points],
+                       facecolors=color,
+                       edgecolors=color,
+                       label=f"q={self.charge}" if label else None)
+
+        if shallow_points:
+            ax.scatter([sp.Q for sp in shallow_points],
+                       [sp.ccd_corrected_energy for sp in shallow_points],
+                       facecolors="none",
+                       edgecolors=color,
+                       label=f"q={self.charge} shallow" if label else None)
+
+    @property
+    def _default_plot_q_range(self) -> List[float]:
+        """Return a nonzero plotting range from transformed single points."""
+        qs = self.single_points.Qs
+        min_q, max_q = min(qs), max(qs)
+        if np.isclose(min_q, max_q):
+            margin = max(abs(self.Q_diff) * 0.1, 1.0)
+            return [min_q - margin, max_q + margin]
+        return [min_q, max_q]
 
     @property
     def table_for_plot(self):

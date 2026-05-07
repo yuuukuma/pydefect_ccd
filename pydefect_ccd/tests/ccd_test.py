@@ -7,7 +7,7 @@ import pytest
 from pydefect.analyzer.band_edge_states import LocalizedOrbital
 from vise.tests.helpers.assertion import assert_dataclass_almost_equal
 
-from pydefect_ccd.ccd import Ccd
+from pydefect_ccd.ccd import Ccd, CcdPlotter
 from pydefect_ccd.fitting_func import QuadraticFittingFunc, intersections
 from pydefect_ccd.local_enum import Carrier
 from pydefect_ccd.potential_curve import SinglePointSpec, SinglePoint, \
@@ -54,11 +54,6 @@ def potential_curve(single_point):
                           curve_transform=CurveTransform(3.0, False))
 
 
-def test_potential_curve_Qs_and_energies(potential_curve):
-    actual = potential_curve.Qs_and_energies
-    assert actual == pytest.approx([(1.0, 10.0+1.0+1.0+3.0)])
-
-
 @pytest.fixture
 def potential_curve_final(single_point):
     spec = PotentialCurveSpec(charge=1,
@@ -83,6 +78,19 @@ def test_ccd_captured_carrier(ccd):
 
 def test_ccd_str(ccd):
     print(ccd)
+
+
+def test_ccd_plotter_construct_plot(ccd, mocker):
+    ccd.ground_curve.fitting_curve = QuadraticFittingFunc(Q0=0.0, E0=0.0, a=1.0)
+    ccd.excited_curve.fitting_curve = QuadraticFittingFunc(Q0=0.0, E0=1.0, a=1.0)
+    plt = mocker.Mock()
+    ax = mocker.Mock()
+    plt.gca.return_value = ax
+
+    CcdPlotter(ccd, plt).construct_plot()
+
+    assert ax.plot.call_count == 2
+    assert ax.scatter.call_count == 2
 
 
 def test_calc_omega_and_Q0_variable_Q0():

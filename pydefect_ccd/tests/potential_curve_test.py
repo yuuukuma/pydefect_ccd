@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 #  Copyright (c) 2026 Kumagai group.
 
+import matplotlib
 import pytest
+
+matplotlib.use("Agg")
+from matplotlib import pyplot as plt
 
 from pydefect_ccd.fitting_func import QuadraticFittingFunc, QuarticFittingFunc
 from pydefect_ccd.potential_curve import CurveTransform, make_curve_transform, \
@@ -12,11 +16,14 @@ from pydefect_ccd.potential_curve import CurveTransform, make_curve_transform, \
 def make_single_point(Q: float,
                       disp_ratio: float,
                       energy: float,
-                      ccd_correction_energy: float = 0.0) -> SinglePoint:
+                      ccd_correction_energy: float = 0.0,
+                      used_for_fitting: bool = True,
+                      is_shallow: bool = None) -> SinglePoint:
     return SinglePoint(energy=energy,
                        spec=SinglePointSpec(Q=Q, disp_ratio=disp_ratio),
                        ccd_correction_energy=ccd_correction_energy,
-                       used_for_fitting=True,
+                       used_for_fitting=used_for_fitting,
+                       is_shallow=is_shallow,
                        magnetization=0.0,
                        localized_orbitals=[[], []],
                        valence_bands=[[], []],
@@ -28,6 +35,13 @@ def test_single_point_spec_flip():
     actual = spec.flip(Q_diff=4.0)
     assert actual == SinglePointSpec(Q=3.2, disp_ratio=0.8)
     assert spec == SinglePointSpec(Q=0.8, disp_ratio=0.2)
+
+
+def test_single_point_spec_flip_raises_for_inconsistent_q_diff():
+    spec = SinglePointSpec(Q=1.0, disp_ratio=0.25)
+
+    with pytest.raises(ValueError, match="Q_diff=5.0"):
+        spec.flip(Q_diff=5.0)
 
 
 def test_single_points_transform_shifts_energy_and_flips_coordinate():
@@ -86,7 +100,8 @@ def test_potential_curve_applies_curve_transform_to_single_points():
     assert shifted_point.spec == SinglePointSpec(Q=4.0, disp_ratio=0.8)
     assert shifted_point.energy == pytest.approx(3.5)
     assert shifted_point.ccd_corrected_energy == pytest.approx(3.7)
-    assert curve.Qs_and_energies == pytest.approx([(4.0, 3.7)])
+    assert curve.single_points.Qs == pytest.approx([4.0])
+    assert curve.single_points.corrected_energies == pytest.approx([3.7])
     assert single_point.spec == SinglePointSpec(Q=1.0, disp_ratio=0.2)
     assert single_point.energy == pytest.approx(4.0)
 
@@ -109,7 +124,7 @@ def test_potential_curve_lowest_energy_adds_spec_correction_to_shifted_minimum()
                                                                 offset=2.0))
 
     assert curve.single_points.lowest_energy == pytest.approx(2.0)
-    assert curve.lowest_energy == pytest.approx(3.5)
+    assert curve.lowest_energy == pytest.approx(2.0)
 
 
 def test_single_point_from_disp_uses_close_match():
@@ -136,6 +151,171 @@ def test_potential_curve_spec_effective_charge():
                               Q_diff=5.0)
 
     assert spec.effective_charge == 2
+
+
+def test_make_fitting_func_uses_only_points_marked_for_fitting():
+    sp = SinglePoints([
+        make_single_point(Q=-1.0, disp_ratio=-1.0, energy=3.25),
+        make_single_point(Q=0.0, disp_ratio=0.0, energy=0.25),
+        make_single_point(Q=1.0, disp_ratio=1.0, energy=3.25),
+        make_single_point(Q=2.0, disp_ratio=2.0, energy=100.0,
+                          used_for_fitting=False)
+    ])
+
+    q = make_fitting_func(QuadraticFittingFunc, sp)
+
+    assert q.a == pytest.approx(3.0)
+    assert q.E0 == pytest.approx(0.25)
+
+
+def test_potential_curve_set_fitting_curve_uses_fitting_points():
+    single_points = SinglePoints([
+        make_single_point(Q=-1.0, disp_ratio=-1.0, energy=3.25),
+        make_single_point(Q=0.0, disp_ratio=0.0, energy=0.25),
+        make_single_point(Q=1.0, disp_ratio=1.0, energy=3.25),
+        make_single_point(Q=2.0, disp_ratio=2.0, energy=100.0,
+                          used_for_fitting=False)
+    ])
+    spec = PotentialCurveSpec(charge=0,
+                              correction_energy=0.0,
+                              counter_charge=1,
+                              Q_diff=1.0)
+    curve = PotentialCurve(spec=spec,
+                           original_single_points=single_points,
+                           curve_transform=CurveTransform(0.0, False))
+
+    curve.set_fitting_curve(QuadraticFittingFunc)
+
+    assert curve.fitting_curve.a == pytest.approx(3.0)
+    assert curve.fitting_curve.E0 == pytest.approx(0.25)
+
+
+def test_potential_curve_add_plot(mocker):
+    single_points = SinglePoints([
+        make_single_point(Q=0.0, disp_ratio=0.0, energy=0.25,
+                          is_shallow=False),
+        make_single_point(Q=1.0, disp_ratio=1.0, energy=3.25,
+                          is_shallow=True)
+    ])
+    spec = PotentialCurveSpec(charge=0,
+                              correction_energy=0.0,
+                              counter_charge=1,
+                              Q_diff=1.0)
+    curve = PotentialCurve(spec=spec,
+                           original_single_points=single_points,
+                           curve_transform=CurveTransform(0.0, False),
+                           fitting_curve=QuadraticFittingFunc(Q0=0.0,
+                                                              E0=0.25,
+                                                              a=3.0))
+    ax = mocker.Mock()
+
+    curve.add_plot(ax, "red")
+
+    ax.plot.assert_called_once()
+    assert ax.scatter.call_args_list == [
+        mocker.call([0.0], [0.25],
+                    facecolors="red",
+                    edgecolors="red",
+                    label=None),
+        mocker.call([1.0], [3.25],
+                    facecolors="none",
+                    edgecolors="red",
+                    label=None)
+    ]
+
+
+def test_potential_curve_add_plot_without_fitting_curve_plots_points_only(mocker):
+    single_points = SinglePoints([
+        make_single_point(Q=0.0, disp_ratio=0.0, energy=0.25,
+                          is_shallow=False),
+        make_single_point(Q=1.0, disp_ratio=1.0, energy=3.25,
+                          is_shallow=True)
+    ])
+    spec = PotentialCurveSpec(charge=0,
+                              correction_energy=0.0,
+                              counter_charge=1,
+                              Q_diff=1.0)
+    curve = PotentialCurve(spec=spec,
+                           original_single_points=single_points,
+                           curve_transform=CurveTransform(0.0, False))
+    ax = mocker.Mock()
+
+    curve.add_plot(ax, "red")
+
+    ax.plot.assert_not_called()
+    assert ax.scatter.call_args_list == [
+        mocker.call([0.0], [0.25],
+                    facecolors="red",
+                    edgecolors="red",
+                    label="q=0"),
+        mocker.call([1.0], [3.25],
+                    facecolors="none",
+                    edgecolors="red",
+                    label="q=0 shallow")
+    ]
+
+
+def test_potential_curve_add_plot_renders_png(tmp_path):
+    single_points = SinglePoints([
+        make_single_point(Q=0.0, disp_ratio=0.0, energy=0.25,
+                          is_shallow=False),
+        make_single_point(Q=1.0, disp_ratio=1.0, energy=3.25,
+                          is_shallow=True)
+    ])
+    spec = PotentialCurveSpec(charge=0,
+                              correction_energy=0.0,
+                              counter_charge=1,
+                              Q_diff=1.0)
+    curve = PotentialCurve(spec=spec,
+                           original_single_points=single_points,
+                           curve_transform=CurveTransform(0.0, False),
+                           fitting_curve=QuadraticFittingFunc(Q0=0.0,
+                                                              E0=0.25,
+                                                              a=3.0))
+    fig, ax = plt.subplots()
+
+    try:
+        curve.add_plot(ax, "red")
+        fig_path = tmp_path / "potential_curve.png"
+        fig.savefig(fig_path)
+        print(tmp_path)
+
+        assert fig_path.exists()
+        assert fig_path.stat().st_size > 0
+        assert len(ax.lines) == 1
+        assert len(ax.collections) == 2
+    finally:
+        plt.close(fig)
+
+
+def test_potential_curve_add_plot_without_fitting_curve_renders_points_only_png(tmp_path):
+    single_points = SinglePoints([
+        make_single_point(Q=0.0, disp_ratio=0.0, energy=0.25,
+                          is_shallow=False),
+        make_single_point(Q=1.0, disp_ratio=1.0, energy=3.25,
+                          is_shallow=True)
+    ])
+    spec = PotentialCurveSpec(charge=0,
+                              correction_energy=0.0,
+                              counter_charge=1,
+                              Q_diff=1.0)
+    curve = PotentialCurve(spec=spec,
+                           original_single_points=single_points,
+                           curve_transform=CurveTransform(0.0, False))
+    fig, ax = plt.subplots()
+
+    try:
+        curve.add_plot(ax, "red")
+        fig_path = tmp_path / "potential_curve_points_only.png"
+        fig.savefig(fig_path)
+        print(tmp_path)
+
+        assert fig_path.exists()
+        assert fig_path.stat().st_size > 0
+        assert len(ax.lines) == 0
+        assert len(ax.collections) == 2
+    finally:
+        plt.close(fig)
 
 
 def test_from_single_points():
