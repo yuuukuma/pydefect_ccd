@@ -134,10 +134,14 @@ class QuarticFittingFunc(MSONable, FittingFunc):
                 f"Q0={self.Q0:.3f} (amu**0.5*Å)")
 
 
-class FittingCurveType(ExtendedEnum):
+class FittingFuncType(ExtendedEnum):
     """Registry of supported fitting-function classes."""
     quadratic = ("quadratic", QuadraticFittingFunc)
     quartic = ("quartic", QuarticFittingFunc)
+
+    @property
+    def cls(self):
+        return self.value[1]
 
     # def __init__(self, _name, cls):
     #     self.name = _name

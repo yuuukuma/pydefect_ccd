@@ -3,7 +3,7 @@
 import os
 from argparse import Namespace
 from pathlib import Path
-from typing import List, Tuple, Optional, Type
+from typing import List, Tuple, Optional, Type, Union
 
 import numpy as np
 import yaml
@@ -30,7 +30,7 @@ from vise.util.logger import get_logger
 
 from pydefect_ccd.capture_rate import \
     CaptureRate, CaptureRatePlotter
-from pydefect_ccd.fitting_func import FittingFunc
+from pydefect_ccd.fitting_func import FittingFuncType, FittingFunc
 from pydefect_ccd.sommerfeld_scaling import SommerfeldScaling
 from pydefect_ccd.transition_moment import CalcTotalSquaredTransitionMoment, \
     PlottedTotalSquaredTransitionMoment
@@ -271,8 +271,13 @@ def make_single_points(args: Namespace):
 
     parse_dirs(args.dirs, _inner, verbose=True)
 
-def _fit_curve(single_points, fitting_curve: Optional[Type[FittingFunc]]):
+
+def _fit_curve(
+        single_points,
+        fitting_curve: Optional[Union[Type[FittingFunc], FittingFuncType]]):
     if fitting_curve:
+        if isinstance(fitting_curve, FittingFuncType):
+            fitting_curve = fitting_curve.value[1]
         return make_fitting_func(fitting_curve, single_points)
     return None
 

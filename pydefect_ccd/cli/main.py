@@ -17,6 +17,7 @@ from pydefect_ccd.cli.main_function import (
     make_ccd_corrections, plot_ccd, make_single_points,
     make_potential_curve, make_sommerfeld_scaling, make_total_squared_transition_moment
 )
+from pydefect_ccd.fitting_func import FittingFuncType
 from pydefect_ccd.version import __version__
 
 warnings.simplefilter("ignore", UnknownPotcarWarning)
@@ -165,30 +166,35 @@ def parse_args_main(args):
     parser_make_ccd_correction.set_defaults(func=make_ccd_corrections)
 
     # -- make-single-point-results ------------------------
-    parser_make_single_point_results = subparsers.add_parser(
-        name="make-single-point",
+    parser_make_single_points = subparsers.add_parser(
+        name="make-single-points",
         description="Make single points.",
         parents=[dirs],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        aliases=["mspr"],
+        aliases=["msp"],
     )
-    parser_make_single_point_results.add_argument(
+    parser_make_single_points.add_argument(
         "--parse-ccd-correction",
         action=argparse.BooleanOptionalAction,
         default=True,
         help="If parse ccd_correction.json. Use --no-parse-ccd-correction to disable."
     )
-    parser_make_single_point_results.set_defaults(func=make_single_points)
+    parser_make_single_points.set_defaults(func=make_single_points)
 
-    # -- make-potential-curve-result ----------------------
-    parser_make_potential_curve_result = subparsers.add_parser(
-        name="make-potential-curve-result",
-        description="Make potential curve result.",
+    # -- make-potential-curve ----------------------
+    parser_make_potential_curve = subparsers.add_parser(
+        name="make-potential-curve",
+        description="Make potential curve.",
         parents=[pot_curve_spec, dirs],
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        aliases=["mpcr"],
+        aliases=["mpc"],
     )
-    parser_make_potential_curve_result.set_defaults(func=make_potential_curve)
+    parser_make_potential_curve.add_argument(
+        "--fitting-func",
+        type=FittingFuncType.from_string,
+        choices=FittingFuncType.name_list(),
+        help="Fitting function type.")
+    parser_make_potential_curve.set_defaults(func=make_potential_curve)
 
     # -- make-ccd -----------------------------------------
     parser_make_ccd = subparsers.add_parser(

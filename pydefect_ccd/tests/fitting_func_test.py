@@ -4,7 +4,7 @@
 import pytest
 
 from pydefect_ccd.fitting_func import QuadraticFittingFunc, QuarticFittingFunc, \
-    intersections
+    intersections, FittingFuncType
 from pydefect_ccd.potential_curve import SinglePoints
 
 
@@ -52,3 +52,5 @@ def test_single_intersection():
     assert e == pytest.approx(0.25)
 
 
+def test_fitting_curve():
+    print(FittingFuncType.from_string("quadratic"))

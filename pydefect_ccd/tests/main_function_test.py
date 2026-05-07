@@ -3,6 +3,7 @@
 from argparse import Namespace
 from pathlib import Path
 
+import pytest
 from monty.serialization import loadfn
 from pydefect.analyzer.unitcell import Unitcell
 from pymatgen.core import Structure
@@ -10,11 +11,13 @@ from pymatgen.electronic_structure.core import Spin
 from vise.input_set.incar import ViseIncar
 from vise.input_set.prior_info import PriorInfo
 
-from pydefect_ccd.potential_curve import SinglePointSpec, PotentialCurveSpec
+from pydefect_ccd.fitting_func import FittingFuncType, QuadraticFittingFunc
+from pydefect_ccd.potential_curve import SinglePointSpec, PotentialCurveSpec, \
+    SinglePoints
 from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.cli.main_function import make_ccd_init, make_ccd, plot_ccd, \
     make_ccd_dirs, make_wswq_dirs, plot_eigenvalues, main_make_e_p_matrix_element, \
-    make_sommerfeld_scaling, make_ccd_corrections, make_single_points
+    make_sommerfeld_scaling, make_ccd_corrections, make_single_points, _fit_curve
 from pydefect_ccd.e_p_matrix_element import EPMatrixElement
 from pydefect_ccd.local_enum import Carrier
 from pydefect_ccd.relaxed_point import NearEdgeState, RelaxedPoint
@@ -236,6 +239,25 @@ def test_make_single_points(tmpdir, mocker):
         is_shallow=True)
     single_point.to_json_file.assert_called_once_with(
         dir_ / "single_point.json")
+
+
+class FakeSinglePoint:
+    def __init__(self, Q, energy):
+        self.Q = Q
+        self.ccd_corrected_energy = energy
+
+
+def test_fit_curve_accepts_fitting_curve_type():
+    single_points = SinglePoints([
+        FakeSinglePoint(Q=-1.0, energy=3.25),
+        FakeSinglePoint(Q=0.0, energy=0.25),
+        FakeSinglePoint(Q=1.0, energy=3.25)])
+
+    actual = _fit_curve(single_points, FittingFuncType.quadratic)
+
+    assert isinstance(actual, QuadraticFittingFunc)
+    assert actual.a == pytest.approx(3.0)
+    assert actual.E0 == pytest.approx(0.25)
 
 
 # @pytest.fixture
