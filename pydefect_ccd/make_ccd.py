@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #  Copyright (c) 2026 Kumagai group.
+from copy import deepcopy
 from typing import Type
 
 from numpy.ma.testutils import assert_almost_equal
@@ -32,42 +33,26 @@ class MakeCcd:
       - carriers are recombined via  (excited + e) → ground
     """
     def __init__(self,
-                 ground_single_points: SinglePoints,
-                 ground_pot_curve_spec: PotentialCurveSpec,
-                 ground_fitting_func: Type[FittingFunc],
-                 excited_single_points: SinglePoints,
-                 excited_pot_curve_spec: PotentialCurveSpec,
-                 excited_fitting_func: Type[FittingFunc],
+                 ground_pot_curve: PotentialCurve,
+                 excited_pot_curve: PotentialCurve,
                  vbm: float,
                  cbm: float,
                  name: str):
         """Prepare shifted potential curves and their fitted functions."""
         self._vbm = vbm
         self._cbm = cbm
-        self._name = name
-        self._ground_charge = ground_pot_curve_spec.charge
-        self._excited_charge = excited_pot_curve_spec.charge
+        self._ground_charge = ground_pot_curve.charge
+        self._excited_charge = excited_pot_curve.charge
 
-        assert ground_pot_curve_spec.counter_charge == excited_pot_curve_spec.charge
-        assert excited_pot_curve_spec.counter_charge == ground_pot_curve_spec.charge
-        assert_almost_equal(ground_pot_curve_spec.Q_diff, excited_pot_curve_spec.Q_diff)
+        assert ground_pot_curve.counter_charge == excited_pot_curve.charge
+        assert excited_pot_curve.counter_charge == ground_pot_curve.charge
+        assert_almost_equal(ground_pot_curve.Q_diff, excited_pot_curve.Q_diff)
 
-        ground_curve_transform = make_curve_transform(ground_pot_curve_spec,
-                                                      ground_single_points)
-        self._ground_curve = PotentialCurve(ground_pot_curve_spec,
-                                            ground_single_points,
-                                            ground_curve_transform)
-        self._ground_curve.set_fitting_curve(ground_fitting_func)
+        offset = self._shifted_energy(excited_pot_curve.charge)
 
-        excited_offset = self._shifted_energy(excited_pot_curve_spec.charge)
-        excited_curve_transform = make_curve_transform(excited_pot_curve_spec,
-                                                       excited_single_points,
-                                                       excited_offset,
-                                                       flip=True)
-        self._excited_curve = PotentialCurve(excited_pot_curve_spec,
-                                             excited_single_points,
-                                             excited_curve_transform)
-        self._excited_curve.set_fitting_curve(excited_fitting_func)
+        self._ccd = Ccd(name=name,
+                        ground_curve=ground_pot_curve.shifted(),
+                        excited_curve=excited_pot_curve.shifted(offset, flip=True))
 
     @property
     def _charge_diff(self):
@@ -79,15 +64,6 @@ class MakeCcd:
         """Return the carrier present in the excited state."""
         carrier_charge = - self._charge_diff
         return Carrier.from_carrier_charge(carrier_charge)
-
-    # @property
-    # def _band_edge_level(self) -> float:
-    #     if self._charge_diff == 1:
-    #         return self._cbm
-    #     elif self._charge_diff == -1:
-    #         return self._vbm
-    #     else:
-    #         raise ValueError("The charge difference must be ±1.")
 
     def _shifted_energy(self, charge) -> float:
         """Return the Fermi-level energy offset for a charge state."""
@@ -102,6 +78,4 @@ class MakeCcd:
     @property
     def ccd(self) -> Ccd:
         """Return the constructed CCD object."""
-        return Ccd(name=self._name,
-                   ground_curve=self._ground_curve,
-                   excited_curve=self._excited_curve)
+        return self._ccd

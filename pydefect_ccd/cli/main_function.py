@@ -31,14 +31,14 @@ from vise.util.logger import get_logger
 from pydefect_ccd.capture_rate import \
     CaptureRate, CaptureRatePlotter
 from pydefect_ccd.fitting_func import FittingFuncType, FittingFunc
+from pydefect_ccd.local_enum import Carrier
 from pydefect_ccd.sommerfeld_scaling import SommerfeldScaling
 from pydefect_ccd.transition_moment import CalcTotalSquaredTransitionMoment, \
     PlottedTotalSquaredTransitionMoment
 from pydefect_ccd.ccd import CcdPlotter, \
     NoCcdCorrection
 from pydefect_ccd.potential_curve import SinglePointSpec, SinglePoint, \
-    PotentialCurveSpec, PotentialCurve, SinglePoints, make_fitting_func, \
-    make_curve_transform
+    PotentialCurveSpec, PotentialCurve, SinglePoints, make_curve_transform
 from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.make_ccd import MakeCcd
 from pydefect_ccd.make_e_p_matrix_element import make_e_p_matrix_element
@@ -67,6 +67,33 @@ def make_sommerfeld_scaling(args: Namespace):
                                 hole_effective_mass=hole_effective_mass,
                                 Ts=args.temperatures)
     scaling.to_json_file()
+    _plot_sommerfeld_scaling(scaling,
+                             title="attractive",
+                             carrier_charges=[(Carrier.e, 1),
+                                              (Carrier.h, -1)],
+                             filename="sommerfeld_scaling_attractive.pdf")
+    _plot_sommerfeld_scaling(scaling,
+                             title="repulsive",
+                             carrier_charges=[(Carrier.e, -1),
+                                              (Carrier.h, 1)],
+                             filename="sommerfeld_scaling_repulsive.pdf")
+
+
+def _plot_sommerfeld_scaling(scaling: SommerfeldScaling,
+                             title: str,
+                             carrier_charges: List[Tuple[Carrier, int]],
+                             filename: str):
+    fig, ax = plt.subplots()
+    for carrier_type, defect_charge in carrier_charges:
+        scaling.add_to_ax(ax=ax,
+                          carrier_type=carrier_type,
+                          defect_charge=defect_charge)
+        ax.lines[-1].set_label(str(carrier_type))
+    ax.set_title(title)
+    scaling.set_label(ax)
+    fig.tight_layout()
+    fig.savefig(filename)
+    plt.close(fig)
 
 
 def _make_near_edge_states(band_edge_orbital_infos: BandEdgeOrbitalInfos,
@@ -285,12 +312,13 @@ def make_single_points(args: Namespace):
 
 
 def _fit_curve(
-        single_points,
+        potential_curve: PotentialCurve,
         fitting_curve: Optional[Union[Type[FittingFunc], FittingFuncType]]):
     if fitting_curve:
         if isinstance(fitting_curve, FittingFuncType):
-            fitting_curve = fitting_curve.value[1]
-        return make_fitting_func(fitting_curve, single_points)
+            fitting_curve = fitting_curve.cls
+        potential_curve.set_fitting_curve(fitting_curve)
+        return potential_curve.fitting_func
     return None
 
 
@@ -299,23 +327,25 @@ def make_potential_curve(args: Namespace):
         return loadfn(dir_ / "single_point.json")
 
     single_points = SinglePoints(parse_dirs(args.dirs, _inner, verbose=True))
-    fitting_curve = _fit_curve(single_points, args.fitting_curve)
     curve_transform = make_curve_transform(args.potential_curve_spec, single_points)
     potential_curve = PotentialCurve(args.potential_curve_spec,
                                      single_points,
-                                     curve_transform,
-                                     fitting_curve)
+                                     curve_transform)
+    _fit_curve(potential_curve, args.fitting_func)
     print(potential_curve)
     potential_curve.to_json_file("potential_curve.json")
+    ax = plt.gca()
+    potential_curve.add_plot(ax)
+    ax.set_xlabel("Q (amu$^{1/2}$ Å)")
+    ax.set_ylabel("dE (eV)")
+    ax.legend()
+    plt.tight_layout()
+    plt.savefig("potential_curve.pdf")
 
 
 def make_ccd(args: Namespace):
-    ccd = MakeCcd(ground_single_points=args.ground_single_points,
-                  ground_pot_curve_spec=args.ground_potential_curve_spec,
-                  ground_fitting_func=args.ground_fitting_func,
-                  excited_single_points=args.excited_single_points,
-                  excited_pot_curve_spec=args.excited_potential_curve_spec,
-                  excited_fitting_func=args.excited_fitting_func,
+    ccd = MakeCcd(ground_pot_curve=args.ground_pot_curve,
+                  excited_pot_curve=args.excited_pot_curve,
                   vbm=args.ccd_init.vbm,
                   cbm=args.ccd_init.cbm,
                   name=args.ccd_init.name).ccd

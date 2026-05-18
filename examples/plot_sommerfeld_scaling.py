@@ -15,8 +15,8 @@ def main():
 
     for mass in [0.1, 1.0]:
         for dielectric_constant, line_style \
-                in zip([10, 20, 30], ["-", "--", ":"]):
-            for defect_charge in [-1, 0, 1]:
+                in zip([10], ["-", "--", ":"]):
+            for defect_charge in [-1]:
                 scaling = SommerfeldScaling(
                     epsilon0=dielectric_constant,
                     electron_effective_mass=mass,

@@ -5,7 +5,6 @@ from pathlib import Path
 import pytest
 from pydefect.analyzer.band_edge_states import PerfectBandEdgeState
 from pymatgen.electronic_structure.core import Spin
-from vise.analyzer.effective_mass import EffectiveMass
 
 from pydefect_ccd.ccd import Ccd
 from pydefect_ccd.ccd_init import CcdInit
@@ -64,11 +63,9 @@ def test_main_make_sommerfeld_scaling(mocker, command):
 def test_main_make_ccd_init(mocker, command):
     mock_unitcell = mocker.patch("pydefect.cli.main.Unitcell")
     mock_p_band_edge_state = mocker.Mock(spec=PerfectBandEdgeState, autospec=True)
-    mock_effective_mass = mocker.Mock(spec=EffectiveMass, autospec=True)
 
     side_effect = loadfn_effect(
-        {"perfect_band_edge_state.json": mock_p_band_edge_state,
-         "effective_mass.json": mock_effective_mass})
+        {"perfect_band_edge_state.json": mock_p_band_edge_state})
     mocker.patch("pydefect.cli.main.loadfn", side_effect=side_effect)
     mocker.patch("pydefect_ccd.cli.main.loadfn", side_effect=side_effect)
 
@@ -76,14 +73,12 @@ def test_main_make_ccd_init(mocker, command):
                             "-fd", "Va_O1_0",
                             "-sd", "Va_O1_1",
                             "-u", "unitcell.yaml",
-                            "-pbes", "perfect_band_edge_state.json",
-                            "-em", "effective_mass.json"])
+                            "-pbes", "perfect_band_edge_state.json"])
 
     assert args.first_dir == Path("Va_O1_0")
     assert args.second_dir == Path("Va_O1_1")
     assert args.unitcell == mock_unitcell.from_yaml.return_value
     assert args.p_state is mock_p_band_edge_state
-    assert args.effective_mass is mock_effective_mass
     assert args.func is make_ccd_init
     mock_unitcell.from_yaml.assert_called_once_with("unitcell.yaml")
 

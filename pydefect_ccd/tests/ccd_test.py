@@ -81,8 +81,8 @@ def test_ccd_str(ccd):
 
 
 def test_ccd_plotter_construct_plot(ccd, mocker):
-    ccd.ground_curve.fitting_curve = QuadraticFittingFunc(Q0=0.0, E0=0.0, a=1.0)
-    ccd.excited_curve.fitting_curve = QuadraticFittingFunc(Q0=0.0, E0=1.0, a=1.0)
+    ccd.ground_curve.fitting_func = QuadraticFittingFunc(Q0=0.0, E0=0.0, a=1.0)
+    ccd.excited_curve.fitting_func = QuadraticFittingFunc(Q0=0.0, E0=1.0, a=1.0)
     plt = mocker.Mock()
     ax = mocker.Mock()
     plt.gca.return_value = ax

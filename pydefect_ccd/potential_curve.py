@@ -50,7 +50,7 @@ class SinglePoint(OrbitalInfoMixIn, ToJsonFileMixIn):
     energy: float
     spec: SinglePointSpec
     ccd_correction_energy: float
-    used_for_fitting: bool
+    used_for_fitting: bool = True
     is_shallow: bool = None
     # This needs to be here to make table_for_plot
 
@@ -101,7 +101,7 @@ class SinglePoint(OrbitalInfoMixIn, ToJsonFileMixIn):
         """Return row values with optional global correction and shift."""
         localized_orbitals = _joined_local_orbital_info(self.localized_orbitals)
         energy = self.energy + correction_energy + self.ccd_correction_energy + shifted_energy
-        return [self.disp_ratio, energy, self.is_shallow, localized_orbitals]
+        return [self.disp_ratio, self.Q, energy, self.is_shallow, localized_orbitals]
 
     def __str__(self):
         """Return a one-row table for this single point."""
@@ -232,16 +232,6 @@ class PotentialCurveSpec(MSONable, ToJsonFileMixIn):
         return self.charge - self.counter_charge
 
 
-def make_curve_transform(spec: PotentialCurveSpec,
-                         single_points: SinglePoints,
-                         offset: float = 0.0,
-                         flip: bool = False) -> CurveTransform:
-    """Create the energy shift that places the curve minimum at the offset."""
-    shift_to_zero = - (single_points.lowest_energy + spec.correction_energy)
-    shift_energy = shift_to_zero + offset
-    return CurveTransform(shift_energy, flip)
-
-
 @dataclass
 class PotentialCurve(MSONable, ToJsonFileMixIn):
     """Potential-energy curve for one charge state.
@@ -254,7 +244,7 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
     spec: PotentialCurveSpec
     original_single_points: SinglePoints # Bare energies.
     curve_transform: CurveTransform
-    fitting_curve: Optional[FittingFunc] = None
+    fitting_func: Optional[FittingFunc] = None
 
     @cached_property
     def single_points(self) -> SinglePoints:
@@ -293,16 +283,16 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
 
     def set_fitting_curve(self, curve: Type[FittingFunc]) -> None:
         """Fit and store a fitting-function instance for this curve."""
-        self.fitting_curve = make_fitting_func(curve, self.single_points)
+        self.fitting_func = make_fitting_func(curve, self.single_points)
 
-    def add_plot(self, ax, color: str, q_range: List[float] = None):
+    def add_plot(self, ax, color: str = "black", q_range: List[float] = None):
         """Add the fitted curve and shifted single points to an axes."""
-        has_fitting_curve = self.fitting_curve is not None
+        has_fitting_curve = self.fitting_func is not None
 
         if has_fitting_curve:
             x_range = q_range or self._default_plot_q_range
             xs = np.linspace(x_range[0], x_range[1], 1000)
-            ax.plot(xs, self.fitting_curve(xs),
+            ax.plot(xs, self.fitting_func(xs),
                     color=color, label=f"q={self.charge}")
 
         self._add_single_point_markers(ax, color, label=not has_fitting_curve)
@@ -337,31 +327,49 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
         return [min_q, max_q]
 
     @property
-    def table_for_plot(self):
+    def _spec_table(self) -> str:
         """Return headers and values summarizing this curve."""
         tables = {"charge": self.charge,
                   "lowest energy": self.lowest_energy,
                   "counter charge": self.counter_charge,
                   "Q diff": self.Q_diff}
-        return list(tables.keys()), tables.values()
+        headers, data = list(tables.keys()), tables.values()
+        return tabulate([data], tablefmt="plain", floatfmt=".3f", headers=headers)
+
+    @property
+    def _single_points_table(self) -> str:
+        return tabulate(
+            [sp.table_values() for sp in self.single_points],
+            tablefmt="plain",
+            floatfmt=".3f",
+            headers=["disp ratio", "Q", "Energy", "is shallow", "localized_orbitals"])
 
     def __str__(self):
         """Return a tabulated summary of the curve and single points."""
-        headers, tabulate_data = self.table_for_plot
-        fitting_curve_str = str(self.fitting_curve) if self.fitting_curve \
-            else "fitted curve is N.A."
-        tables = [tabulate([tabulate_data],
-                           tablefmt="plain", floatfmt=".3f", headers=headers),
-                  fitting_curve_str]
+        fitting_func \
+            = str(self.fitting_func) if self.fitting_func else "fitted curve is N.A."
+        sep = "-"*70
+        return f"\n{sep}\n".join(
+            [self._spec_table, fitting_func, self._single_points_table])
 
-        if self.single_points:
-            single_point_table = tabulate(
-                [sp.table_values() for sp in self.single_points],
-                tablefmt="plain",
-                floatfmt=".3f",
-                headers=headers)
-        else:
-            single_point_table = "single points are N.A."
-        tables.append(single_point_table)
+    def shifted(self, offset: float = 0.0, flip: bool = False) -> "PotentialCurve":
+        shift_to_zero = - self.lowest_energy
+        shift_energy = shift_to_zero + offset
+        result = deepcopy(self)
+        result.curve_transform = CurveTransform(shift_energy, flip)
+        result.set_fitting_curve(result.fitting_func.__class__)
+        print("+"*100)
+        print(offset)
+        print("+"*100)
+        return result
 
-        return "\n".join(tables)
+
+def make_curve_transform(pot_curve: PotentialCurve,
+                         offset: float = 0.0,
+                         flip: bool = False) -> CurveTransform:
+    """Create the curve transform such that the lowest energy to be the offset."""
+    shift_to_zero = - pot_curve.lowest_energy
+    shift_energy = shift_to_zero + offset
+    return CurveTransform(shift_energy, flip)
+
+

@@ -3,6 +3,7 @@
 from argparse import Namespace
 from pathlib import Path
 
+import matplotlib
 import pytest
 from monty.serialization import loadfn
 from pydefect.analyzer.unitcell import Unitcell
@@ -12,14 +13,16 @@ from vise.analyzer.effective_mass import EffectiveMass
 from vise.input_set.incar import ViseIncar
 from vise.input_set.prior_info import PriorInfo
 
+matplotlib.use("Agg")
+
 from pydefect_ccd.fitting_func import FittingFuncType, QuadraticFittingFunc
-from pydefect_ccd.potential_curve import SinglePointSpec, PotentialCurveSpec, \
-    SinglePoints
+from pydefect_ccd.potential_curve import SinglePointSpec, PotentialCurveSpec
 from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.cli.main_function import make_ccd_init, make_ccd, plot_ccd, \
     make_ccd_dirs, make_wswq_dirs, plot_eigenvalues, \
     main_make_e_p_matrix_element, make_sommerfeld_scaling, \
-    make_ccd_corrections, make_single_points, _fit_curve
+    make_ccd_corrections, make_potential_curve, make_single_points, _fit_curve, \
+    _plot_sommerfeld_scaling
 from pydefect_ccd.e_p_matrix_element import EPMatrixElement
 from pydefect_ccd.local_enum import Carrier
 from pydefect_ccd.relaxed_point import NearEdgeState, RelaxedPoint
@@ -34,6 +37,8 @@ def test_make_sommerfeld_scaling(test_files, tmpdir):
                      temperatures=[100, 200])
     make_sommerfeld_scaling(args)
     assert str(loadfn("sommerfeld_scaling.json"))
+    assert Path("sommerfeld_scaling_attractive.pdf").exists()
+    assert Path("sommerfeld_scaling_repulsive.pdf").exists()
 
 
 def test_make_sommerfeld_scaling_from_effective_mass_file(tmpdir):
@@ -58,6 +63,64 @@ def test_make_sommerfeld_scaling_from_effective_mass_file(tmpdir):
     actual = loadfn("sommerfeld_scaling.json")
     assert actual.electron_effective_mass == pytest.approx(4.0)
     assert actual.hole_effective_mass == pytest.approx(6.0)
+
+
+def test_make_sommerfeld_scaling_plots_attractive_and_repulsive(tmpdir, mocker):
+    tmpdir.chdir()
+    mock_plot = mocker.patch(
+        "pydefect_ccd.cli.main_function._plot_sommerfeld_scaling")
+    args = Namespace(epsilon0=10.0,
+                     unitcell=None,
+                     electron_and_hole_effective_mass=[2.0, 5.0],
+                     effective_mass_file=None,
+                     temperatures=[100, 200])
+
+    make_sommerfeld_scaling(args)
+
+    scaling = mock_plot.call_args_list[0].args[0]
+    assert mock_plot.call_args_list == [
+        mocker.call(scaling,
+                    title="attractive",
+                    carrier_charges=[(Carrier.e, 1),
+                                     (Carrier.h, -1)],
+                    filename="sommerfeld_scaling_attractive.pdf"),
+        mocker.call(scaling,
+                    title="repulsive",
+                    carrier_charges=[(Carrier.e, -1),
+                                     (Carrier.h, 1)],
+                    filename="sommerfeld_scaling_repulsive.pdf")]
+
+
+def test_plot_sommerfeld_scaling_adds_electron_and_hole_curves(mocker):
+    scaling = mocker.Mock()
+    fig = mocker.Mock()
+    ax = mocker.Mock()
+    ax.lines = []
+
+    def add_line(**_kwargs):
+        ax.lines.append(mocker.Mock())
+
+    scaling.add_to_ax.side_effect = add_line
+    mocker.patch("pydefect_ccd.cli.main_function.plt.subplots",
+                 return_value=(fig, ax))
+    mock_close = mocker.patch("pydefect_ccd.cli.main_function.plt.close")
+
+    _plot_sommerfeld_scaling(scaling,
+                             title="attractive",
+                             carrier_charges=[(Carrier.e, 1),
+                                              (Carrier.h, -1)],
+                             filename="sommerfeld_scaling_attractive.pdf")
+
+    assert scaling.add_to_ax.call_args_list == [
+        mocker.call(ax=ax, carrier_type=Carrier.e, defect_charge=1),
+        mocker.call(ax=ax, carrier_type=Carrier.h, defect_charge=-1)]
+    ax.lines[0].set_label.assert_called_once_with(str(Carrier.e))
+    ax.lines[1].set_label.assert_called_once_with(str(Carrier.h))
+    ax.set_title.assert_called_once_with("attractive")
+    scaling.set_label.assert_called_once_with(ax)
+    fig.tight_layout.assert_called_once_with()
+    fig.savefig.assert_called_once_with("sommerfeld_scaling_attractive.pdf")
+    mock_close.assert_called_once_with(fig)
 
 
 def test_make_ccd_init(test_files, tmpdir):
@@ -268,23 +331,40 @@ def test_make_single_points(tmpdir, mocker):
         dir_ / "single_point.json")
 
 
-class FakeSinglePoint:
-    def __init__(self, Q, energy):
-        self.Q = Q
-        self.ccd_corrected_energy = energy
+def test_fit_curve_accepts_fitting_curve_type(mocker):
+    potential_curve = mocker.Mock()
+
+    actual = _fit_curve(potential_curve, FittingFuncType.quadratic)
+
+    potential_curve.set_fitting_curve.assert_called_once_with(QuadraticFittingFunc)
+    assert actual is potential_curve.fitting_func
 
 
-def test_fit_curve_accepts_fitting_curve_type():
-    single_points = SinglePoints([
-        FakeSinglePoint(Q=-1.0, energy=3.25),
-        FakeSinglePoint(Q=0.0, energy=0.25),
-        FakeSinglePoint(Q=1.0, energy=3.25)])
+def test_make_potential_curve_sets_plot_labels(mocker):
+    potential_curve = mocker.Mock()
+    ax = mocker.Mock()
+    mocker.patch("pydefect_ccd.cli.main_function.parse_dirs",
+                 return_value=[mocker.Mock()])
+    mocker.patch("pydefect_ccd.cli.main_function.make_curve_transform",
+                 return_value=mocker.Mock())
+    mocker.patch("pydefect_ccd.cli.main_function.PotentialCurve",
+                 return_value=potential_curve)
+    mocker.patch("pydefect_ccd.cli.main_function.plt.gca", return_value=ax)
+    mock_savefig = mocker.patch("pydefect_ccd.cli.main_function.plt.savefig")
+    mock_tight_layout = mocker.patch(
+        "pydefect_ccd.cli.main_function.plt.tight_layout")
+    args = Namespace(dirs=[Path("disp_0.0")],
+                     potential_curve_spec=mocker.Mock(),
+                     fitting_func=None)
 
-    actual = _fit_curve(single_points, FittingFuncType.quadratic)
+    make_potential_curve(args)
 
-    assert isinstance(actual, QuadraticFittingFunc)
-    assert actual.a == pytest.approx(3.0)
-    assert actual.E0 == pytest.approx(0.25)
+    potential_curve.add_plot.assert_called_once_with(ax)
+    ax.set_xlabel.assert_called_once_with("Q (amu$^{1/2}$ Å)")
+    ax.set_ylabel.assert_called_once_with("dE (eV)")
+    ax.legend.assert_called_once_with()
+    mock_tight_layout.assert_called_once_with()
+    mock_savefig.assert_called_once_with("potential_curve.pdf")
 
 
 # @pytest.fixture

@@ -43,7 +43,7 @@ pydefect_ccd make-sommerfeld-scaling
 2. Create a `ccd_init.json` file from two directories containing pydefect files. 
 If the excited state has one more (less) charge state, n-type (p-type) is assumed.
 ```bash
-pydefect_ccd make-ccd-init -u ../unitcell.yaml -pbes ../perfect/perfect_band_edge_state.json -fd ../C_N1_-1 -sd ../C_N1_0 -em ../effective_mass.json
+pydefect_ccd make-ccd-init -u ../unitcell.yaml -pbes ../perfect/perfect_band_edge_state.json -fd ../C_N1_-1 -sd ../C_N1_0
 ```
 The defect in `first_dir` needs to show higher formation energy than that in `second_dir`.
 For example, in the above command, the formation energy of C_N1_-1
@@ -91,15 +91,15 @@ Note that this correction is needed even for neutral defects.
 pydefect_ccd make-ccd-corrections -d disp_* -u ../unitcell/unitcell.yaml -ndcr ../../../C_N1_-1/calc_results.json -ndde ../../../C_N1_-1/defect_entry.json -p potential_curve_spec.json
 ```
 
-6. We then create `single_point_info.json` in each directory, which
+6. We then create `single_points.json` in each directory, which
 summarize the calculation result for each single point, with the following command.
 ```bash
-pydefect_ccd make-single-point-results -d disp_* 
+pydefect_ccd make-single-points -d disp_* 
 ```
 
 7. Next, we create `potential_curve.json` at each q using the following command.
 ```bash
-pydefect_ccd make-potential-curve-result -d disp_* 
+pydefect_ccd make-potential-curve -d disp_* 
 ```
 
 8. Finally, we create the `ccd.json` file by merging all the calculated data 

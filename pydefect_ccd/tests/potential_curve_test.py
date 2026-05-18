@@ -186,8 +186,28 @@ def test_potential_curve_set_fitting_curve_uses_fitting_points():
 
     curve.set_fitting_curve(QuadraticFittingFunc)
 
-    assert curve.fitting_curve.a == pytest.approx(3.0)
-    assert curve.fitting_curve.E0 == pytest.approx(0.25)
+    assert curve.fitting_func.a == pytest.approx(3.0)
+    assert curve.fitting_func.E0 == pytest.approx(0.25)
+
+
+def test_potential_curve_set_fitting_curve_uses_transformed_points():
+    single_points = SinglePoints([
+        make_single_point(Q=-1.0, disp_ratio=-1.0, energy=3.25),
+        make_single_point(Q=0.0, disp_ratio=0.0, energy=0.25),
+        make_single_point(Q=1.0, disp_ratio=1.0, energy=3.25)
+    ])
+    spec = PotentialCurveSpec(charge=0,
+                              correction_energy=0.5,
+                              counter_charge=1,
+                              Q_diff=1.0)
+    curve = PotentialCurve(spec=spec,
+                           original_single_points=single_points,
+                           curve_transform=CurveTransform(2.0, False))
+
+    curve.set_fitting_curve(QuadraticFittingFunc)
+
+    assert curve.fitting_func.a == pytest.approx(3.0)
+    assert curve.fitting_func.E0 == pytest.approx(2.75)
 
 
 def test_potential_curve_add_plot(mocker):
@@ -204,9 +224,9 @@ def test_potential_curve_add_plot(mocker):
     curve = PotentialCurve(spec=spec,
                            original_single_points=single_points,
                            curve_transform=CurveTransform(0.0, False),
-                           fitting_curve=QuadraticFittingFunc(Q0=0.0,
-                                                              E0=0.25,
-                                                              a=3.0))
+                           fitting_func=QuadraticFittingFunc(Q0=0.0,
+                                                             E0=0.25,
+                                                             a=3.0))
     ax = mocker.Mock()
 
     curve.add_plot(ax, "red")
@@ -269,9 +289,9 @@ def test_potential_curve_add_plot_renders_png(tmp_path):
     curve = PotentialCurve(spec=spec,
                            original_single_points=single_points,
                            curve_transform=CurveTransform(0.0, False),
-                           fitting_curve=QuadraticFittingFunc(Q0=0.0,
-                                                              E0=0.25,
-                                                              a=3.0))
+                           fitting_func=QuadraticFittingFunc(Q0=0.0,
+                                                             E0=0.25,
+                                                             a=3.0))
     fig, ax = plt.subplots()
 
     try:

@@ -95,15 +95,15 @@ class CalcTotalSquaredTransitionMoment:
         dQ = self.excited_curve.Q_diff
         dE = abs(self.excited_curve.lowest_energy - self.ground_curve.lowest_energy)
 
-        assert isinstance(self.ground_curve.fitting_curve, QuadraticFittingFunc)
-        assert isinstance(self.excited_curve.fitting_curve, QuadraticFittingFunc)
+        assert isinstance(self.ground_curve.fitting_func, QuadraticFittingFunc)
+        assert isinstance(self.excited_curve.fitting_func, QuadraticFittingFunc)
 
         # at Wif=1, volume=1cm^3 * HBAR / 2 / np.pi, g=1: Then, unit is in amu x Å^2 / eV.
         # dQ [amu^0.5 x Å], dE [eV], wi [eV], wf [eV], T [K]
         result = get_C(dQ=abs(dQ),
                        dE=dE,
-                       wi=self.excited_curve.fitting_curve.omega_in_eV,
-                       wf=self.ground_curve.fitting_curve.omega_in_eV,
+                       wi=self.excited_curve.fitting_func.omega_in_eV,
+                       wf=self.ground_curve.fitting_func.omega_in_eV,
                        T=np.array(self.Ts),
                        Wif=1.0,
                        volume=1e24 * HBAR / 2 / np.pi,

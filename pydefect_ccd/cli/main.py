@@ -104,13 +104,13 @@ def parse_args_main(args):
         parser_make_sommerfeld_scaling.add_mutually_exclusive_group(
             required=True))
     effective_mass_source.add_argument(
-        "--electron-and-hole-effective-mass",
+        "--electron-and-hole-effective-mass", "-ehem",
         type=float,
         nargs=2,
         metavar=("ELECTRON", "HOLE"),
         help="Electron and hole effective masses in units of m0.")
     effective_mass_source.add_argument(
-        "--effective-mass-file",
+        "--effective-mass-file", "-em",
         type=loadfn,
         nargs="?",
         const="effective_mass.json",
@@ -142,10 +142,6 @@ def parse_args_main(args):
     parser_make_ccd_init.add_argument(
         "-sd", "--second-dir", type=Path, required=True,
         help="Second directory considered for ccd, e.g., Va_O1_1."
-    )
-    parser_make_ccd_init.add_argument(
-        "-em", "--effective-mass", type=loadfn, default=None,
-        help="effective_mass.json file."
     )
     parser_make_ccd_init.set_defaults(func=make_ccd_init)
 
@@ -231,12 +227,8 @@ def parse_args_main(args):
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         aliases=["mc"],
     )
-    parser_make_ccd.add_argument("--ground-single-points", type=loadfn)
-    parser_make_ccd.add_argument("--ground-potential-curve-spec", type=loadfn)
-    parser_make_ccd.add_argument("--ground-fitting-func", type=loadfn)
-    parser_make_ccd.add_argument("--excited-single-points", type=loadfn)
-    parser_make_ccd.add_argument("--excited-potential-curve-spec", type=loadfn)
-    parser_make_ccd.add_argument("--excited-fitting-func", type=loadfn)
+    parser_make_ccd.add_argument("--ground-pot-curve", type=loadfn, required=True)
+    parser_make_ccd.add_argument("--excited-pot-curve", type=loadfn, required=True)
     # parser_make_ccd.add_argument(
     #     "--fixed-Q0",
     #     action=argparse.BooleanOptionalAction,
