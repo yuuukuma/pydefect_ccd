@@ -23,7 +23,6 @@ from pydefect_ccd.cli.main_function import make_ccd_init, make_ccd, plot_ccd, \
     main_make_e_p_matrix_element, make_sommerfeld_scaling, \
     make_ccd_corrections, make_potential_curve, make_single_points, _fit_curve, \
     _plot_sommerfeld_scaling
-from pydefect_ccd.e_p_matrix_element import EPMatrixElement
 from pydefect_ccd.local_enum import Carrier
 from pydefect_ccd.relaxed_point import NearEdgeState, RelaxedPoint
 
@@ -380,35 +379,79 @@ def test_make_potential_curve_sets_plot_labels(mocker):
 #
 
 
-def test_make_ccd(test_files, tmpdir):
-    tmpdir.chdir()
-    va_p1 = Path(test_files) / "NaP/Va_P1_-1__Va_P1_0"
-    ground_ccd = loadfn(va_p1 / "from_-1_to_0_after_make_single_point_infos/potential_curve.json")
-    excited_ccd = loadfn(va_p1 / "from_0_to_-1_after_make_single_point_infos/potential_curve.json")
-    dephon_init = loadfn(va_p1 / "ccd_init.json")
-    args = Namespace(ground_ccd=ground_ccd, excited_ccd=excited_ccd,
-                     dephon_init=dephon_init)
+def test_make_ccd(mocker):
+    ccd = mocker.Mock()
+    mock_make_ccd = mocker.patch("pydefect_ccd.cli.main_function.MakeCcd")
+    mock_make_ccd.return_value.ccd = ccd
+    ground_curve = mocker.Mock()
+    excited_curve = mocker.Mock()
+    ccd_init = Namespace(vbm=1.0, cbm=2.0, name="test")
+    args = Namespace(ground_pot_curve=ground_curve,
+                     excited_pot_curve=excited_curve,
+                     ccd_init=ccd_init)
+
     make_ccd(args)
 
+    mock_make_ccd.assert_called_once_with(ground_pot_curve=ground_curve,
+                                          excited_pot_curve=excited_curve,
+                                          vbm=1.0,
+                                          cbm=2.0,
+                                          name="test")
+    ccd.to_json_file.assert_called_once_with()
 
-def test_plot_ccd(ccd, tmpdir):
-    args = Namespace(ccd=ccd, fig_name=tmpdir / "ccd.pdf",
-                     q_range=[-1.0, 1.0],
-                     quadratic_fit=True,
-                     spline_fit=True)
+
+def test_plot_ccd(tmpdir, mocker):
+    plotter = mocker.Mock()
+    mock_plotter = mocker.patch("pydefect_ccd.cli.main_function.CcdPlotter",
+                                return_value=plotter)
+    mock_savefig = mocker.patch("pydefect_ccd.cli.main_function.plt.savefig")
+    mock_show = mocker.patch("pydefect_ccd.cli.main_function.plt.show")
+    ccd = mocker.Mock()
+    args = Namespace(ccd=ccd,
+                     fig_name=tmpdir / "ccd.pdf",
+                     ground_q_range=[-1.0, 1.0],
+                     excited_q_range=[0.0, 2.0])
+
     plot_ccd(args)
 
+    mock_plotter.assert_called_once_with(ccd,
+                                         mocker.ANY,
+                                         ground_q_range=[-1.0, 1.0],
+                                         excited_q_range=[0.0, 2.0])
+    plotter.construct_plot.assert_called_once_with()
+    mock_savefig.assert_called_once_with(args.fig_name)
+    mock_show.assert_called_once_with()
 
-def test_plot_eigenvalues(test_files, tmpdir):
-    tmpdir.chdir()
-    va_p1 = Path(test_files) / "NaP/Va_P1_-1__Va_P1_0"
-    dephon_init = loadfn(va_p1 / "ccd_init.json")
-    dir_ = va_p1 / "from_0_to_-1_before_make_single_point_infos"
+
+def test_plot_eigenvalues(mocker):
+    dir_ = Path("disp_0.0")
+    orb_info = mocker.Mock()
+    single_point = Namespace(disp_ratio=0.0)
+    ccd_init = Namespace(supercell_vbm=1.0, supercell_cbm=2.0)
+    plotter = mocker.Mock()
+    mock_loadfn = mocker.patch(
+        "pydefect_ccd.cli.main_function.loadfn",
+        side_effect=[orb_info, single_point])
+    mock_plotter = mocker.patch(
+        "pydefect_ccd.cli.main_function.EigenvalPlotter",
+        return_value=plotter)
     args = Namespace(dirs=[dir_ / "disp_0.0"],
-                     dephon_init=dephon_init,
-                     y_range=None)
+                     ccd_init=ccd_init,
+                     y_range=[-1.0, 1.0])
+
     plot_eigenvalues(args)
 
+    assert mock_loadfn.call_args_list == [
+        mocker.call(dir_ / "disp_0.0" / "band_edge_orbital_infos.json"),
+        mocker.call(dir_ / "disp_0.0" / "single_point.json")]
+    mock_plotter.assert_called_once_with([orb_info],
+                                         [0.0],
+                                         1.0,
+                                         2.0,
+                                         y_range=[-1.0, 1.0])
+    plotter.construct_plot.assert_called_once_with()
+    plotter.plt.savefig.assert_called_once_with("eigenvalues.pdf")
+    plotter.plt.show.assert_called_once_with()
 
 def test_make_wswq_dirs(tmpdir, mocker):
 
@@ -474,24 +517,49 @@ def test_make_wswq_dirs(tmpdir, mocker):
     assert Path("excited/disp_-0.2/wswq/KPOINTS").exists() is False
 
 
-def test_make_e_p_matrix_element(tmpdir, test_files):
-    print(tmpdir)
-    tmpdir.chdir()
-    dir_ = test_files / "NaP/Va_P1_-1__Va_P1_0/from_0_to_-1_after_make_single_point_infos"
-    args = Namespace(base_disp=0.0,
-                     single_ccd=loadfn(dir_/"potential_curve.json"),
-                     captured_carrier=Carrier.e,
+def test_make_e_p_matrix_element(mocker):
+    dir_0 = Path("disp_0.0")
+    dir_1 = Path("disp_0.1")
+    potential_curve = Namespace(charge=0)
+    base_orbital_infos = mocker.Mock()
+    single_point_0 = Namespace(Q=0.0, disp_ratio=0.0)
+    single_point_1 = Namespace(Q=0.1, disp_ratio=0.1)
+    ep_matrix_element = mocker.Mock(index_info="b767_d766_k1_-1")
+    wswq_0 = {(2, 1): {(766, 767): 3.0 + 4.0j}}
+    wswq_1 = {(2, 1): {(766, 767): 30.0 + 40.0j}}
+    mocker.patch("pydefect_ccd.cli.main_function._read_WSWQ",
+                 side_effect=[wswq_0, wswq_1])
+
+    def loadfn_side_effect(filename):
+        data = {
+            dir_0 / "single_point.json": single_point_0,
+            dir_0 / "band_edge_orbital_infos.json": base_orbital_infos,
+            dir_1 / "single_point.json": single_point_1}
+        return data[filename]
+
+    mocker.patch("pydefect_ccd.cli.main_function.loadfn",
+                 side_effect=loadfn_side_effect)
+    mock_make = mocker.patch(
+        "pydefect_ccd.cli.main_function.make_e_p_matrix_element",
+        return_value=ep_matrix_element)
+    mocker.patch("pydefect_ccd.cli.main_function.plt.savefig")
+    args = Namespace(potential_curve=potential_curve,
                      band_edge_index=767,
                      defect_band_index=766,
-                     kpoint_index=1,
                      spin=Spin.down,
-                     dirs=[dir_/"disp_0.0", dir_/"disp_0.1"],
-                     energy_diff=1.0)
-#    dirs=[dir_/"disp_0.0", dir_/"disp_0.1", dir_/"disp_0.2"])
+                     dirs=[dir_0, dir_1])
 
     main_make_e_p_matrix_element(args)
-    actual: EPMatrixElement = loadfn("e_p_matrix_element_b767_d766_k1_-1.json")
-    print(actual)
+
+    mock_make.assert_called_once_with(
+        charge=0,
+        base_band_edge_orbital_infos=base_orbital_infos,
+        band_edge_index=767,
+        defect_band_index=766,
+        spin=Spin.down,
+        dQs=[0.0, 0.1],
+        wswqs=[3.0 + 4.0j, 30.0 + 40.0j])
+    ep_matrix_element.to_json_file.assert_called_once_with()
 
 
 # def test_make_capture_rate(tmpdir, test_files):

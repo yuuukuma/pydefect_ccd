@@ -139,40 +139,24 @@ def test_main_make_ccd_corrections(mocker, command):
 @pytest.mark.parametrize("command", ["make-ccd", "mc"])
 def test_main_make_ccd(mocker, command):
     mock_ccd_init = mocker.Mock(spec=CcdInit, autospec=True)
-    mock_ground_single_points = mocker.Mock()
-    mock_ground_spec = mocker.Mock()
-    mock_ground_fitting_func = mocker.Mock()
-    mock_excited_single_points = mocker.Mock()
-    mock_excited_spec = mocker.Mock()
-    mock_excited_fitting_func = mocker.Mock()
+    mock_ground_pot_curve = mocker.Mock()
+    mock_excited_pot_curve = mocker.Mock()
     side_effect = loadfn_effect(
         {"ccd_init.json": mock_ccd_init,
-         "ground_single_points.json": mock_ground_single_points,
-         "ground_spec.json": mock_ground_spec,
-         "ground_fitting_func.json": mock_ground_fitting_func,
-         "excited_single_points.json": mock_excited_single_points,
-         "excited_spec.json": mock_excited_spec,
-         "excited_fitting_func.json": mock_excited_fitting_func})
+         "ground_potential_curve.json": mock_ground_pot_curve,
+         "excited_potential_curve.json": mock_excited_pot_curve})
 
     mocker.patch("pydefect_ccd.cli.main.loadfn", side_effect=side_effect)
 
     args = parse_args_main(
         [command,
          "--ccd_init", "ccd_init.json",
-         "--ground-single-points", "ground_single_points.json",
-         "--ground-potential-curve-spec", "ground_spec.json",
-         "--ground-fitting-func", "ground_fitting_func.json",
-         "--excited-single-points", "excited_single_points.json",
-         "--excited-potential-curve-spec", "excited_spec.json",
-         "--excited-fitting-func", "excited_fitting_func.json"])
+         "--ground-pot-curve", "ground_potential_curve.json",
+         "--excited-pot-curve", "excited_potential_curve.json"])
 
     assert args.ccd_init is mock_ccd_init
-    assert args.ground_single_points is mock_ground_single_points
-    assert args.ground_potential_curve_spec is mock_ground_spec
-    assert args.ground_fitting_func is mock_ground_fitting_func
-    assert args.excited_single_points is mock_excited_single_points
-    assert args.excited_potential_curve_spec is mock_excited_spec
-    assert args.excited_fitting_func is mock_excited_fitting_func
+    assert args.ground_pot_curve is mock_ground_pot_curve
+    assert args.excited_pot_curve is mock_excited_pot_curve
     assert args.func is make_ccd
 
 

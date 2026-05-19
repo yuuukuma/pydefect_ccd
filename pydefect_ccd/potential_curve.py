@@ -72,7 +72,8 @@ class SinglePoint(OrbitalInfoMixIn, ToJsonFileMixIn):
         lo = self.localized_orbitals[spin_idx]
 
         for band in vb + lo + cb:
-            if getattr(band, "band_index", None) == band_index:
+            if (getattr(band, "band_index", None) == band_index
+                    or getattr(band, "band_idx", None) == band_index):
                 return band
 
         raise ValueError
@@ -93,7 +94,8 @@ class SinglePoint(OrbitalInfoMixIn, ToJsonFileMixIn):
     @property
     def table_headers(self):
         """Return column labels for tabulating this point."""
-        return ["disp ratio", "corrected energy", "is shallow?", "localized orb"]
+        return ["disp ratio", "Q", "corrected energy", "is shallow?",
+                "localized orb"]
 
     def table_values(self,
                      correction_energy: float = 0.0,
@@ -350,12 +352,13 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
             [self._spec_table, fitting_func, self._single_points_table])
 
     def shifted(self, offset: float = 0.0, flip: bool = False) -> "PotentialCurve":
-        shift_to_zero = - self.lowest_energy
-        shift_energy = shift_to_zero + offset
+        shift_energy = (
+            self.curve_transform.shift_energy - self.lowest_energy + offset)
         result = deepcopy(self)
         result.curve_transform = CurveTransform(shift_energy, flip)
         result.__dict__.pop("single_points", None)
-        result.set_fitting_curve(result.fitting_func.__class__)
+        if result.fitting_func is not None:
+            result.set_fitting_curve(result.fitting_func.__class__)
         return result
 
 
@@ -363,6 +366,7 @@ def make_curve_transform(pot_curve: PotentialCurve,
                          offset: float = 0.0,
                          flip: bool = False) -> CurveTransform:
     """Create the curve transform such that the lowest energy is placed at the offset."""
-    shift_to_zero = - pot_curve.lowest_energy
-    shift_energy = shift_to_zero + offset
+    shift_energy = (
+        pot_curve.curve_transform.shift_energy - pot_curve.lowest_energy
+        + offset)
     return CurveTransform(shift_energy, flip)

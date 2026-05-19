@@ -1,16 +1,10 @@
 # -*- coding: utf-8 -*-
 #  Copyright (c) 2026 Kumagai group.
-from copy import deepcopy
-from typing import Type
-
-from numpy.ma.testutils import assert_almost_equal
 from vise.util.logger import get_logger
 
 from pydefect_ccd.ccd import Ccd
-from pydefect_ccd.fitting_func import FittingFunc
 from pydefect_ccd.local_enum import Carrier
-from pydefect_ccd.potential_curve import PotentialCurve, SinglePoints, \
-    PotentialCurveSpec, make_curve_transform
+from pydefect_ccd.potential_curve import PotentialCurve
 
 logger = get_logger(__name__)
 
@@ -44,15 +38,12 @@ class MakeCcd:
         self._ground_charge = ground_pot_curve.charge
         self._excited_charge = excited_pot_curve.charge
 
-        assert ground_pot_curve.counter_charge == excited_pot_curve.charge
-        assert excited_pot_curve.counter_charge == ground_pot_curve.charge
-        assert_almost_equal(ground_pot_curve.Q_diff, excited_pot_curve.Q_diff)
-
         offset = self._shifted_energy(excited_pot_curve.charge)
 
         self._ccd = Ccd(name=name,
                         ground_curve=ground_pot_curve.shifted(),
-                        excited_curve=excited_pot_curve.shifted(offset, flip=True))
+                        excited_curve=excited_pot_curve.shifted(offset,
+                                                                flip=True))
 
     @property
     def _charge_diff(self):

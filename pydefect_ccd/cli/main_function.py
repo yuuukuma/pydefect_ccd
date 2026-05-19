@@ -38,7 +38,8 @@ from pydefect_ccd.transition_moment import CalcTotalSquaredTransitionMoment, \
 from pydefect_ccd.ccd import CcdPlotter, \
     NoCcdCorrection
 from pydefect_ccd.potential_curve import SinglePointSpec, SinglePoint, \
-    PotentialCurveSpec, PotentialCurve, SinglePoints, make_curve_transform
+    CurveTransform, PotentialCurveSpec, PotentialCurve, SinglePoints, \
+    make_curve_transform
 from pydefect_ccd.ccd_init import CcdInit
 from pydefect_ccd.make_ccd import MakeCcd
 from pydefect_ccd.make_e_p_matrix_element import make_e_p_matrix_element
@@ -327,7 +328,10 @@ def make_potential_curve(args: Namespace):
         return loadfn(dir_ / "single_point.json")
 
     single_points = SinglePoints(parse_dirs(args.dirs, _inner, verbose=True))
-    curve_transform = make_curve_transform(args.potential_curve_spec, single_points)
+    raw_curve = PotentialCurve(args.potential_curve_spec,
+                               single_points,
+                               CurveTransform(0.0, False))
+    curve_transform = make_curve_transform(raw_curve)
     potential_curve = PotentialCurve(args.potential_curve_spec,
                                      single_points,
                                      curve_transform)

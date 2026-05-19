@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import List, Tuple
 
+import numpy as np
 from monty.json import MSONable
 from pydefect.corrections.abstract_correction import Correction
 from vise.util.logger import get_logger
@@ -23,10 +24,27 @@ class Ccd(MSONable, ToJsonFileMixIn):
     ground_curve: PotentialCurve
     excited_curve: PotentialCurve
 
+    def __post_init__(self):
+        """Validate that the two curves describe opposite ends of one CCD path."""
+        if self.ground_curve.counter_charge != self.excited_curve.charge:
+            raise ValueError(
+                "ground counter_charge must match excited charge: "
+                f"{self.ground_curve.counter_charge} != "
+                f"{self.excited_curve.charge}")
+        if self.excited_curve.counter_charge != self.ground_curve.charge:
+            raise ValueError(
+                "excited counter_charge must match ground charge: "
+                f"{self.excited_curve.counter_charge} != "
+                f"{self.ground_curve.charge}")
+        if not np.isclose(self.ground_curve.Q_diff, self.excited_curve.Q_diff):
+            raise ValueError(
+                "ground and excited Q_diff must match: "
+                f"{self.ground_curve.Q_diff} != {self.excited_curve.Q_diff}")
+
     @property
     def Q_diff(self) -> float:
         """Return the displacement between the two relaxed structures."""
-        return self.excited_curve.Q_diff
+        return self.ground_curve.Q_diff
 
     @property
     def dE(self) -> float:

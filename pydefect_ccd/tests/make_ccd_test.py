@@ -5,7 +5,7 @@ import pytest
 
 from pydefect_ccd.fitting_func import QuadraticFittingFunc
 from pydefect_ccd.potential_curve import SinglePointSpec, SinglePoint, \
-    CurveTransform, PotentialCurveSpec, SinglePoints
+    CurveTransform, PotentialCurve, PotentialCurveSpec, SinglePoints
 from pydefect_ccd.make_ccd import MakeCcd
 
 band_edges = dict(vbm=1.0, cbm=3.0, supercell_vbm=1.1, supercell_cbm=2.9)
@@ -13,7 +13,17 @@ band_edges = dict(vbm=1.0, cbm=3.0, supercell_vbm=1.1, supercell_cbm=2.9)
 common = dict(is_shallow=False, used_for_fitting=True)
 
 
-def test_make_ccd(excited_structure, ground_structure):
+def make_potential_curve(spec: PotentialCurveSpec,
+                         single_points: SinglePoints,
+                         shift_energy: float) -> PotentialCurve:
+    result = PotentialCurve(spec=spec,
+                            original_single_points=single_points,
+                            curve_transform=CurveTransform(shift_energy, False))
+    result.set_fitting_curve(QuadraticFittingFunc)
+    return result
+
+
+def test_make_ccd():
     ground_spec = PotentialCurveSpec(charge=0, correction_energy=0.0,
                                      counter_charge=1, Q_diff=5.0)
     excited_spec = PotentialCurveSpec(charge=1, correction_energy=1.0,
@@ -54,12 +64,11 @@ def test_make_ccd(excited_structure, ground_structure):
                     used_for_fitting=True)
     ])
 
-    actual = MakeCcd(ground_single_points=ground_single_points,
-                     ground_pot_curve_spec=ground_spec,
-                     ground_fitting_func=QuadraticFittingFunc,
-                     excited_single_points=excited_single_points,
-                     excited_pot_curve_spec=excited_spec,
-                     excited_fitting_func=QuadraticFittingFunc,
+    ground_curve = make_potential_curve(ground_spec, ground_single_points, 2.0)
+    excited_curve = make_potential_curve(excited_spec, excited_single_points, 2.0)
+
+    actual = MakeCcd(ground_pot_curve=ground_curve,
+                     excited_pot_curve=excited_curve,
                      vbm=100.0,
                      cbm=200.0,
                      name="test").ccd
@@ -69,7 +78,10 @@ def test_make_ccd(excited_structure, ground_structure):
     assert actual.excited_curve.curve_transform == CurveTransform(196.0, True)
     assert actual.excited_curve.single_points.single_points[0].spec \
         == SinglePointSpec(Q=5.0, disp_ratio=1.0)
+    assert actual.ground_curve.single_points.lowest_energy == pytest.approx(0.0)
     assert actual.excited_curve.single_points.lowest_energy == pytest.approx(200.0)
     assert actual.excited_curve.lowest_energy == pytest.approx(200.0)
     assert actual.ground_curve.fitting_func
     assert actual.excited_curve.fitting_func
+    assert ground_curve.curve_transform == CurveTransform(2.0, False)
+    assert excited_curve.curve_transform == CurveTransform(2.0, False)

@@ -3,6 +3,8 @@
 
 import matplotlib
 import pytest
+from pydefect.analyzer.band_edge_states import LocalizedOrbital
+from pymatgen.electronic_structure.core import Spin
 
 matplotlib.use("Agg")
 from matplotlib import pyplot as plt
@@ -159,6 +161,22 @@ def test_potential_curve_spec_effective_charge():
     assert spec.effective_charge == 2
 
 
+def test_single_point_near_edge_state_finds_localized_orbital():
+    localized_orbital = LocalizedOrbital(band_idx=102,
+                                         ave_energy=2.0,
+                                         occupation=1.0,
+                                         orbitals={})
+    single_point = SinglePoint(energy=0.0,
+                               spec=SinglePointSpec(Q=0.0, disp_ratio=0.0),
+                               ccd_correction_energy=0.0,
+                               magnetization=0.0,
+                               localized_orbitals=[[localized_orbital], []],
+                               valence_bands=[[], []],
+                               conduction_bands=[[], []])
+
+    assert single_point.near_edge_state(Spin.up, 102) is localized_orbital
+
+
 def test_make_fitting_func_uses_only_points_marked_for_fitting():
     sp = SinglePoints([
         make_single_point(Q=-1.0, disp_ratio=-1.0, energy=3.25),
@@ -243,6 +261,51 @@ def test_potential_curve_shifted_recomputes_transformed_points():
     assert actual.fitting_func.E0 == pytest.approx(3.0)
     assert curve.curve_transform == CurveTransform(0.0, False)
     assert curve.single_points.Qs == pytest.approx([0.0, 1.0, 2.0])
+
+
+def test_potential_curve_shifted_preserves_existing_shift_basis():
+    single_points = SinglePoints([
+        make_single_point(Q=0.0, disp_ratio=0.0, energy=5.0),
+        make_single_point(Q=1.0, disp_ratio=0.5, energy=6.0),
+        make_single_point(Q=2.0, disp_ratio=1.0, energy=8.0)
+    ])
+    spec = PotentialCurveSpec(charge=0,
+                              correction_energy=0.0,
+                              counter_charge=1,
+                              Q_diff=2.0)
+    curve = PotentialCurve(spec=spec,
+                           original_single_points=single_points,
+                           curve_transform=CurveTransform(2.0, False),
+                           fitting_func=QuadraticFittingFunc(Q0=0.0,
+                                                             E0=0.0,
+                                                             a=1.0))
+
+    actual = curve.shifted(offset=3.0, flip=True)
+
+    assert actual.curve_transform == CurveTransform(-2.0, True)
+    assert actual.single_points.Qs == pytest.approx([2.0, 1.0, 0.0])
+    assert actual.single_points.corrected_energies == pytest.approx([3.0, 4.0, 6.0])
+    assert actual.lowest_energy == pytest.approx(3.0)
+
+
+def test_potential_curve_shifted_keeps_missing_fitting_curve_none():
+    single_points = SinglePoints([
+        make_single_point(Q=0.0, disp_ratio=0.0, energy=5.0),
+        make_single_point(Q=1.0, disp_ratio=0.5, energy=6.0)
+    ])
+    spec = PotentialCurveSpec(charge=0,
+                              correction_energy=0.0,
+                              counter_charge=1,
+                              Q_diff=2.0)
+    curve = PotentialCurve(spec=spec,
+                           original_single_points=single_points,
+                           curve_transform=CurveTransform(2.0, False))
+
+    actual = curve.shifted(offset=3.0)
+
+    assert actual.curve_transform == CurveTransform(-2.0, False)
+    assert actual.lowest_energy == pytest.approx(3.0)
+    assert actual.fitting_func is None
 
 
 def test_potential_curve_add_plot(mocker):

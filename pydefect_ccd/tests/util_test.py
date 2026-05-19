@@ -3,6 +3,7 @@
 from math import sqrt
 from pathlib import Path
 
+import pytest
 from pymatgen.core import Lattice, Structure
 from pymatgen.electronic_structure.core import Spin
 
@@ -81,4 +82,5 @@ def test_get_dR():
     lattice = Lattice.orthorhombic(10, 20, 30)
     structure1 = Structure(lattice, ["H"], [[0.0, 0.0, 0.0]])
     structure2 = Structure(lattice, ["H"], [[0.1, 0.1, 0.1]])
-    assert get_dR(structure1, structure2) == sqrt(1**2+2**2+3**2)
+    expected = sqrt(1**2 + 2**2 + 3**2)
+    assert get_dR(structure1, structure2) == pytest.approx(expected)
