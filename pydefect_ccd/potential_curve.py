@@ -116,7 +116,7 @@ class CurveTransform(MSONable, ToJsonFileMixIn):
     flip: bool
 
 
-@dataclass
+@dataclass(frozen=True)
 class SinglePoints(MSONable):
     """Container for single-point calculations on one potential curve."""
     single_points: List[SinglePoint]
@@ -205,7 +205,8 @@ class SinglePoints(MSONable):
     # def __str__(self):
     #     sort Single points
 
-def make_fitting_func(curve: Type[FittingFunc], single_points: SinglePoints) -> FittingFunc:
+def make_fitting_func(curve: Type[FittingFunc],
+                      single_points: SinglePoints) -> FittingFunc:
     """Fit a potential function class to a set of single points."""
     # TODO: Consider if Q0, E0 need to be fixed or not.
     vals, _ = curve_fit(curve.fitting_func,
@@ -219,7 +220,7 @@ def make_fitting_func(curve: Type[FittingFunc], single_points: SinglePoints) -> 
     return curve(**kwargs)
 
 
-@dataclass
+@dataclass(frozen=True)
 class PotentialCurveSpec(MSONable, ToJsonFileMixIn):
     """Metadata for one charge-state potential curve."""
     charge: int
@@ -266,10 +267,6 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
     def Q_diff(self) -> float:
         """Return the endpoint separation in amu^0.5 Angstrom."""
         return self.spec.Q_diff
-    # TODO: consider why they need to be sorted.
-    # def __post_init__(self):
-    #     self.original_single_points \
-    #         = list(sorted(self.original_single_points, key=lambda x: x.Q))
 
     @property
     def lowest_energy_single_point(self) -> SinglePoint:
@@ -357,19 +354,15 @@ class PotentialCurve(MSONable, ToJsonFileMixIn):
         shift_energy = shift_to_zero + offset
         result = deepcopy(self)
         result.curve_transform = CurveTransform(shift_energy, flip)
+        result.__dict__.pop("single_points", None)
         result.set_fitting_curve(result.fitting_func.__class__)
-        print("+"*100)
-        print(offset)
-        print("+"*100)
         return result
 
 
 def make_curve_transform(pot_curve: PotentialCurve,
                          offset: float = 0.0,
                          flip: bool = False) -> CurveTransform:
-    """Create the curve transform such that the lowest energy to be the offset."""
+    """Create the curve transform such that the lowest energy is placed at the offset."""
     shift_to_zero = - pot_curve.lowest_energy
     shift_energy = shift_to_zero + offset
     return CurveTransform(shift_energy, flip)
-
-

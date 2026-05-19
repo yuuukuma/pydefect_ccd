@@ -75,10 +75,14 @@ def test_make_curve_transform_places_lowest_energy_at_offset():
                               correction_energy=1.0,
                               counter_charge=0,
                               Q_diff=5.0)
+    curve = PotentialCurve(spec=spec,
+                           original_single_points=single_points,
+                           curve_transform=CurveTransform(0.0, False))
 
-    actual = make_curve_transform(spec, single_points, offset=2.0, flip=True)
+    actual = make_curve_transform(curve, offset=2.0, flip=True)
 
-    assert actual == CurveTransform(shift_energy=pytest.approx(-2.25), flip=True)
+    assert actual.shift_energy == pytest.approx(-2.25)
+    assert actual.flip is True
 
 
 def test_potential_curve_applies_curve_transform_to_single_points():
@@ -106,7 +110,7 @@ def test_potential_curve_applies_curve_transform_to_single_points():
     assert single_point.energy == pytest.approx(4.0)
 
 
-def test_potential_curve_lowest_energy_adds_spec_correction_to_shifted_minimum():
+def test_potential_curve_lowest_energy_uses_transformed_points():
     single_points = SinglePoints([
         make_single_point(Q=0.0, disp_ratio=0.0, energy=4.0,
                           ccd_correction_energy=0.2),
@@ -117,14 +121,16 @@ def test_potential_curve_lowest_energy_adds_spec_correction_to_shifted_minimum()
                               correction_energy=1.5,
                               counter_charge=0,
                               Q_diff=5.0)
-    curve = PotentialCurve(spec=spec,
-                           original_single_points=single_points,
-                           curve_transform=make_curve_transform(spec,
-                                                                single_points,
-                                                                offset=2.0))
+    raw_curve = PotentialCurve(spec=spec,
+                               original_single_points=single_points,
+                               curve_transform=CurveTransform(0.0, False))
+    shifted_curve = PotentialCurve(
+        spec=spec,
+        original_single_points=single_points,
+        curve_transform=make_curve_transform(raw_curve, offset=2.0))
 
-    assert curve.single_points.lowest_energy == pytest.approx(2.0)
-    assert curve.lowest_energy == pytest.approx(2.0)
+    assert shifted_curve.single_points.lowest_energy == pytest.approx(2.0)
+    assert shifted_curve.lowest_energy == pytest.approx(2.0)
 
 
 def test_single_point_from_disp_uses_close_match():
@@ -208,6 +214,35 @@ def test_potential_curve_set_fitting_curve_uses_transformed_points():
 
     assert curve.fitting_func.a == pytest.approx(3.0)
     assert curve.fitting_func.E0 == pytest.approx(2.75)
+
+
+def test_potential_curve_shifted_recomputes_transformed_points():
+    single_points = SinglePoints([
+        make_single_point(Q=0.0, disp_ratio=0.0, energy=4.0),
+        make_single_point(Q=1.0, disp_ratio=0.5, energy=1.0),
+        make_single_point(Q=2.0, disp_ratio=1.0, energy=0.0)
+    ])
+    spec = PotentialCurveSpec(charge=0,
+                              correction_energy=0.0,
+                              counter_charge=1,
+                              Q_diff=2.0)
+    curve = PotentialCurve(spec=spec,
+                           original_single_points=single_points,
+                           curve_transform=CurveTransform(0.0, False),
+                           fitting_func=QuadraticFittingFunc(Q0=0.0,
+                                                             E0=0.0,
+                                                             a=1.0))
+
+    actual = curve.shifted(offset=3.0, flip=True)
+
+    assert actual.curve_transform == CurveTransform(3.0, True)
+    assert actual.single_points.Qs == pytest.approx([2.0, 1.0, 0.0])
+    assert actual.single_points.corrected_energies == pytest.approx([7.0, 4.0, 3.0])
+    assert actual.lowest_energy == pytest.approx(3.0)
+    assert actual.fitting_func.a == pytest.approx(1.0)
+    assert actual.fitting_func.E0 == pytest.approx(3.0)
+    assert curve.curve_transform == CurveTransform(0.0, False)
+    assert curve.single_points.Qs == pytest.approx([0.0, 1.0, 2.0])
 
 
 def test_potential_curve_add_plot(mocker):
